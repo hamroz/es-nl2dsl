@@ -1,0 +1,25 @@
+time_window:
+  required: true
+  max_days: 30
+fields:
+  allowed:
+    - "@timestamp"
+    - "src_ip"
+    - "dst_ip"
+    - "src_port"
+    - "dst_port"
+    - "protocol"
+    - "bytes_in"
+    - "bytes_out"
+    - "label"
+types:
+  src_port: integer
+  dst_port: integer
+  bytes_in: long
+  bytes_out: long
+cost:
+  max_docs: 200000
+regex:
+  bounded_required: true
+retries:
+  max: 2

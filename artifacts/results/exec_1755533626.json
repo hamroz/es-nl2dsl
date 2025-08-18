@@ -1,0 +1,16 @@
+{
+  "index": "logs_net",
+  "expert_ids": [
+    "17ef71b7ffa776e73e19b8192a9f440d7c6cf3b5",
+    "2"
+  ],
+  "candidate_ids": [
+    "17ef71b7ffa776e73e19b8192a9f440d7c6cf3b5",
+    "2"
+  ],
+  "jaccard": 1.0,
+  "precision": 1.0,
+  "recall": 1.0,
+  "f1": 1.0,
+  "ts": 1755533626
+}

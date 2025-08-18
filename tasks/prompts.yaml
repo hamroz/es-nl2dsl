@@ -1,0 +1,17 @@
+- id: scan-001
+  category: port-scan
+  prompt: "Find events labeled malicious on 2017-07-04."
+  time_window:
+    start: "2017-07-04T00:00:00Z"
+    end:   "2017-07-04T23:59:59Z"
+  expert_dsl: |
+    {
+      "query": {
+        "bool": {
+          "filter": [
+            { "range": { "@timestamp": { "gte": "2017-07-04T00:00:00Z", "lte": "2017-07-04T23:59:59Z" } } },
+            { "term": { "label": "malicious" } }
+          ]
+        }
+      }
+    }
