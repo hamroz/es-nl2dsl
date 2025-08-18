@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import argparse, pathlib, hashlib, orjson, pandas as pd
 from elasticsearch import Elasticsearch, helpers
+from config import get_es_client_config, ES_ADMIN_CREDS, ES_DEFAULT_INDEX
 
 def make_id(row: dict) -> str:
     # Deterministic ID from a stable subset of fields
@@ -25,9 +26,9 @@ def gen_actions(df: pd.DataFrame, index: str):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--file", required=True, help="CSV file with columns matching mappings.json")
-    ap.add_argument("--index", default="logs_net")
-    ap.add_argument("--user", default="elastic")
-    ap.add_argument("--password", default="ChangeMe_123")
+    ap.add_argument("--index", default=ES_DEFAULT_INDEX)
+    ap.add_argument("--user", default=ES_ADMIN_CREDS['user'])
+    ap.add_argument("--password", default=ES_ADMIN_CREDS['password'])
     args = ap.parse_args()
 
     es = Elasticsearch("http://localhost:9200", basic_auth=(args.user, args.password), request_timeout=60)

@@ -1,0 +1,164 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "query": {
+      "type": "object",
+      "properties": {
+        "bool": {
+          "type": "object",
+          "properties": {
+            "filter": {
+              "type": "array",
+              "items": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "term": {
+                        "type": "object",
+                        "patternProperties": {
+                          "^[a-zA-Z0-9_@]+$": {
+                            "oneOf": [
+                              {"type": "string"},
+                              {"type": "number"},
+                              {"type": "boolean"}
+                            ]
+                          }
+                        },
+                        "additionalProperties": false
+                      }
+                    },
+                    "required": ["term"],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "terms": {
+                        "type": "object",
+                        "patternProperties": {
+                          "^[a-zA-Z0-9_@]+$": {
+                            "type": "array",
+                            "items": {
+                              "oneOf": [
+                                {"type": "string"},
+                                {"type": "number"}
+                              ]
+                            }
+                          }
+                        },
+                        "additionalProperties": false
+                      }
+                    },
+                    "required": ["terms"],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "range": {
+                        "type": "object",
+                        "patternProperties": {
+                          "^[a-zA-Z0-9_@]+$": {
+                            "type": "object",
+                            "properties": {
+                              "gte": {"type": "string"},
+                              "gt": {"type": "string"},
+                              "lte": {"type": "string"},
+                              "lt": {"type": "string"}
+                            },
+                            "additionalProperties": false
+                          }
+                        },
+                        "additionalProperties": false
+                      }
+                    },
+                    "required": ["range"],
+                    "additionalProperties": false
+                  }
+                ]
+              }
+            },
+            "must": {
+              "type": "array",
+              "items": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "term": {
+                        "type": "object",
+                        "patternProperties": {
+                          "^[a-zA-Z0-9_@]+$": {
+                            "oneOf": [
+                              {"type": "string"},
+                              {"type": "number"},
+                              {"type": "boolean"}
+                            ]
+                          }
+                        },
+                        "additionalProperties": false
+                      }
+                    },
+                    "required": ["term"],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "terms": {
+                        "type": "object",
+                        "patternProperties": {
+                          "^[a-zA-Z0-9_@]+$": {
+                            "type": "array",
+                            "items": {
+                              "oneOf": [
+                                {"type": "string"},
+                                {"type": "number"}
+                              ]
+                            }
+                          }
+                        },
+                        "additionalProperties": false
+                      }
+                    },
+                    "required": ["terms"],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "range": {
+                        "type": "object",
+                        "patternProperties": {
+                          "^[a-zA-Z0-9_@]+$": {
+                            "type": "object",
+                            "properties": {
+                              "gte": {"type": "string"},
+                              "gt": {"type": "string"},
+                              "lte": {"type": "string"},
+                              "lt": {"type": "string"}
+                            },
+                            "additionalProperties": false
+                          }
+                        },
+                        "additionalProperties": false
+                      }
+                    },
+                    "required": ["range"],
+                    "additionalProperties": false
+                  }
+                ]
+              }
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "required": ["query"],
+  "additionalProperties": false
+}
