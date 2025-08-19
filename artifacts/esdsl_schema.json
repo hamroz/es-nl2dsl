@@ -63,10 +63,10 @@
                           "^[a-zA-Z0-9_@]+$": {
                             "type": "object",
                             "properties": {
-                              "gte": {"type": "string"},
-                              "gt": {"type": "string"},
-                              "lte": {"type": "string"},
-                              "lt": {"type": "string"}
+                              "gte": {"oneOf": [{"type": "string"}, {"type": "number"}]},
+                              "gt": {"oneOf": [{"type": "string"}, {"type": "number"}]},
+                              "lte": {"oneOf": [{"type": "string"}, {"type": "number"}]},
+                              "lt": {"oneOf": [{"type": "string"}, {"type": "number"}]}
                             },
                             "additionalProperties": false
                           }
@@ -135,10 +135,10 @@
                           "^[a-zA-Z0-9_@]+$": {
                             "type": "object",
                             "properties": {
-                              "gte": {"type": "string"},
-                              "gt": {"type": "string"},
-                              "lte": {"type": "string"},
-                              "lt": {"type": "string"}
+                              "gte": {"oneOf": [{"type": "string"}, {"type": "number"}]},
+                              "gt": {"oneOf": [{"type": "string"}, {"type": "number"}]},
+                              "lte": {"oneOf": [{"type": "string"}, {"type": "number"}]},
+                              "lt": {"oneOf": [{"type": "string"}, {"type": "number"}]}
                             },
                             "additionalProperties": false
                           }

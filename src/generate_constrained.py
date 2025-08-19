@@ -86,7 +86,7 @@ def build_prompt(task_prompt):
     
     return prompt
 
-def call_local_model(prompt, model="llama3.2:latest"):
+def call_local_model(prompt, model="llama3.1:latest"):
     """Call Ollama local model"""
     try:
         result = subprocess.run(
@@ -202,7 +202,7 @@ def main():
     parser.add_argument("--schema", default="artifacts/esdsl_schema.json", help="Schema file")
     parser.add_argument("--rules", default="artifacts/validator_rules.yaml", help="Validator rules")
     parser.add_argument("--output-dir", default="artifacts/generated", help="Output directory")
-    parser.add_argument("--model", default="llama3.2:latest", help="Ollama model to use")
+    parser.add_argument("--model", default="llama3.1:latest", help="Ollama model to use")
     
     args = parser.parse_args()
     
