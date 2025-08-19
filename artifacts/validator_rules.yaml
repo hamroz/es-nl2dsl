@@ -1,6 +1,6 @@
 time_window:
   required: true
-  max_days: 30
+  max_days: 7
 fields:
   allowed:
     - "@timestamp"
@@ -18,7 +18,7 @@ types:
   bytes_in: long
   bytes_out: long
 cost:
-  max_docs: 200000
+  max_docs: 1000
 regex:
   bounded_required: true
 retries:

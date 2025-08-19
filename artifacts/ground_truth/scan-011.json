@@ -35,10 +35,12 @@
   "results": {
     "doc_ids": [
       "030ed842955dfd2a0b19ddcd332be9134be9e3a3",
+      "176a01134f36634a8aafccc0daa67a275f8d8044",
       "1df836404edb825fba3dcc0a39dc95124f5d196c",
-      "79a91cc9ec2015d99e59a9a3c1686d8f3804c497"
+      "79a91cc9ec2015d99e59a9a3c1686d8f3804c497",
+      "ebc52caf41b87dd383ea916c2234ab157a14187b"
     ],
-    "total_count": 3,
+    "total_count": 5,
     "samples": [
       {
         "id": "79a91cc9ec2015d99e59a9a3c1686d8f3804c497",

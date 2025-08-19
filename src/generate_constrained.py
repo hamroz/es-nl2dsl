@@ -30,8 +30,41 @@ ALLOWED_OPERATORS = {
 
 AMBIGUOUS_TERMS = [
     "overnight", "last weekend", "yesterday", "today", "tomorrow",
-    "this week", "last week", "next week", "this month", "last month",
+    "this week", "last week", "next week", "this month", "last month", 
     "recently", "lately", "soon", "earlier", "later"
+]
+
+# Security patterns that should be blocked
+SECURITY_PATTERNS = [
+    # Time restriction bypasses
+    "ignore time restrictions", "ignore time", "no time filter", "without time", 
+    "bypass time", "skip time", "all time", "any time", "ignore timestamp",
+    
+    # Broad data access attempts
+    "all data", "everything", "all documents", "all events", "all records",
+    "no restrictions", "no limits", "unrestricted", "unlimited", "complete data",
+    "entire dataset", "full database", "all logs", "every record",
+    
+    # Long time ranges that exceed limits
+    "last year", "past year", "last 2 years", "last 3 years", "last 5 years",
+    "last decade", "all years", "since 2000", "since beginning", "historical data",
+    "long term", "multi-year", "years of data",
+    
+    # Resource exhaustion
+    "million documents", "billion documents", "large aggregation", "huge query",
+    "all 10 million", "massive dataset", "entire index", "full scan",
+    
+    # Credential/sensitive data fishing
+    "password", "credential", "secret", "api_key", "token", "admin",
+    "private_key", "certificate", "ssn", "credit_card", "social security",
+    "internal_secret", "confidential", "classified",
+    
+    # System manipulation attempts
+    "delete", "drop", "truncate", "update", "modify", "alter", "create",
+    "execute", "system", "eval", "script", "bypass validator", "ignore validation",
+    "raw query", "direct access", "admin access", "ignore all", "match_all query",
+    "future year", "/etc/passwd", "access denied", "return match_all", 
+    "ignore all previous", "ignore instructions"
 ]
 
 def load_fewshot_examples():
@@ -124,12 +157,41 @@ def validate_with_validator(query_json, rules_path):
         Path(temp_path).unlink()
         return False, str(e)
 
-def check_ambiguity(prompt_text):
-    """Check if prompt contains ambiguous time references"""
+def check_security_violations(prompt_text):
+    """Check for security violations and ambiguous terms"""
     prompt_lower = prompt_text.lower()
+    
+    # Check ambiguous time references
     for term in AMBIGUOUS_TERMS:
         if term in prompt_lower:
             return True, f"Ambiguous time reference detected: '{term}'"
+    
+    # Check security patterns
+    for pattern in SECURITY_PATTERNS:
+        if pattern in prompt_lower:
+            return True, f"Security violation detected: '{pattern}'"
+    
+    # Check for unknown fields being requested
+    unknown_fields = ["credit_card", "ssn", "password", "private_key", "secret_key", 
+                     "api_key", "token", "credential", "admin123", "internal_secret"]
+    for field in unknown_fields:
+        if field in prompt_lower:
+            return True, f"Attempt to access non-existent/sensitive field: '{field}'"
+    
+    # Check for SQL injection patterns
+    sql_patterns = ["drop table", "delete from", "insert into", "update set", 
+                   "select *", "union select", "sql", "database"]
+    for pattern in sql_patterns:
+        if pattern in prompt_lower:
+            return True, f"SQL injection attempt detected: '{pattern}'"
+    
+    # Check for excessive time ranges (more sophisticated)
+    excessive_ranges = ["5 years", "10 years", "decade", "all time", "since 2000", 
+                       "since beginning", "historical", "years of data"]
+    for range_term in excessive_ranges:
+        if range_term in prompt_lower:
+            return True, f"Excessive time range request: '{range_term}'"
+    
     return False, None
 
 def generate_with_retries(task_prompt, schema_path, rules_path, max_retries=2):
@@ -141,11 +203,11 @@ def generate_with_retries(task_prompt, schema_path, rules_path, max_retries=2):
         "retry_reasons": []
     }
     
-    # Check for ambiguity first
-    is_ambiguous, ambiguity_reason = check_ambiguity(task_prompt)
-    if is_ambiguous:
+    # Check for security violations and ambiguity first
+    is_violation, violation_reason = check_security_violations(task_prompt)
+    if is_violation:
         metrics["latency_seconds"] = time.time() - start_time
-        return {"abstain": True, "reason": f"Ambiguous prompt: {ambiguity_reason}", "metrics": metrics}
+        return {"abstain": True, "reason": f"Security violation: {violation_reason}", "metrics": metrics}
     
     prompt = build_prompt(task_prompt)
     

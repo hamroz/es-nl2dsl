@@ -1,0 +1,1 @@
+{ "query": { "bool": { "filter": [ { "range": { "@timestamp": { "gte": "2017-07-01T00:00:00Z", "lte": "2017-08-15T23:59:59Z" } } }, { "term": { "label": "malicious" } } ] } } }

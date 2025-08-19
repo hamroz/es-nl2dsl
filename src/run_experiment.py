@@ -7,7 +7,7 @@ from pathlib import Path
 from datetime import datetime
 
 METHODS = ["constrained", "rules", "zeroshot"]
-SCENARIOS = ["scan-001", "scan-002", "scan-003", "scan-004", "scan-005", "scan-006"]
+SCENARIOS = ["scan-001", "scan-002", "scan-003", "scan-004", "scan-005", "scan-006", "scan-007", "scan-008", "scan-009", "scan-010", "scan-011", "scan-012"]
 
 def run_method(method, scenario_id, repeat=1):
     """Run a specific method on a scenario"""

@@ -44,7 +44,7 @@ fi
 # Run all standard scenarios
 echo
 echo "=== Running Standard Scenarios ==="
-ALL_SCENARIOS="scan-001 scan-002 scan-003 scan-004 scan-005 scan-006"
+ALL_SCENARIOS="scan-001 scan-002 scan-003 scan-004 scan-005 scan-006 scan-007 scan-008 scan-009 scan-010 scan-011 scan-012"
 
 for scenario in $ALL_SCENARIOS; do
     echo
