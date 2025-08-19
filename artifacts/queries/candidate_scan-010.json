@@ -5,26 +5,25 @@
         {
           "range": {
             "@timestamp": {
-              "gte": "2017-07-03T00:00:00Z",
+              "gte": "2017-07-05T00:00:00Z",
               "lte": "2017-07-05T23:59:59Z"
             }
           }
         },
         {
-          "term": {
-            "protocol": "TCP"
+          "terms": {
+            "dst_port": [
+              80,
+              443
+            ]
           }
         },
         {
-          "range": {
-            "bytes_out": {
-              "gt": 10000
-            }
-          }
-        },
-        {
-          "term": {
-            "src_ip": "10.42.42.1"
+          "terms": {
+            "protocol": [
+              "HTTP",
+              "HTTPS"
+            ]
           }
         }
       ]

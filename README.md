@@ -19,6 +19,7 @@ ES-NL2DSL enables secure translation of human-readable queries into Elasticsearc
 ## 📋 Table of Contents
 
 - [Quick Start](#-quick-start)
+- [Web GUI](#-web-gui)
 - [System Requirements](#-system-requirements)
 - [Installation](#-installation)
 - [Basic Usage](#-basic-usage)
@@ -46,6 +47,34 @@ python src/run_one.py --id scan-001 --gen
 # 5. Run full evaluation suite
 ./run_suite.sh
 ```
+
+## 🌐 Web GUI
+
+ES-NL2DSL now includes a comprehensive **Streamlit-based web interface** that provides an intuitive way to interact with all system capabilities through your browser.
+
+### Features
+- **🤖 Interactive Query Generator** - Convert natural language to DSL with real-time validation
+- **📊 Evaluation Dashboard** - Run comprehensive evaluations with parallel processing
+- **🛡️ Security Testing Panel** - Test against adversarial prompts with live monitoring
+- **🔒 Privacy Analysis Tools** - Visualize privacy-utility tradeoffs across epsilon values
+- **⚙️ System Administration** - Complete system monitoring and management
+
+### Quick Start GUI
+
+```bash
+# Option 1: Automatic setup and launch
+python gui/start_gui.py
+
+# Option 2: Docker deployment (full containerized environment)
+python gui/start_gui.py --docker
+
+# Option 3: Direct launch
+streamlit run gui/streamlit_app.py
+```
+
+The GUI will be available at **http://localhost:8501**
+
+📖 **For detailed GUI documentation, see [gui/README.md](gui/README.md)**
 
 ## 💻 System Requirements
 
