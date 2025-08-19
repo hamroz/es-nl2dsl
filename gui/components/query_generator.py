@@ -9,7 +9,11 @@ import sys
 project_root = Path(__file__).parent.parent.parent
 sys.path.append(str(project_root))
 
-from gui.utils.backend_interface import run_query_generation, validate_query, get_available_models
+from gui.utils.backend_interface import (
+    run_query_generation, validate_query, get_available_models,
+    get_available_indices, execute_elasticsearch_query, 
+    export_results_as_csv, export_results_as_json
+)
 
 def render_query_generator():
     """Render the query generator interface"""
@@ -30,13 +34,28 @@ def render_query_generator():
             help="Enter your query in natural language. Be specific about time ranges and conditions."
         )
         
-        # Method selection
-        method = st.selectbox(
-            "Generation Method:",
-            ["constrained", "rules", "zeroshot"],
-            index=0,
-            help="Choose the query generation method"
-        )
+        # Index and method selection in two columns
+        method_col, index_col = st.columns(2)
+        
+        with method_col:
+            method = st.selectbox(
+                "Generation Method:",
+                ["constrained", "rules", "zeroshot"],
+                index=0,
+                help="Choose the query generation method"
+            )
+        
+        with index_col:
+            # Get available indices
+            available_indices = get_available_indices()
+            default_index = "logs_net" if "logs_net" in available_indices else available_indices[0] if available_indices else "logs_net"
+            
+            selected_index = st.selectbox(
+                "Target Index:",
+                available_indices,
+                index=available_indices.index(default_index) if default_index in available_indices else 0,
+                help="Select the Elasticsearch index to query"
+            )
         
         # Advanced options in expandable section
         with st.expander("⚙️ Advanced Options"):
@@ -135,13 +154,26 @@ def render_query_generator():
                         formatted_query = json.dumps(query, indent=2)
                         st.code(formatted_query, language="json")
                         
-                        # Download button
-                        st.download_button(
-                            "📥 Download Query",
-                            data=formatted_query,
-                            file_name=f"query_{int(time.time())}.json",
-                            mime="application/json"
-                        )
+                        # Buttons row
+                        button_col1, button_col2 = st.columns(2)
+                        
+                        with button_col1:
+                            st.download_button(
+                                "📥 Download Query",
+                                data=formatted_query,
+                                file_name=f"query_{int(time.time())}.json",
+                                mime="application/json"
+                            )
+                        
+                        with button_col2:
+                            execute_button = st.button("🚀 Execute Query", type="secondary")
+                        
+                        # Execute query if button pressed
+                        if execute_button:
+                            st.session_state.execute_query = True
+                            st.session_state.query_to_execute = query
+                            st.session_state.target_index = selected_index
+                            st.rerun()
                     except Exception as e:
                         st.error(f"Error formatting query: {e}")
                 
@@ -175,6 +207,127 @@ def render_query_generator():
                 st.error("❌ Generation Failed")
                 st.write("**Error Details:**")
                 st.code(results["output"])
+    
+    # Query Execution Section
+    if st.session_state.get("execute_query", False):
+        st.markdown("---")
+        st.subheader("🔍 Query Execution Results")
+        
+        query_to_execute = st.session_state.get("query_to_execute", {})
+        target_index = st.session_state.get("target_index", "logs_net")
+        
+        # Reset execution flag
+        st.session_state.execute_query = False
+        
+        if query_to_execute:
+            with st.spinner(f"Executing query on index '{target_index}'..."):
+                # Add size limit control
+                size_limit = st.slider(
+                    "Max Results to Return:", 
+                    min_value=10, max_value=10000, value=1000, step=50,
+                    help="Limit the number of results returned to avoid overwhelming the interface"
+                )
+                
+                success, execution_results = execute_elasticsearch_query(
+                    query_to_execute, target_index, max_size=size_limit
+                )
+            
+            if success:
+                # Display summary metrics
+                col1, col2, col3, col4 = st.columns(4)
+                
+                with col1:
+                    st.metric("Total Hits", f"{execution_results['total_hits']:,}")
+                with col2:
+                    st.metric("Returned", f"{execution_results['returned_hits']:,}")
+                with col3:
+                    st.metric("Query Time", f"{execution_results['took']} ms")
+                with col4:
+                    st.metric("Index", execution_results['index'])
+                
+                # Display results
+                if execution_results['results']:
+                    st.subheader("📄 Query Results")
+                    
+                    # Results display options
+                    display_cols = st.columns([3, 1, 1])
+                    
+                    with display_cols[0]:
+                        display_format = st.selectbox(
+                            "Display Format:",
+                            ["Table", "JSON", "Raw Data"],
+                            help="Choose how to display the results"
+                        )
+                    
+                    with display_cols[1]:
+                        # Export buttons
+                        if execution_results['results']:
+                            csv_data = export_results_as_csv(execution_results)
+                            st.download_button(
+                                "📊 Export CSV",
+                                data=csv_data,
+                                file_name=f"query_results_{int(time.time())}.csv",
+                                mime="text/csv"
+                            )
+                    
+                    with display_cols[2]:
+                        if execution_results['results']:
+                            json_data = export_results_as_json(execution_results)
+                            st.download_button(
+                                "📋 Export JSON",
+                                data=json_data,
+                                file_name=f"query_results_{int(time.time())}.json",
+                                mime="application/json"
+                            )
+                    
+                    # Display results based on format selection
+                    if display_format == "Table":
+                        # Convert to DataFrame for better display
+                        try:
+                            import pandas as pd
+                            df = pd.DataFrame(execution_results['results'])
+                            
+                            # Truncate long text fields for better table display
+                            for col in df.columns:
+                                if df[col].dtype == 'object':
+                                    df[col] = df[col].astype(str).apply(
+                                        lambda x: (x[:100] + '...') if len(str(x)) > 100 else x
+                                    )
+                            
+                            st.dataframe(df, use_container_width=True)
+                        except Exception as e:
+                            st.error(f"Error displaying table: {e}")
+                            st.json(execution_results['results'])
+                    
+                    elif display_format == "JSON":
+                        # Pretty print JSON with syntax highlighting
+                        st.json(execution_results['results'])
+                    
+                    else:  # Raw Data
+                        # Display raw results with expandable sections
+                        for i, result in enumerate(execution_results['results'][:100]):  # Limit to first 100
+                            with st.expander(f"Document {i+1} (ID: {result.get('_id', 'Unknown')})", expanded=(i < 3)):
+                                st.json(result)
+                        
+                        if len(execution_results['results']) > 100:
+                            st.info(f"Showing first 100 results. Total: {len(execution_results['results'])} documents.")
+                
+                # Display aggregations if present
+                if execution_results.get('aggregations'):
+                    st.subheader("📊 Aggregations")
+                    st.json(execution_results['aggregations'])
+                
+                # Store results for later use
+                st.session_state.last_execution_results = execution_results
+                
+            else:
+                st.error("❌ Query Execution Failed")
+                st.write("**Error Details:**")
+                st.code(execution_results.get("error", "Unknown error"))
+                
+                # Show the query that failed for debugging
+                st.write("**Failed Query:**")
+                st.code(json.dumps(query_to_execute, indent=2), language="json")
     
     # Quick examples section
     st.markdown("---")

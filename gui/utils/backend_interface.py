@@ -3,9 +3,12 @@ import subprocess
 import json
 import sys
 import time
+import pandas as pd
+import io
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Any
 import streamlit as st
+from elasticsearch import Elasticsearch
 
 # Add project root to path for imports
 project_root = Path(__file__).parent.parent.parent
@@ -279,3 +282,93 @@ def get_recent_results() -> List[Dict]:
     except Exception as e:
         st.error(f"Failed to load recent results: {e}")
         return []
+
+def get_available_indices() -> List[str]:
+    """Get list of available Elasticsearch indices"""
+    try:
+        result = subprocess.run([
+            "curl", "-s", "-u", "elastic:ChangeMe_123",
+            "http://localhost:9200/_cat/indices?format=json"
+        ], capture_output=True, text=True, timeout=10)
+        
+        if result.returncode == 0:
+            indices = json.loads(result.stdout)
+            # Filter for log indices and sort them
+            log_indices = [idx["index"] for idx in indices 
+                          if idx["index"].startswith(("logs_", "log_")) 
+                          and not idx["index"].endswith("_dp")]
+            return sorted(log_indices) if log_indices else ["logs_net"]
+        else:
+            return ["logs_net", "logs_cic_ids2017"]  # Fallback
+    except Exception as e:
+        return ["logs_net", "logs_cic_ids2017"]  # Fallback
+
+def execute_elasticsearch_query(query: Dict[str, Any], index: str, max_size: int = 1000) -> Tuple[bool, Dict[str, Any]]:
+    """Execute an Elasticsearch query and return results with metadata"""
+    try:
+        # Import config here to avoid circular imports
+        from src.config import get_es_client_config
+        
+        # Create Elasticsearch client with read-only credentials
+        es = Elasticsearch(**get_es_client_config(use_admin=False), request_timeout=60)
+        
+        # Execute the query with size limit
+        response = es.search(index=index, body=query, size=max_size, track_total_hits=True)
+        
+        # Extract metadata
+        total_hits = (response["hits"]["total"]["value"] 
+                     if isinstance(response["hits"]["total"], dict) 
+                     else response["hits"]["total"])
+        
+        hits = response["hits"]["hits"]
+        took = response["took"]
+        
+        # Process results
+        results = []
+        for hit in hits:
+            result_doc = {
+                "_id": hit["_id"],
+                "_score": hit.get("_score"),
+                **hit["_source"]
+            }
+            results.append(result_doc)
+        
+        # Aggregations if present
+        aggregations = response.get("aggs", {})
+        
+        return True, {
+            "total_hits": total_hits,
+            "returned_hits": len(hits),
+            "took": took,
+            "index": index,
+            "results": results,
+            "aggregations": aggregations,
+            "query": query
+        }
+        
+    except Exception as e:
+        return False, {"error": str(e), "query": query, "index": index}
+
+def export_results_as_csv(results_data: Dict[str, Any]) -> str:
+    """Convert query results to CSV format"""
+    try:
+        if not results_data.get("results"):
+            return "No results to export"
+        
+        # Convert results to DataFrame
+        df = pd.DataFrame(results_data["results"])
+        
+        # Convert to CSV
+        output = io.StringIO()
+        df.to_csv(output, index=False)
+        return output.getvalue()
+        
+    except Exception as e:
+        return f"Error exporting to CSV: {e}"
+
+def export_results_as_json(results_data: Dict[str, Any]) -> str:
+    """Convert query results to JSON format"""
+    try:
+        return json.dumps(results_data, indent=2, default=str)
+    except Exception as e:
+        return f"Error exporting to JSON: {e}"
