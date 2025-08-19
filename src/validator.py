@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 import argparse, json, math, re, datetime as dt, orjson, yaml
+from pathlib import Path
+from datetime import datetime
 from elasticsearch import Elasticsearch
+from config import get_es_client_config, ES_READER_CREDS, ES_DEFAULT_INDEX
 
 def load_rules(path):
     with open(path, "r") as f:
@@ -94,14 +97,14 @@ def check_aggs_selectivity(dsl):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--index", default="logs_net")
+    ap.add_argument("--index", default=ES_DEFAULT_INDEX)
     ap.add_argument("--dsl", required=True, help="Path to DSL JSON to validate")
     ap.add_argument("--rules", default="artifacts/validator_rules.yaml")
-    ap.add_argument("--user", default="reader")
-    ap.add_argument("--password", default="ReaderPwd_123")
+    ap.add_argument("--user", default=ES_READER_CREDS['user'])
+    ap.add_argument("--password", default=ES_READER_CREDS['password'])
     args = ap.parse_args()
 
-    es = Elasticsearch("http://localhost:9200", basic_auth=(args.user, args.password), request_timeout=30)
+    es = Elasticsearch(**get_es_client_config(use_admin=False), request_timeout=30)
     dsl = json.load(open(args.dsl))
     rules = load_rules(args.rules)
 
@@ -111,6 +114,11 @@ def main():
     mapping_types = {k: v.get("type") for k, v in props.items()}
     allowed_fields = set(rules["fields"]["allowed"])
 
+    # Log validation events
+    log_dir = Path("artifacts/results")
+    log_dir.mkdir(parents=True, exist_ok=True)
+    events_file = log_dir / "validator_events.jsonl"
+    
     checks = []
     for fn in [
         lambda: check_time_window(dsl, rules),
@@ -120,11 +128,33 @@ def main():
     ]:
         ok, reason = fn()
         checks.append((ok, reason))
+        
+        # Log the event
+        event = {
+            "timestamp": datetime.now().isoformat(),
+            "dsl_file": args.dsl,
+            "check_passed": ok,
+            "failure_category": reason if not ok else None
+        }
+        
+        with open(events_file, 'a') as f:
+            f.write(json.dumps(event) + "\n")
+        
         if not ok:
             result = {"ok": False, "reason": reason, "suggested_critique": f"Please add/adjust to satisfy rule: {reason}"}
             print(orjson.dumps(result, option=orjson.OPT_INDENT_2).decode())
             return
 
+    # Log success
+    event = {
+        "timestamp": datetime.now().isoformat(),
+        "dsl_file": args.dsl,
+        "check_passed": True,
+        "failure_category": None
+    }
+    with open(events_file, 'a') as f:
+        f.write(json.dumps(event) + "\n")
+    
     print(orjson.dumps({"ok": True, "reason": None}, option=orjson.OPT_INDENT_2).decode())
 
 if __name__ == "__main__":

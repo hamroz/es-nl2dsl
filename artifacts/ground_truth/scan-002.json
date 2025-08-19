@@ -1,0 +1,66 @@
+{
+  "scenario_id": "scan-002",
+  "prompt": "Find TCP connections with more than 10000 bytes transferred from source IP 10.42.42.1 between July 3-5, 2017.",
+  "time_window": {
+    "start": "2017-07-03T00:00:00Z",
+    "end": "2017-07-05T23:59:59Z"
+  },
+  "expert_dsl": {
+    "query": {
+      "bool": {
+        "filter": [
+          {
+            "range": {
+              "@timestamp": {
+                "gte": "2017-07-03T00:00:00Z",
+                "lte": "2017-07-05T23:59:59Z"
+              }
+            }
+          },
+          {
+            "term": {
+              "src_ip": "10.42.42.1"
+            }
+          },
+          {
+            "term": {
+              "protocol": "TCP"
+            }
+          },
+          {
+            "range": {
+              "bytes_out": {
+                "gt": 10000
+              }
+            }
+          }
+        ]
+      }
+    }
+  },
+  "results": {
+    "doc_ids": [
+      "1055abec4e06e6753135933603711b1c8e9a4387",
+      "2d4dfe09bb59f07c965c163248b07b745547bef2",
+      "8f586a6cd46bd6bb28614fe0287892735e702f49"
+    ],
+    "total_count": 3,
+    "samples": [
+      {
+        "id": "2d4dfe09bb59f07c965c163248b07b745547bef2",
+        "timestamp": "2017-07-03T08:00:00Z",
+        "label": "benign"
+      },
+      {
+        "id": "1055abec4e06e6753135933603711b1c8e9a4387",
+        "timestamp": "2017-07-03T14:30:00Z",
+        "label": "benign"
+      },
+      {
+        "id": "8f586a6cd46bd6bb28614fe0287892735e702f49",
+        "timestamp": "2017-07-05T02:00:00Z",
+        "label": "benign"
+      }
+    ]
+  }
+}

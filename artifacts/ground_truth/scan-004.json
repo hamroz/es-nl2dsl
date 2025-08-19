@@ -1,0 +1,49 @@
+{
+  "scenario_id": "scan-004",
+  "prompt": "Find UDP traffic with high outbound bytes (more than 50000) from internal IPs (10.x.x.x) on July 4, 2017.",
+  "time_window": {
+    "start": "2017-07-04T00:00:00Z",
+    "end": "2017-07-04T23:59:59Z"
+  },
+  "expert_dsl": {
+    "query": {
+      "bool": {
+        "filter": [
+          {
+            "range": {
+              "@timestamp": {
+                "gte": "2017-07-04T00:00:00Z",
+                "lte": "2017-07-04T23:59:59Z"
+              }
+            }
+          },
+          {
+            "term": {
+              "protocol": "UDP"
+            }
+          },
+          {
+            "range": {
+              "bytes_out": {
+                "gt": 50000
+              }
+            }
+          }
+        ]
+      }
+    }
+  },
+  "results": {
+    "doc_ids": [
+      "734844059e1549e53a8b4695cc246fe88757fc07"
+    ],
+    "total_count": 1,
+    "samples": [
+      {
+        "id": "734844059e1549e53a8b4695cc246fe88757fc07",
+        "timestamp": "2017-07-04T14:20:00Z",
+        "label": "malicious"
+      }
+    ]
+  }
+}

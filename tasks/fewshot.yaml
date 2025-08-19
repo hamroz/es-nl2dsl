@@ -1,0 +1,55 @@
+# Few-shot examples for query generation
+# These examples are used in prompts but not evaluated
+
+- prompt: "Find events labeled malicious on a specific date"
+  query:
+    query:
+      bool:
+        filter:
+          - range:
+              "@timestamp":
+                gte: "2017-07-04T00:00:00Z"
+                lte: "2017-07-04T23:59:59Z"
+          - term:
+              label: "malicious"
+
+- prompt: "Find TCP traffic from a specific IP address"
+  query:
+    query:
+      bool:
+        filter:
+          - term:
+              src_ip: "192.168.1.10"
+          - term:
+              protocol: "TCP"
+
+- prompt: "Find high-volume data transfers"
+  query:
+    query:
+      bool:
+        filter:
+          - range:
+              bytes_out:
+                gt: 10000
+
+- prompt: "Find traffic to multiple ports"
+  query:
+    query:
+      bool:
+        filter:
+          - terms:
+              dst_port: [80, 443, 8080]
+
+- prompt: "Find DNS queries within a time range"
+  query:
+    query:
+      bool:
+        filter:
+          - range:
+              "@timestamp":
+                gte: "2017-07-01T00:00:00Z"
+                lte: "2017-07-02T00:00:00Z"
+          - term:
+              dst_port: 53
+          - term:
+              protocol: "UDP"

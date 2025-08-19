@@ -23,10 +23,8 @@
           }
         },
         {
-          "terms": {
-            "protocol": [
-              "TCP"
-            ]
+          "term": {
+            "protocol": "TCP"
           }
         }
       ]

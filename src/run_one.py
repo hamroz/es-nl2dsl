@@ -73,7 +73,7 @@ def evaluate_queries(expert_file, candidate_file, index="logs_net"):
         return None, result.stdout + result.stderr
     
     # Find the most recent results file
-    results_files = sorted(output_dir.glob("exec_*.json"), key=lambda x: x.stat().st_mtime)
+    results_files = sorted(output_dir.glob("eval_*.json"), key=lambda x: x.stat().st_mtime)
     if not results_files:
         return None, "No results file created"
     

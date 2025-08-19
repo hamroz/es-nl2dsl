@@ -1,0 +1,58 @@
+{
+  "scenario_id": "scan-003",
+  "prompt": "Find all traffic to destination port 445 or 3389 on July 4, 2017.",
+  "time_window": {
+    "start": "2017-07-04T00:00:00Z",
+    "end": "2017-07-04T23:59:59Z"
+  },
+  "expert_dsl": {
+    "query": {
+      "bool": {
+        "filter": [
+          {
+            "range": {
+              "@timestamp": {
+                "gte": "2017-07-04T00:00:00Z",
+                "lte": "2017-07-04T23:59:59Z"
+              }
+            }
+          },
+          {
+            "terms": {
+              "dst_port": [
+                445,
+                3389
+              ]
+            }
+          }
+        ]
+      }
+    }
+  },
+  "results": {
+    "doc_ids": [
+      "00aaf876cf5c4f6424dc281010769f02d9b36029",
+      "544673aeffe5fff9ef79116c41230af85360d76c",
+      "5e0c4d41ddc7dedfabd13ba3c7188caab3e61c31",
+      "bc8abd80fd740dc069cb1329a7e2c2383b9c5d9d"
+    ],
+    "total_count": 4,
+    "samples": [
+      {
+        "id": "00aaf876cf5c4f6424dc281010769f02d9b36029",
+        "timestamp": "2017-07-04T03:15:00Z",
+        "label": "benign"
+      },
+      {
+        "id": "5e0c4d41ddc7dedfabd13ba3c7188caab3e61c31",
+        "timestamp": "2017-07-04T05:45:00Z",
+        "label": "malicious"
+      },
+      {
+        "id": "bc8abd80fd740dc069cb1329a7e2c2383b9c5d9d",
+        "timestamp": "2017-07-04T16:45:00Z",
+        "label": "benign"
+      }
+    ]
+  }
+}

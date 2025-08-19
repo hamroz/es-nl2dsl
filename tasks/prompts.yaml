@@ -72,3 +72,42 @@
         }
       }
     }
+
+- id: scan-005
+  category: multi-condition
+  prompt: "Find benign TCP traffic to ports 22 or 80 with less than 5000 total bytes on July 4, 2017."
+  time_window:
+    start: "2017-07-04T00:00:00Z"
+    end:   "2017-07-04T23:59:59Z"
+  expert_dsl: |
+    {
+      "query": {
+        "bool": {
+          "filter": [
+            { "range": { "@timestamp": { "gte": "2017-07-04T00:00:00Z", "lte": "2017-07-04T23:59:59Z" } } },
+            { "term": { "protocol": "TCP" } },
+            { "term": { "label": "benign" } },
+            { "terms": { "dst_port": [22, 80] } },
+            { "range": { "bytes_in": { "lt": 5000 } } }
+          ]
+        }
+      }
+    }
+
+- id: scan-006
+  category: source-analysis
+  prompt: "Find all traffic from source IPs starting with 192.168 between July 3-5, 2017."
+  time_window:
+    start: "2017-07-03T00:00:00Z"
+    end:   "2017-07-05T23:59:59Z"
+  expert_dsl: |
+    {
+      "query": {
+        "bool": {
+          "filter": [
+            { "range": { "@timestamp": { "gte": "2017-07-03T00:00:00Z", "lte": "2017-07-05T23:59:59Z" } } },
+            { "terms": { "src_ip": ["192.168.1.50", "192.168.1.100", "192.168.1.150", "192.168.2.50"] } }
+          ]
+        }
+      }
+    }

@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 from elasticsearch import Elasticsearch
 from elasticsearch.helpers import bulk
 import json
+from config import get_es_client_config, ES_ADMIN_CREDS, ES_DEFAULT_INDEX
 
 def add_laplace_noise(value, scale):
     """Add Laplace noise to a numeric value"""
@@ -53,13 +54,9 @@ def apply_dp_transformations(df, epsilon=1.0, timestamp_jitter_minutes=30):
     return df_dp
 
 def index_to_elasticsearch(df, index_name, es_host='localhost', es_port=9200, 
-                          es_user='elastic', es_password='ChangeMe_123'):
+                          es_user=None, es_password=None):
     """Index DataFrame to Elasticsearch"""
-    es = Elasticsearch(
-        hosts=[{'host': es_host, 'port': es_port, 'scheme': 'http'}],
-        basic_auth=(es_user, es_password),
-        verify_certs=False
-    )
+    es = Elasticsearch(**get_es_client_config(use_admin=True))
     
     # Check connection
     if not es.ping():
@@ -101,14 +98,14 @@ def index_to_elasticsearch(df, index_name, es_host='localhost', es_port=9200,
 def main():
     parser = argparse.ArgumentParser(description="Generate DP-synthetic network log data")
     parser.add_argument("--input", default="data_raw/sample.csv", help="Input CSV file")
-    parser.add_argument("--index", default="logs_net_dp", help="Target ES index name")
+    parser.add_argument("--index", default=ES_DEFAULT_INDEX + "_dp", help="Target ES index name")
     parser.add_argument("--epsilon", type=float, default=1.0, help="Privacy parameter (lower = more privacy)")
     parser.add_argument("--timestamp-jitter", type=int, default=30, help="Timestamp jitter window in minutes")
     parser.add_argument("--output-csv", help="Optional: save DP data to CSV")
     parser.add_argument("--host", default="localhost", help="Elasticsearch host")
     parser.add_argument("--port", type=int, default=9200, help="Elasticsearch port")
-    parser.add_argument("--user", default="elastic", help="Elasticsearch username")
-    parser.add_argument("--password", default="ChangeMe_123", help="Elasticsearch password")
+    parser.add_argument("--user", default=ES_ADMIN_CREDS['user'], help="Elasticsearch username")
+    parser.add_argument("--password", default=ES_ADMIN_CREDS['password'], help="Elasticsearch password")
     
     args = parser.parse_args()
     

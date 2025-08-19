@@ -1,0 +1,55 @@
+{
+  "scenario_id": "scan-001",
+  "prompt": "Find events labeled malicious on 2017-07-04.",
+  "time_window": {
+    "start": "2017-07-04T00:00:00Z",
+    "end": "2017-07-04T23:59:59Z"
+  },
+  "expert_dsl": {
+    "query": {
+      "bool": {
+        "filter": [
+          {
+            "range": {
+              "@timestamp": {
+                "gte": "2017-07-04T00:00:00Z",
+                "lte": "2017-07-04T23:59:59Z"
+              }
+            }
+          },
+          {
+            "term": {
+              "label": "malicious"
+            }
+          }
+        ]
+      }
+    }
+  },
+  "results": {
+    "doc_ids": [
+      "1df836404edb825fba3dcc0a39dc95124f5d196c",
+      "544673aeffe5fff9ef79116c41230af85360d76c",
+      "5e0c4d41ddc7dedfabd13ba3c7188caab3e61c31",
+      "734844059e1549e53a8b4695cc246fe88757fc07"
+    ],
+    "total_count": 4,
+    "samples": [
+      {
+        "id": "5e0c4d41ddc7dedfabd13ba3c7188caab3e61c31",
+        "timestamp": "2017-07-04T05:45:00Z",
+        "label": "malicious"
+      },
+      {
+        "id": "1df836404edb825fba3dcc0a39dc95124f5d196c",
+        "timestamp": "2017-07-04T12:34:56Z",
+        "label": "malicious"
+      },
+      {
+        "id": "734844059e1549e53a8b4695cc246fe88757fc07",
+        "timestamp": "2017-07-04T14:20:00Z",
+        "label": "malicious"
+      }
+    ]
+  }
+}

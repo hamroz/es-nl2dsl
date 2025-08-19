@@ -4,6 +4,7 @@ import sys
 import argparse
 import subprocess
 import yaml
+import time
 from pathlib import Path
 from jsonschema import validate, ValidationError
 
@@ -27,34 +28,19 @@ ALLOWED_OPERATORS = {
     "range": "Range queries with gte, gt, lte, lt for dates and numbers"
 }
 
-FEW_SHOT_EXAMPLES = [
-    {
-        "prompt": "Find events labeled malicious on 2017-07-04",
-        "query": {
-            "query": {
-                "bool": {
-                    "filter": [
-                        {"range": {"@timestamp": {"gte": "2017-07-04T00:00:00Z", "lte": "2017-07-04T23:59:59Z"}}},
-                        {"term": {"label": "malicious"}}
-                    ]
-                }
-            }
-        }
-    },
-    {
-        "prompt": "Find TCP traffic from IP 192.168.1.10",
-        "query": {
-            "query": {
-                "bool": {
-                    "filter": [
-                        {"term": {"src_ip": "192.168.1.10"}},
-                        {"term": {"protocol": "TCP"}}
-                    ]
-                }
-            }
-        }
-    }
+AMBIGUOUS_TERMS = [
+    "overnight", "last weekend", "yesterday", "today", "tomorrow",
+    "this week", "last week", "next week", "this month", "last month",
+    "recently", "lately", "soon", "earlier", "later"
 ]
+
+def load_fewshot_examples():
+    """Load few-shot examples from file"""
+    fewshot_path = Path(__file__).parent.parent / "tasks" / "fewshot.yaml"
+    if fewshot_path.exists():
+        with open(fewshot_path) as f:
+            return yaml.safe_load(f)
+    return []
 
 def build_prompt(task_prompt):
     """Build the constrained generation prompt"""
@@ -77,7 +63,8 @@ def build_prompt(task_prompt):
     prompt += "- Output only valid JSON, no explanations\n\n"
     
     prompt += "Examples:\n"
-    for example in FEW_SHOT_EXAMPLES:
+    fewshot_examples = load_fewshot_examples()
+    for example in fewshot_examples[:3]:  # Use first 3 examples
         prompt += f"Input: {example['prompt']}\n"
         prompt += f"Output: {json.dumps(example['query'], indent=2)}\n\n"
     
@@ -93,7 +80,7 @@ def call_local_model(prompt, model="llama3.1:latest"):
             ["ollama", "run", model, prompt],
             capture_output=True,
             text=True,
-            timeout=30
+            timeout=60
         )
         if result.returncode != 0:
             raise RuntimeError(f"Model call failed: {result.stderr}")
@@ -137,11 +124,33 @@ def validate_with_validator(query_json, rules_path):
         Path(temp_path).unlink()
         return False, str(e)
 
+def check_ambiguity(prompt_text):
+    """Check if prompt contains ambiguous time references"""
+    prompt_lower = prompt_text.lower()
+    for term in AMBIGUOUS_TERMS:
+        if term in prompt_lower:
+            return True, f"Ambiguous time reference detected: '{term}'"
+    return False, None
+
 def generate_with_retries(task_prompt, schema_path, rules_path, max_retries=2):
     """Generate query with validation and retries"""
+    start_time = time.time()
+    metrics = {
+        "attempts": 0,
+        "latency_seconds": 0,
+        "retry_reasons": []
+    }
+    
+    # Check for ambiguity first
+    is_ambiguous, ambiguity_reason = check_ambiguity(task_prompt)
+    if is_ambiguous:
+        metrics["latency_seconds"] = time.time() - start_time
+        return {"abstain": True, "reason": f"Ambiguous prompt: {ambiguity_reason}", "metrics": metrics}
+    
     prompt = build_prompt(task_prompt)
     
     for attempt in range(max_retries + 1):
+        metrics["attempts"] = attempt + 1
         print(f"Generation attempt {attempt + 1}/{max_retries + 1}")
         
         try:
@@ -166,7 +175,9 @@ def generate_with_retries(task_prompt, schema_path, rules_path, max_retries=2):
                     prompt += "Please fix the schema issues and try again.\n"
                     continue
                 else:
-                    return {"abstain": True, "reason": f"Schema validation failed: {schema_error}"}
+                    metrics["retry_reasons"].append(f"schema: {schema_error}")
+                    metrics["latency_seconds"] = time.time() - start_time
+                    return {"abstain": True, "reason": f"Schema validation failed: {schema_error}", "metrics": metrics}
             
             # Validate with validator.py
             validator_valid, validator_error = validate_with_validator(query_json, rules_path)
@@ -177,9 +188,13 @@ def generate_with_retries(task_prompt, schema_path, rules_path, max_retries=2):
                     prompt += "Please fix the validation issues and try again.\n"
                     continue
                 else:
-                    return {"abstain": True, "reason": f"Validation failed: {validator_error}"}
+                    metrics["retry_reasons"].append(f"validator: {validator_error}")
+                    metrics["latency_seconds"] = time.time() - start_time
+                    return {"abstain": True, "reason": f"Validation failed: {validator_error}", "metrics": metrics}
             
             # Success!
+            metrics["latency_seconds"] = time.time() - start_time
+            query_json["_generation_metrics"] = metrics
             return query_json
             
         except json.JSONDecodeError as e:
@@ -189,11 +204,15 @@ def generate_with_retries(task_prompt, schema_path, rules_path, max_retries=2):
                 prompt += "Please output valid JSON only.\n"
                 continue
             else:
-                return {"abstain": True, "reason": f"Invalid JSON: {e}"}
+                metrics["retry_reasons"].append(f"json: {e}")
+                metrics["latency_seconds"] = time.time() - start_time
+                return {"abstain": True, "reason": f"Invalid JSON: {e}", "metrics": metrics}
         except Exception as e:
-            return {"abstain": True, "reason": f"Generation error: {e}"}
+            metrics["latency_seconds"] = time.time() - start_time
+            return {"abstain": True, "reason": f"Generation error: {e}", "metrics": metrics}
     
-    return {"abstain": True, "reason": "Max retries exceeded"}
+    metrics["latency_seconds"] = time.time() - start_time
+    return {"abstain": True, "reason": "Max retries exceeded", "metrics": metrics}
 
 def main():
     parser = argparse.ArgumentParser(description="Generate constrained ES DSL queries")
@@ -219,14 +238,27 @@ def main():
     else:
         output_file = output_dir / "generated.json"
     
+    # Extract metrics before saving
+    metrics = None
+    if "_generation_metrics" in result and "abstain" not in result:
+        metrics = result.pop("_generation_metrics")
+    
     with open(output_file, 'w') as f:
         json.dump(result, f, indent=2)
     
     if "abstain" in result:
         print(f"Generation abstained: {result['reason']}")
+        if "metrics" in result:
+            print(f"Metrics: {result['metrics']['attempts']} attempts, {result['metrics']['latency_seconds']:.2f}s")
         sys.exit(1)
     else:
         print(f"Successfully generated query saved to {output_file}")
+        if metrics:
+            print(f"Metrics: {metrics['attempts']} attempts, {metrics['latency_seconds']:.2f}s")
+            # Save metrics separately
+            metrics_file = output_file.parent / f"{output_file.stem}.metrics.json"
+            with open(metrics_file, 'w') as f:
+                json.dump(metrics, f, indent=2)
         print(json.dumps(result, indent=2))
 
 if __name__ == "__main__":

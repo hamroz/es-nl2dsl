@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import argparse, json, time, pathlib, orjson
 from elasticsearch import Elasticsearch
+from config import get_es_client_config, ES_READER_CREDS, ES_DEFAULT_INDEX
 
 def run_query(es, index, dsl: dict, size=10000):
     res = es.search(index=index, body=dsl, size=size, track_total_hits=True)
@@ -21,15 +22,15 @@ def prf1(pred, gold):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--index", default="logs_net")
+    ap.add_argument("--index", default=ES_DEFAULT_INDEX)
     ap.add_argument("--expert", required=True, help="Path to expert DSL JSON")
     ap.add_argument("--candidate", required=True, help="Path to candidate DSL JSON")
     ap.add_argument("--out", default="artifacts/results")
-    ap.add_argument("--user", default="reader")
-    ap.add_argument("--password", default="ReaderPwd_123")
+    ap.add_argument("--user", default=ES_READER_CREDS['user'])
+    ap.add_argument("--password", default=ES_READER_CREDS['password'])
     args = ap.parse_args()
 
-    es = Elasticsearch("http://localhost:9200", basic_auth=(args.user, args.password), request_timeout=60)
+    es = Elasticsearch(**get_es_client_config(use_admin=False), request_timeout=60)
 
     expert = json.load(open(args.expert))
     cand   = json.load(open(args.candidate))
@@ -49,7 +50,7 @@ def main():
         "jaccard": jac, "precision": p, "recall": r, "f1": f1,
         "ts": stamp,
     }
-    outpath = outdir / f"exec_{stamp}.json"
+    outpath = outdir / f"eval_{stamp}.json"
     outpath.write_bytes(orjson.dumps(rec, option=orjson.OPT_INDENT_2))
     print(f"Wrote {outpath}"); print(orjson.dumps(rec, option=orjson.OPT_INDENT_2).decode())
 
