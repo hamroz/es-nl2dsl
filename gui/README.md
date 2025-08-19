@@ -49,7 +49,7 @@ A comprehensive web interface for the ES-NL2DSL framework, providing an intuitiv
    ```
 
 2. **Elasticsearch** running on localhost:9200
-3. **Ollama** with llama3.1:latest model
+3. **Ollama** with offline LLMs (llama3.1:latest is primary, also supports deepseek-r1:14b, gpt-oss:20b, etc.)
 
 ### Local Startup
 

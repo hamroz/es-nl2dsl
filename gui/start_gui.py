@@ -74,7 +74,7 @@ def check_ollama():
                 return True
             else:
                 print("⚠️ Ollama running but no models found")
-                print("  Install a model with: ollama pull llama3.1:latest")
+                print("  Install models with: ollama pull llama3.1:latest")
                 return False
         else:
             print("❌ Ollama not responding")
@@ -150,38 +150,53 @@ def start_services_docker():
         return False
 
 def pull_ollama_model():
-    """Pull required Ollama model if not present"""
-    print("🤖 Checking for required Ollama model...")
+    """Pull primary Ollama model if not present"""
+    print("🤖 Checking for offline LLM models...")
     
     try:
-        # Check if llama3.1 is available
+        # Check what models are available
         result = subprocess.run(
             ["ollama", "list"], 
             capture_output=True, text=True, timeout=10
         )
         
-        if "llama3.1" not in result.stdout:
-            print("📥 Pulling llama3.1:latest model...")
+        if result.returncode == 0:
+            models = []
+            for line in result.stdout.split('\n')[1:]:  # Skip header
+                if line.strip():
+                    models.append(line.split()[0])
+            
+            if models:
+                print(f"✅ Found {len(models)} models: {', '.join(models)}")
+                return True
+        
+        # If no models found, try to pull the primary model
+        if not models or "llama3.1" not in result.stdout:
+            print("📥 Pulling primary model llama3.1:latest...")
+            print("💡 You can also install additional models like:")
+            print("   ollama pull deepseek-r1:14b")
+            print("   ollama pull gpt-oss:20b")
+            
             pull_result = subprocess.run(
                 ["ollama", "pull", "llama3.1:latest"],
                 timeout=600  # 10 minutes timeout
             )
             
             if pull_result.returncode == 0:
-                print("✅ Model pulled successfully")
+                print("✅ Primary model pulled successfully")
                 return True
             else:
-                print("❌ Failed to pull model")
+                print("❌ Failed to pull primary model")
                 return False
         else:
-            print("✅ Model already available")
+            print("✅ Offline LLM models available")
             return True
             
     except subprocess.TimeoutExpired:
         print("⏳ Model pull is taking longer than expected, continuing...")
         return True
     except Exception as e:
-        print(f"⚠️ Error checking/pulling model: {e}")
+        print(f"⚠️ Error checking/pulling models: {e}")
         return True  # Continue anyway
 
 def start_streamlit():
@@ -258,6 +273,8 @@ def main():
                 print("   ollama serve")
                 if not pull_ollama_model():
                     print("   ollama pull llama3.1:latest")
+                    print("   ollama pull deepseek-r1:14b")
+                    print("   ollama pull gpt-oss:20b")
             
             if not (es_ok and ollama_ok):
                 print("\n⚠️ Some services are not ready. The GUI will still start but some features may not work.")

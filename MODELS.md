@@ -2,20 +2,37 @@
 
 ## Required Models
 
-### Primary Model: Llama 3.1 Latest
+### Supported Offline LLMs
+
+The system supports multiple offline LLM models via Ollama. The GUI automatically detects and displays all available models.
+
+#### Primary Model: Llama 3.1 Latest
 
 **Model**: `llama3.1:latest`  
 **Provider**: Ollama  
 **Size**: ~4.7GB download  
-**Purpose**: Natural language to Elasticsearch DSL translation
+**Purpose**: Primary model for natural language to Elasticsearch DSL translation
+
+#### Additional Supported Models
+
+The system can use any Ollama-compatible model, including:
+
+- **DeepSeek-R1**: `deepseek-r1:14b` (~8GB) - Advanced reasoning capabilities
+- **GPT-OSS**: `gpt-oss:20b` (~12GB) - Large context window
+- **Dolphin-Llama3**: `dolphin-llama3:latest` (~4GB) - Fine-tuned variant
 
 #### Installation
 ```bash
 # Install Ollama
 curl -fsSL https://ollama.ai/install.sh | sh
 
-# Pull the model (this may take 10-30 minutes)
+# Pull primary model (recommended)
 ollama pull llama3.1:latest
+
+# Optional: Pull additional models
+ollama pull deepseek-r1:14b
+ollama pull gpt-oss:20b  
+ollama pull dolphin-llama3:latest
 
 # Verify installation
 ollama list

@@ -86,7 +86,7 @@ The GUI will be available at **http://localhost:8501**
 ### Software
 - **Python**: 3.10.1+
 - **Docker & Docker Compose**: Latest stable version
-- **Ollama**: 0.3.x with `llama3.1:latest` model
+- **Ollama**: 0.3.x with offline LLMs such as `llama3.1:latest`, `deepseek-r1:14b`, `gpt-oss:20b` (llama3.1 is our primary model)
 - **Operating System**: macOS 14.5+, Ubuntu 20.04+, or Windows 11 with WSL2
 
 ### Network
@@ -106,9 +106,12 @@ cd es-nl2dsl
 conda env create -f environment.yml
 conda activate es-nl2dsl
 
-# Install Ollama and pull model
+# Install Ollama and pull models
 curl -fsSL https://ollama.ai/install.sh | sh
-ollama pull llama3.1:latest
+ollama pull llama3.1:latest  # Primary model
+# Optional: Pull additional models
+# ollama pull deepseek-r1:14b
+# ollama pull gpt-oss:20b
 ```
 
 ### Option 2: Using pip
@@ -125,9 +128,12 @@ source env/bin/activate  # On Windows: env\\Scripts\\activate
 # Install dependencies
 pip install -r requirements.txt
 
-# Install Ollama and pull model
+# Install Ollama and pull models
 curl -fsSL https://ollama.ai/install.sh | sh
-ollama pull llama3.1:latest
+ollama pull llama3.1:latest  # Primary model
+# Optional: Pull additional models
+# ollama pull deepseek-r1:14b
+# ollama pull gpt-oss:20b
 ```
 
 ### Initial Setup

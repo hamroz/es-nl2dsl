@@ -239,6 +239,26 @@ def validate_query(query_file: str) -> Tuple[bool, str]:
     except Exception as e:
         return False, str(e)
 
+def get_available_models() -> List[str]:
+    """Get list of available Ollama models"""
+    try:
+        result = subprocess.run(
+            ["ollama", "list"], 
+            capture_output=True, text=True, timeout=10
+        )
+        
+        if result.returncode == 0:
+            models = []
+            for line in result.stdout.split('\n')[1:]:  # Skip header
+                if line.strip():
+                    model_name = line.split()[0]
+                    models.append(model_name)
+            return models if models else ["llama3.1:latest"]  # Fallback
+        else:
+            return ["llama3.1:latest"]  # Fallback
+    except Exception as e:
+        return ["llama3.1:latest"]  # Fallback
+
 def get_recent_results() -> List[Dict]:
     """Get recent evaluation results"""
     try:

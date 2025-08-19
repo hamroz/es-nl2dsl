@@ -9,7 +9,7 @@ import sys
 project_root = Path(__file__).parent.parent.parent
 sys.path.append(str(project_root))
 
-from gui.utils.backend_interface import run_query_generation, validate_query
+from gui.utils.backend_interface import run_query_generation, validate_query, get_available_models
 
 def render_query_generator():
     """Render the query generator interface"""
@@ -47,7 +47,24 @@ def render_query_generator():
                 few_shot = st.checkbox("Few-shot Examples", value=True)
             
             with col1b:
-                model = st.selectbox("Model:", ["llama3.1:latest", "llama3.2:latest", "codellama:latest"])
+                # Get available models dynamically
+                available_models = get_available_models()
+                
+                # Set default model (prefer llama3.1 if available)
+                default_model = "llama3.1:latest"
+                if default_model not in available_models and available_models:
+                    default_model = available_models[0]
+                
+                default_index = 0
+                if default_model in available_models:
+                    default_index = available_models.index(default_model)
+                
+                model = st.selectbox(
+                    "Model:", 
+                    available_models,
+                    index=default_index,
+                    help=f"Available offline LLMs ({len(available_models)} models found)"
+                )
                 max_retries = st.number_input("Max Retries:", min_value=1, max_value=5, value=2)
         
         # Generate button

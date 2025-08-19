@@ -24,9 +24,10 @@ docker-compose up -d
 # 3. Install Python dependencies
 pip install -r requirements.txt
 
-# 4. Install Ollama model (one-time, may take 10+ minutes)
+# 4. Install Ollama models (one-time, may take 10+ minutes)
 curl -fsSL https://ollama.ai/install.sh | sh
-ollama pull llama3.1:latest
+ollama pull llama3.1:latest  # Primary model
+# Optional: ollama pull deepseek-r1:14b
 
 # 5. Complete setup
 ./setup.sh
@@ -172,8 +173,9 @@ docker-compose up -d
 # Verify model availability
 ollama list
 
-# Re-download if needed
+# Re-download primary model if needed
 ollama pull llama3.1:latest
+# Check available models: ollama list
 ```
 
 ### Generation Timeouts
