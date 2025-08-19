@@ -476,9 +476,9 @@ If you use this system in your research, please cite:
 ```bibtex
 @software{es_nl2dsl,
   title={ES-NL2DSL: Secure Natural Language to Elasticsearch DSL Translation},
-  author={[Your Name]},
+  author={[Hamroz Gavharov]},
   year={2025},
-  url={https://github.com/[username]/es-nl2dsl}
+  url={https://github.com/hamroz/es-nl2dsl}
 }
 ```
 
@@ -490,4 +490,4 @@ If you use this system in your research, please cite:
 
 ---
 
-**For questions, issues, or contributions, please open an issue on GitHub or contact the maintainers.**
+**For questions, issues, or contributions, please open an issue on GitHub or contact me.**
