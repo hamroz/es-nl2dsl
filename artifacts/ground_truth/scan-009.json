@@ -1,0 +1,44 @@
+{
+  "scenario_id": "scan-009",
+  "prompt": "Find connections with more than 5000 bytes received between July 3-4, 2017.",
+  "time_window": {
+    "start": "2017-07-03T00:00:00Z",
+    "end": "2017-07-04T23:59:59Z"
+  },
+  "expert_dsl": {
+    "query": {
+      "bool": {
+        "filter": [
+          {
+            "range": {
+              "@timestamp": {
+                "gte": "2017-07-03T00:00:00Z",
+                "lte": "2017-07-04T23:59:59Z"
+              }
+            }
+          },
+          {
+            "range": {
+              "bytes_in": {
+                "gt": 5000
+              }
+            }
+          }
+        ]
+      }
+    }
+  },
+  "results": {
+    "doc_ids": [
+      "1055abec4e06e6753135933603711b1c8e9a4387"
+    ],
+    "total_count": 1,
+    "samples": [
+      {
+        "id": "1055abec4e06e6753135933603711b1c8e9a4387",
+        "timestamp": "2017-07-03T14:30:00Z",
+        "label": "benign"
+      }
+    ]
+  }
+}

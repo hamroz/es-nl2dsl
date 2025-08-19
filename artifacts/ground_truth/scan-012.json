@@ -1,0 +1,54 @@
+{
+  "scenario_id": "scan-012",
+  "prompt": "Find malicious TCP traffic with bytes_out less than 3000 on July 4, 2017.",
+  "time_window": {
+    "start": "2017-07-04T00:00:00Z",
+    "end": "2017-07-04T23:59:59Z"
+  },
+  "expert_dsl": {
+    "query": {
+      "bool": {
+        "filter": [
+          {
+            "range": {
+              "@timestamp": {
+                "gte": "2017-07-04T00:00:00Z",
+                "lte": "2017-07-04T23:59:59Z"
+              }
+            }
+          },
+          {
+            "term": {
+              "label": "malicious"
+            }
+          },
+          {
+            "term": {
+              "protocol": "TCP"
+            }
+          },
+          {
+            "range": {
+              "bytes_out": {
+                "lt": 3000
+              }
+            }
+          }
+        ]
+      }
+    }
+  },
+  "results": {
+    "doc_ids": [
+      "1df836404edb825fba3dcc0a39dc95124f5d196c"
+    ],
+    "total_count": 1,
+    "samples": [
+      {
+        "id": "1df836404edb825fba3dcc0a39dc95124f5d196c",
+        "timestamp": "2017-07-04T12:34:56Z",
+        "label": "malicious"
+      }
+    ]
+  }
+}

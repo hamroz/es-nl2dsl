@@ -1,0 +1,53 @@
+{
+  "scenario_id": "scan-007",
+  "prompt": "Find all DNS queries (port 53 UDP) on July 4, 2017.",
+  "time_window": {
+    "start": "2017-07-04T00:00:00Z",
+    "end": "2017-07-04T23:59:59Z"
+  },
+  "expert_dsl": {
+    "query": {
+      "bool": {
+        "filter": [
+          {
+            "range": {
+              "@timestamp": {
+                "gte": "2017-07-04T00:00:00Z",
+                "lte": "2017-07-04T23:59:59Z"
+              }
+            }
+          },
+          {
+            "term": {
+              "dst_port": 53
+            }
+          },
+          {
+            "term": {
+              "protocol": "UDP"
+            }
+          }
+        ]
+      }
+    }
+  },
+  "results": {
+    "doc_ids": [
+      "734844059e1549e53a8b4695cc246fe88757fc07",
+      "79a91cc9ec2015d99e59a9a3c1686d8f3804c497"
+    ],
+    "total_count": 2,
+    "samples": [
+      {
+        "id": "79a91cc9ec2015d99e59a9a3c1686d8f3804c497",
+        "timestamp": "2017-07-04T01:00:00Z",
+        "label": "benign"
+      },
+      {
+        "id": "734844059e1549e53a8b4695cc246fe88757fc07",
+        "timestamp": "2017-07-04T14:20:00Z",
+        "label": "malicious"
+      }
+    ]
+  }
+}

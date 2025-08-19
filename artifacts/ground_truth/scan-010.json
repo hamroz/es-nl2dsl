@@ -1,0 +1,51 @@
+{
+  "scenario_id": "scan-010",
+  "prompt": "Find HTTP or HTTPS traffic (ports 80 or 443) on July 5, 2017.",
+  "time_window": {
+    "start": "2017-07-05T00:00:00Z",
+    "end": "2017-07-05T23:59:59Z"
+  },
+  "expert_dsl": {
+    "query": {
+      "bool": {
+        "filter": [
+          {
+            "range": {
+              "@timestamp": {
+                "gte": "2017-07-05T00:00:00Z",
+                "lte": "2017-07-05T23:59:59Z"
+              }
+            }
+          },
+          {
+            "terms": {
+              "dst_port": [
+                80,
+                443
+              ]
+            }
+          }
+        ]
+      }
+    }
+  },
+  "results": {
+    "doc_ids": [
+      "27c50ef6a5f814748f9d3af6c498963b1d53bcf9",
+      "8f586a6cd46bd6bb28614fe0287892735e702f49"
+    ],
+    "total_count": 2,
+    "samples": [
+      {
+        "id": "8f586a6cd46bd6bb28614fe0287892735e702f49",
+        "timestamp": "2017-07-05T02:00:00Z",
+        "label": "benign"
+      },
+      {
+        "id": "27c50ef6a5f814748f9d3af6c498963b1d53bcf9",
+        "timestamp": "2017-07-05T11:30:00Z",
+        "label": "benign"
+      }
+    ]
+  }
+}

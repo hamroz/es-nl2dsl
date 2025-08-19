@@ -111,3 +111,115 @@
         }
       }
     }
+
+- id: scan-007
+  category: dns-analysis
+  prompt: "Find all DNS queries (port 53 UDP) on July 4, 2017."
+  time_window:
+    start: "2017-07-04T00:00:00Z"
+    end:   "2017-07-04T23:59:59Z"
+  expert_dsl: |
+    {
+      "query": {
+        "bool": {
+          "filter": [
+            { "range": { "@timestamp": { "gte": "2017-07-04T00:00:00Z", "lte": "2017-07-04T23:59:59Z" } } },
+            { "term": { "dst_port": 53 } },
+            { "term": { "protocol": "UDP" } }
+          ]
+        }
+      }
+    }
+
+- id: scan-008
+  category: ssh-analysis
+  prompt: "Find SSH traffic (port 22) with benign label on July 4, 2017."
+  time_window:
+    start: "2017-07-04T00:00:00Z"
+    end:   "2017-07-04T23:59:59Z"
+  expert_dsl: |
+    {
+      "query": {
+        "bool": {
+          "filter": [
+            { "range": { "@timestamp": { "gte": "2017-07-04T00:00:00Z", "lte": "2017-07-04T23:59:59Z" } } },
+            { "term": { "dst_port": 22 } },
+            { "term": { "label": "benign" } }
+          ]
+        }
+      }
+    }
+
+- id: scan-009
+  category: large-transfers
+  prompt: "Find connections with more than 5000 bytes received between July 3-4, 2017."
+  time_window:
+    start: "2017-07-03T00:00:00Z"
+    end:   "2017-07-04T23:59:59Z"
+  expert_dsl: |
+    {
+      "query": {
+        "bool": {
+          "filter": [
+            { "range": { "@timestamp": { "gte": "2017-07-03T00:00:00Z", "lte": "2017-07-04T23:59:59Z" } } },
+            { "range": { "bytes_in": { "gt": 5000 } } }
+          ]
+        }
+      }
+    }
+
+- id: scan-010
+  category: web-traffic
+  prompt: "Find HTTP or HTTPS traffic (ports 80 or 443) on July 5, 2017."
+  time_window:
+    start: "2017-07-05T00:00:00Z"
+    end:   "2017-07-05T23:59:59Z"
+  expert_dsl: |
+    {
+      "query": {
+        "bool": {
+          "filter": [
+            { "range": { "@timestamp": { "gte": "2017-07-05T00:00:00Z", "lte": "2017-07-05T23:59:59Z" } } },
+            { "terms": { "dst_port": [80, 443] } }
+          ]
+        }
+      }
+    }
+
+- id: scan-011
+  category: internal-traffic
+  prompt: "Find traffic from 10.0.0.0/24 subnet to any destination on July 4, 2017."
+  time_window:
+    start: "2017-07-04T00:00:00Z"
+    end:   "2017-07-04T23:59:59Z"
+  expert_dsl: |
+    {
+      "query": {
+        "bool": {
+          "filter": [
+            { "range": { "@timestamp": { "gte": "2017-07-04T00:00:00Z", "lte": "2017-07-04T23:59:59Z" } } },
+            { "terms": { "src_ip": ["10.0.0.5", "10.0.0.7", "10.0.0.10", "10.0.0.15", "10.0.0.20"] } }
+          ]
+        }
+      }
+    }
+
+- id: scan-012
+  category: combined-filters
+  prompt: "Find malicious TCP traffic with bytes_out less than 3000 on July 4, 2017."
+  time_window:
+    start: "2017-07-04T00:00:00Z"
+    end:   "2017-07-04T23:59:59Z"
+  expert_dsl: |
+    {
+      "query": {
+        "bool": {
+          "filter": [
+            { "range": { "@timestamp": { "gte": "2017-07-04T00:00:00Z", "lte": "2017-07-04T23:59:59Z" } } },
+            { "term": { "label": "malicious" } },
+            { "term": { "protocol": "TCP" } },
+            { "range": { "bytes_out": { "lt": 3000 } } }
+          ]
+        }
+      }
+    }

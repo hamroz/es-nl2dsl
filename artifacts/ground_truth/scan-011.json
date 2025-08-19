@@ -1,0 +1,60 @@
+{
+  "scenario_id": "scan-011",
+  "prompt": "Find traffic from 10.0.0.0/24 subnet to any destination on July 4, 2017.",
+  "time_window": {
+    "start": "2017-07-04T00:00:00Z",
+    "end": "2017-07-04T23:59:59Z"
+  },
+  "expert_dsl": {
+    "query": {
+      "bool": {
+        "filter": [
+          {
+            "range": {
+              "@timestamp": {
+                "gte": "2017-07-04T00:00:00Z",
+                "lte": "2017-07-04T23:59:59Z"
+              }
+            }
+          },
+          {
+            "terms": {
+              "src_ip": [
+                "10.0.0.5",
+                "10.0.0.7",
+                "10.0.0.10",
+                "10.0.0.15",
+                "10.0.0.20"
+              ]
+            }
+          }
+        ]
+      }
+    }
+  },
+  "results": {
+    "doc_ids": [
+      "030ed842955dfd2a0b19ddcd332be9134be9e3a3",
+      "1df836404edb825fba3dcc0a39dc95124f5d196c",
+      "79a91cc9ec2015d99e59a9a3c1686d8f3804c497"
+    ],
+    "total_count": 3,
+    "samples": [
+      {
+        "id": "79a91cc9ec2015d99e59a9a3c1686d8f3804c497",
+        "timestamp": "2017-07-04T01:00:00Z",
+        "label": "benign"
+      },
+      {
+        "id": "1df836404edb825fba3dcc0a39dc95124f5d196c",
+        "timestamp": "2017-07-04T12:34:56Z",
+        "label": "malicious"
+      },
+      {
+        "id": "030ed842955dfd2a0b19ddcd332be9134be9e3a3",
+        "timestamp": "2017-07-04T18:00:00Z",
+        "label": "benign"
+      }
+    ]
+  }
+}

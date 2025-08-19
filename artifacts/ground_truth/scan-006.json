@@ -1,0 +1,59 @@
+{
+  "scenario_id": "scan-006",
+  "prompt": "Find all traffic from source IPs starting with 192.168 between July 3-5, 2017.",
+  "time_window": {
+    "start": "2017-07-03T00:00:00Z",
+    "end": "2017-07-05T23:59:59Z"
+  },
+  "expert_dsl": {
+    "query": {
+      "bool": {
+        "filter": [
+          {
+            "range": {
+              "@timestamp": {
+                "gte": "2017-07-03T00:00:00Z",
+                "lte": "2017-07-05T23:59:59Z"
+              }
+            }
+          },
+          {
+            "terms": {
+              "src_ip": [
+                "192.168.1.50",
+                "192.168.1.100",
+                "192.168.1.150",
+                "192.168.2.50"
+              ]
+            }
+          }
+        ]
+      }
+    }
+  },
+  "results": {
+    "doc_ids": [
+      "00aaf876cf5c4f6424dc281010769f02d9b36029",
+      "27c50ef6a5f814748f9d3af6c498963b1d53bcf9",
+      "bc8abd80fd740dc069cb1329a7e2c2383b9c5d9d"
+    ],
+    "total_count": 3,
+    "samples": [
+      {
+        "id": "00aaf876cf5c4f6424dc281010769f02d9b36029",
+        "timestamp": "2017-07-04T03:15:00Z",
+        "label": "benign"
+      },
+      {
+        "id": "bc8abd80fd740dc069cb1329a7e2c2383b9c5d9d",
+        "timestamp": "2017-07-04T16:45:00Z",
+        "label": "benign"
+      },
+      {
+        "id": "27c50ef6a5f814748f9d3af6c498963b1d53bcf9",
+        "timestamp": "2017-07-05T11:30:00Z",
+        "label": "benign"
+      }
+    ]
+  }
+}
