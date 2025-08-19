@@ -26,10 +26,16 @@ def render_query_generator():
     with col1:
         st.subheader("Input")
         
+        # Check for example selection
+        default_prompt = "Find events labeled malicious on 2017-07-04"
+        if "example_prompt" in st.session_state:
+            default_prompt = st.session_state.example_prompt
+            st.session_state.pop("example_prompt")  # Remove after use
+        
         # Query input
         prompt = st.text_area(
             "Natural Language Query:",
-            value="Find events labeled malicious on 2017-07-04",
+            value=default_prompt,
             height=100,
             help="Enter your query in natural language. Be specific about time ranges and conditions."
         )
@@ -173,7 +179,6 @@ def render_query_generator():
                             st.session_state.execute_query = True
                             st.session_state.query_to_execute = query
                             st.session_state.target_index = selected_index
-                            st.rerun()
                     except Exception as e:
                         st.error(f"Error formatting query: {e}")
                 
@@ -209,30 +214,67 @@ def render_query_generator():
                 st.code(results["output"])
     
     # Query Execution Section
-    if st.session_state.get("execute_query", False):
+    # Show execution results if we have them or if execution was requested
+    show_execution = (st.session_state.get("execute_query", False) or 
+                     "last_execution_results" in st.session_state)
+    
+    if show_execution:
         st.markdown("---")
         st.subheader("🔍 Query Execution Results")
         
         query_to_execute = st.session_state.get("query_to_execute", {})
         target_index = st.session_state.get("target_index", "logs_net")
         
-        # Reset execution flag
-        st.session_state.execute_query = False
+        # Check if we need to execute a new query
+        need_execution = st.session_state.get("execute_query", False)
         
-        if query_to_execute:
-            with st.spinner(f"Executing query on index '{target_index}'..."):
-                # Add size limit control
+        if need_execution:
+            # Reset execution flag
+            st.session_state.execute_query = False
+        
+        if query_to_execute or "last_execution_results" in st.session_state:
+            # Execution controls
+            exec_col1, exec_col2 = st.columns([3, 1])
+            
+            with exec_col1:
+                # Get current size limit from session state or default
+                current_size = st.session_state.get("execution_size_limit", 1000)
                 size_limit = st.slider(
                     "Max Results to Return:", 
-                    min_value=10, max_value=10000, value=1000, step=50,
+                    min_value=10, max_value=10000, value=current_size, step=50,
+                    key="size_limit_slider",
                     help="Limit the number of results returned to avoid overwhelming the interface"
                 )
-                
-                success, execution_results = execute_elasticsearch_query(
-                    query_to_execute, target_index, max_size=size_limit
-                )
+                # Store size limit in session state
+                st.session_state.execution_size_limit = size_limit
             
-            if success:
+            with exec_col2:
+                # Re-execute button
+                if st.button("🔄 Re-execute Query", type="secondary"):
+                    need_execution = True
+                    st.session_state.execute_query = True
+            
+            # Execute query if needed (first time or re-execute)
+            if need_execution and query_to_execute:
+                with st.spinner(f"Executing query on index '{target_index}'..."):
+                    success, execution_results = execute_elasticsearch_query(
+                        query_to_execute, target_index, max_size=size_limit
+                    )
+                    # Store results in session state for persistence
+                    if success:
+                        st.session_state.last_execution_results = execution_results
+                    else:
+                        st.session_state.last_execution_error = execution_results
+            
+            # Use stored results for display
+            execution_results = st.session_state.get("last_execution_results")
+            execution_error = st.session_state.get("last_execution_error")
+            
+            # Display results or errors
+            if execution_results:
+                # Display query info
+                st.info(f"📋 **Query executed on:** `{execution_results['index']}` | **Max results:** {st.session_state.get('execution_size_limit', 1000)}")
+                
                 # Display summary metrics
                 col1, col2, col3, col4 = st.columns(4)
                 
@@ -253,11 +295,22 @@ def render_query_generator():
                     display_cols = st.columns([3, 1, 1])
                     
                     with display_cols[0]:
+                        # Get current display format from session state or default
+                        current_format = st.session_state.get("execution_display_format", "Table")
+                        format_options = ["Table", "JSON", "Raw Data"]
+                        default_index = 0
+                        if current_format in format_options:
+                            default_index = format_options.index(current_format)
+                        
                         display_format = st.selectbox(
                             "Display Format:",
-                            ["Table", "JSON", "Raw Data"],
+                            format_options,
+                            index=default_index,
+                            key="display_format_selector",
                             help="Choose how to display the results"
                         )
+                        # Store format in session state
+                        st.session_state.execution_display_format = display_format
                     
                     with display_cols[1]:
                         # Export buttons
@@ -317,17 +370,31 @@ def render_query_generator():
                     st.subheader("📊 Aggregations")
                     st.json(execution_results['aggregations'])
                 
-                # Store results for later use
-                st.session_state.last_execution_results = execution_results
+                # Clear results button
+                st.markdown("---")
+                if st.button("🗑️ Clear Execution Results", type="secondary"):
+                    st.session_state.pop("last_execution_results", None)
+                    st.session_state.pop("last_execution_error", None)
+                    st.session_state.pop("execution_size_limit", None)
+                    st.session_state.pop("execution_display_format", None)
+                    st.rerun()
                 
-            else:
+            elif execution_error:
                 st.error("❌ Query Execution Failed")
                 st.write("**Error Details:**")
-                st.code(execution_results.get("error", "Unknown error"))
+                st.code(execution_error.get("error", "Unknown error"))
                 
                 # Show the query that failed for debugging
-                st.write("**Failed Query:**")
-                st.code(json.dumps(query_to_execute, indent=2), language="json")
+                query_to_show = execution_error.get("query", query_to_execute)
+                if query_to_show:
+                    st.write("**Failed Query:**")
+                    st.code(json.dumps(query_to_show, indent=2), language="json")
+                
+                # Clear results button for errors
+                if st.button("🗑️ Clear Error", type="secondary"):
+                    st.session_state.pop("last_execution_error", None)
+                    st.session_state.pop("last_execution_results", None)
+                    st.rerun()
     
     # Quick examples section
     st.markdown("---")
@@ -345,11 +412,9 @@ def render_query_generator():
         with col:
             if st.button(f"📝 Example {i+1}", key=f"example_{i}", use_container_width=True):
                 st.session_state.example_prompt = example
-                st.rerun()
+                st.toast(f"Example {i+1} selected!", icon="📝")
     
-    # Apply example if selected
-    if "example_prompt" in st.session_state:
-        st.session_state.pop("example_prompt")  # Remove after use
+    # Note: Example handling is now done at the top of the component
     
     # Query validation section
     st.markdown("---")

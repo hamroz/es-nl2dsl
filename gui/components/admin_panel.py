@@ -34,7 +34,7 @@ def render_admin_panel():
         # Refresh status button
         if st.button("🔄 Refresh System Status", type="primary"):
             st.session_state.pop("system_status", None)
-            st.rerun()
+            st.toast("System status refreshed!", icon="✅")
         
         # Get current system status
         status = check_system_status()
@@ -289,6 +289,7 @@ def render_admin_panel():
         # List existing indices
         if st.button("🔄 Refresh Index List"):
             st.session_state.pop("index_list", None)
+            st.toast("Index list refreshed!", icon="✅")
         
         # Get index information
         if "index_list" not in st.session_state:
@@ -388,7 +389,7 @@ def render_admin_panel():
                                 if result.returncode == 0:
                                     st.success(f"✅ Deleted {selected_index}")
                                     st.session_state.pop("index_list", None)
-                                    st.rerun()
+                                    st.toast(f"Index {selected_index} deleted successfully!", icon="✅")
                                 else:
                                     st.error("❌ Deletion failed")
                             except Exception as e:
@@ -417,11 +418,14 @@ def render_admin_panel():
                 
                 if st.button("🗑️ Clean Generated Files"):
                     try:
+                        cleaned_count = len(query_files)
                         for file in query_files:
                             file.unlink()
-                        st.success(f"✅ Cleaned {len(query_files)} files")
+                        st.success(f"✅ Cleaned {cleaned_count} files")
+                        st.session_state.generated_files_cleaned = True
                     except Exception as e:
                         st.error(f"Cleanup error: {e}")
+                        st.session_state.generated_files_cleaned = False
             else:
                 st.info("No generated files directory found")
         
@@ -436,11 +440,14 @@ def render_admin_panel():
                 
                 if st.button("🗑️ Clean Result Files"):
                     try:
+                        cleaned_count = len(result_files)
                         for file in result_files:
                             file.unlink()
-                        st.success(f"✅ Cleaned {len(result_files)} files")
+                        st.success(f"✅ Cleaned {cleaned_count} files")
+                        st.session_state.result_files_cleaned = True
                     except Exception as e:
                         st.error(f"Cleanup error: {e}")
+                        st.session_state.result_files_cleaned = False
             else:
                 st.info("No results directory found")
         

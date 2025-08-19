@@ -133,13 +133,13 @@ def render_privacy_analysis():
                     if st.button("✅ Select All Scenarios", use_container_width=True):
                         for scenario in scenarios:
                             st.session_state[f"privacy_scenario_{scenario['id']}"] = True
-                        st.rerun()
+                        st.toast("All scenarios selected for privacy analysis!", icon="✅")
                 
                 with select_col2:
                     if st.button("❌ Clear All Scenarios", use_container_width=True):
                         for scenario in scenarios:
                             st.session_state[f"privacy_scenario_{scenario['id']}"] = False
-                        st.rerun()
+                        st.toast("All scenarios cleared!", icon="❌")
                 
                 # Scenario checkboxes
                 for scenario in scenarios[:6]:  # Limit for privacy analysis

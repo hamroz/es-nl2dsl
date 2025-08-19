@@ -41,13 +41,13 @@ def render_evaluation_dashboard():
             if st.button("✅ Select All", use_container_width=True):
                 for scenario in scenarios:
                     st.session_state[f"scenario_{scenario['id']}"] = True
-                st.rerun()
+                st.toast("All scenarios selected!", icon="✅")
         
         with select_col2:
             if st.button("❌ Clear All", use_container_width=True):
                 for scenario in scenarios:
                     st.session_state[f"scenario_{scenario['id']}"] = False
-                st.rerun()
+                st.toast("All scenarios cleared!", icon="❌")
         
         st.markdown("---")
         
@@ -397,7 +397,7 @@ def render_evaluation_dashboard():
             if "evaluation_results" in st.session_state:
                 del st.session_state.evaluation_results
                 st.success("Results cleared!")
-                st.rerun()
+                st.toast("Evaluation results cleared!", icon="🗑️")
     
     # Recent evaluations
     st.markdown("---")

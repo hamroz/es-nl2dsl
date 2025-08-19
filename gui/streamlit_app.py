@@ -50,6 +50,24 @@ st.markdown("""
         border-radius: 0.5rem;
         border-left: 4px solid #1f77b4;
     }
+    /* Improve sidebar navigation */
+    .stSidebar .stButton > button {
+        width: 100%;
+        text-align: left;
+        border-radius: 8px;
+        margin-bottom: 4px;
+        transition: all 0.2s ease;
+    }
+    .stSidebar .stButton > button:hover {
+        background-color: #f0f2f6;
+        border-color: #1f77b4;
+    }
+    /* Active navigation button styling */
+    .stSidebar .stButton > button[kind="primary"] {
+        background-color: #1f77b4 !important;
+        color: white !important;
+        border-color: #1f77b4 !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -108,26 +126,53 @@ def main():
     render_header()
     render_status_bar()
     
-    # Sidebar navigation
-    st.sidebar.title("Navigation")
+    # Initialize current page in session state
+    if "current_page" not in st.session_state:
+        st.session_state.current_page = "🤖 Query Generator"
     
-    page = st.sidebar.selectbox(
-        "Choose a section:",
-        [
-            "🤖 Query Generator",
-            "📊 Evaluation Dashboard", 
-            "🛡️ Security Testing",
-            "🔒 Privacy Analysis",
-            "⚙️ System Administration"
-        ]
-    )
+    # Sidebar navigation with persistent buttons
+    st.sidebar.title("🧭 Navigation")
+    
+    # Show current page indicator
+    st.sidebar.markdown(f"**Current:** {st.session_state.current_page}")
+    st.sidebar.markdown("---")
+    
+    # Navigation buttons
+    nav_options = [
+        "🤖 Query Generator",
+        "📊 Evaluation Dashboard", 
+        "🛡️ Security Testing",
+        "🔒 Privacy Analysis",
+        "⚙️ System Administration"
+    ]
+    
+    # Create navigation buttons
+    for option in nav_options:
+        is_current = st.session_state.current_page == option
+        button_type = "primary" if is_current else "secondary"
+        
+        # Don't disable buttons - just style them differently
+        if st.sidebar.button(
+            option, 
+            key=f"nav_{option}",
+            use_container_width=True,
+            type=button_type
+        ):
+            # Only change page if it's different from current
+            if not is_current:
+                st.session_state.current_page = option
+                st.rerun()  # Rerun only for navigation changes
+    
+    st.sidebar.markdown("---")
     
     # Add refresh button in sidebar
-    if st.sidebar.button("🔄 Refresh Status"):
+    if st.sidebar.button("🔄 Refresh Status", use_container_width=True):
         st.session_state.pop("system_status", None)
-        st.rerun()
+        # Don't call st.rerun() here to avoid navigation reset
+        st.toast("Status refreshed!", icon="✅")
     
-    # Render selected page
+    # Render selected page based on session state
+    page = st.session_state.current_page
     if page == "🤖 Query Generator":
         render_query_generator()
     elif page == "📊 Evaluation Dashboard":
