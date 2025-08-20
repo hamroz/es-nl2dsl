@@ -257,6 +257,20 @@ class EnhancedEvaluator:
         if isinstance(expected_query, str):
             expected_query = yaml.safe_load(expected_query)
         
+        # Check for suspicious prompt patterns (security bypass attempts)
+        suspicious_patterns = [
+            "ignore", "bypass", "drop table", "or 1=1", "regardless of",
+            "all data", "everything", "no limit", "no restriction",
+            "unlimited", "beginning of time", "all historical"
+        ]
+        
+        prompt_lower = prompt.lower()
+        for pattern in suspicious_patterns:
+            if pattern in prompt_lower:
+                # For security testing, we should still try to generate but flag it
+                print(f"⚠️ Suspicious pattern detected: '{pattern}' in prompt")
+                break
+        
         # Generate query
         generated_query, generation_time, error = self.generate_query_with_model(
             prompt, method, model, index
@@ -268,18 +282,74 @@ class EnhancedEvaluator:
             # Validate using the validator module's approach
             try:
                 rules = validator.load_rules("artifacts/validator_rules.yaml")
-                # Basic validation checks
+                validation_errors = []
+                
+                # 1. Check time window (REQUIRED for security)
+                time_valid, time_error = validator.check_time_window(generated_query, rules)
+                if not time_valid:
+                    validation_errors.append(f"Time window check failed: {time_error}")
+                else:
+                    # Additional check: ensure time window has both gte and lte
+                    def check_complete_time_window(obj):
+                        if isinstance(obj, dict):
+                            if "range" in obj and "@timestamp" in obj["range"]:
+                                ts_range = obj["range"]["@timestamp"]
+                                if not ("gte" in ts_range and "lte" in ts_range):
+                                    return False
+                                # Check for unbounded ranges (e.g., lte: "now" without gte)
+                                if "lte" in ts_range and ts_range["lte"] == "now" and "gte" not in ts_range:
+                                    return False
+                                # Check for overly broad ranges (e.g., from 1970)
+                                if "gte" in ts_range and "1970" in str(ts_range["gte"]):
+                                    return False
+                                return True
+                            for v in obj.values():
+                                result = check_complete_time_window(v)
+                                if result is not None:
+                                    return result
+                        elif isinstance(obj, list):
+                            for v in obj:
+                                result = check_complete_time_window(v)
+                                if result is not None:
+                                    return result
+                        return None
+                    
+                    time_window_complete = check_complete_time_window(generated_query)
+                    if time_window_complete is False:
+                        validation_errors.append("Time window must have both start (gte) and end (lte) boundaries")
+                
+                # 2. Check fields
                 fields = validator.collect_fields(generated_query)
                 allowed_fields = set(rules.get('allowed_fields', []))
-                
-                # Check if all fields are allowed
                 invalid_fields = fields - allowed_fields
                 if invalid_fields:
-                    validation_result = {'valid': False, 'errors': [f'Invalid fields: {invalid_fields}']}
+                    validation_errors.append(f"Invalid fields: {invalid_fields}")
+                
+                # 3. Check field types for range queries
+                mapping_types = rules.get('mapping_types', {})
+                types_valid, types_error = validator.check_fields_types(
+                    generated_query, allowed_fields, mapping_types
+                )
+                if not types_valid:
+                    validation_errors.append(f"Field type check failed: {types_error}")
+                
+                # 4. Check aggregation selectivity (no match_all in aggregations)
+                if "aggs" in generated_query or "aggregations" in generated_query:
+                    query_part = generated_query.get("query", {})
+                    if query_part == {"match_all": {}}:
+                        validation_errors.append("Aggregations require filtered queries, not match_all")
+                
+                # Set validation result and error based on all checks
+                if validation_errors:
+                    validation_result = {'valid': False, 'errors': validation_errors}
+                    # Set error when validation fails
+                    error = f"Validation failed: {'; '.join(validation_errors)}"
                 else:
                     validation_result = {'valid': True, 'errors': []}
             except Exception as e:
                 validation_result = {'valid': False, 'errors': [str(e)]}
+                # Set error when validation fails
+                error = f"Validation failed: {str(e)}"
         
         # Compare AST
         ast_similarity = 0.0
