@@ -173,27 +173,61 @@ def render_query_generator():
                     # Format and display JSON
                     try:
                         formatted_query = json.dumps(query, indent=2)
-                        st.code(formatted_query, language="json")
                         
-                        # Buttons row
-                        button_col1, button_col2 = st.columns(2)
+                        # Create editable text area for query
+                        st.subheader("📝 Generated Query (Editable)")
+                        st.info("💡 You can edit the query below before executing")
                         
-                        with button_col1:
-                            st.download_button(
-                                "📥 Download Query",
-                                data=formatted_query,
-                                file_name=f"query_{int(time.time())}.json",
-                                mime="application/json"
-                            )
+                        # Initialize edited query in session state if not exists
+                        if 'edited_query' not in st.session_state or st.session_state.get('last_generated_query') != formatted_query:
+                            st.session_state.edited_query = formatted_query
+                            st.session_state.last_generated_query = formatted_query
                         
-                        with button_col2:
-                            execute_button = st.button("🚀 Execute Query", type="secondary")
+                        # Editable text area
+                        edited_query_str = st.text_area(
+                            "Edit Query:",
+                            value=st.session_state.edited_query,
+                            height=300,
+                            key="query_editor",
+                            help="Modify the query as needed. Must be valid JSON."
+                        )
                         
-                        # Execute query if button pressed
-                        if execute_button:
-                            st.session_state.execute_query = True
-                            st.session_state.query_to_execute = query
-                            st.session_state.target_index = selected_index
+                        # Update session state with edited query
+                        st.session_state.edited_query = edited_query_str
+                        
+                        # Validate JSON
+                        try:
+                            parsed_query = json.loads(edited_query_str)
+                            st.success("✅ Valid JSON")
+                            
+                            # Buttons row
+                            button_col1, button_col2, button_col3 = st.columns(3)
+                            
+                            with button_col1:
+                                st.download_button(
+                                    "📥 Download Query",
+                                    data=edited_query_str,
+                                    file_name=f"query_{int(time.time())}.json",
+                                    mime="application/json"
+                                )
+                            
+                            with button_col2:
+                                if st.button("🔄 Reset to Original", type="secondary"):
+                                    st.session_state.edited_query = formatted_query
+                                    st.rerun()
+                            
+                            with button_col3:
+                                execute_button = st.button("🚀 Execute Query", type="primary")
+                            
+                            # Execute query if button pressed
+                            if execute_button:
+                                st.session_state.execute_query = True
+                                st.session_state.query_to_execute = parsed_query
+                                st.session_state.target_index = selected_index
+                                
+                        except json.JSONDecodeError as e:
+                            st.error(f"❌ Invalid JSON: {str(e)}")
+                            st.warning("Please fix the JSON syntax before executing")
                     except Exception as e:
                         st.error(f"Error formatting query: {e}")
                 
@@ -411,6 +445,47 @@ def render_query_generator():
                         
                         if len(execution_results['results']) > 100:
                             st.info(f"Showing first 100 results. Total: {len(execution_results['results'])} documents.")
+                
+                else:
+                    # No results found - show helpful information
+                    st.warning("⚠️ No results found")
+                    
+                    # Try to provide helpful suggestions
+                    st.subheader("💡 Suggestions")
+                    
+                    # Show the query that was executed
+                    with st.expander("Query that was executed:", expanded=True):
+                        st.code(json.dumps(query_to_execute, indent=2), language="json")
+                    
+                    # Provide helpful tips based on index
+                    if "cic" in target_index.lower():
+                        st.info("""
+                        **Common issues with CIC-IDS2017 queries:**
+                        
+                        1. **Check IP addresses**: DDoS attacks come from `172.16.0.1`, not `192.168.x.x`
+                        2. **Verify ports**: Common attack ports are 80, 21, 443, 22, 444
+                        3. **Adjust thresholds**: 
+                           - Packet rates: Average is ~2 pps, high is >10 pps
+                           - Flow duration: In milliseconds (1000 = 1 second)
+                        4. **Check attack types**: dos, scan, bruteforce (not DDoS, portscan, etc.)
+                        
+                        **Try these example queries that work:**
+                        - Find DDoS attacks from 172.16.0.1
+                        - Find port scans targeting port 80
+                        - Find traffic with packet rate over 5
+                        """)
+                    else:
+                        st.info("""
+                        **Possible reasons for no results:**
+                        
+                        1. The combination of filters is too restrictive
+                        2. Check field values match actual data
+                        3. Verify date ranges include your data
+                        4. Try removing some conditions
+                        """)
+                    
+                    # Suggest editing the query
+                    st.success("✨ **Tip**: Edit the query above and try different values!")
                 
                 # Display aggregations if present
                 if execution_results.get('aggregations'):
