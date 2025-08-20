@@ -1,4 +1,12 @@
-"""Query Generator Component for Streamlit GUI"""
+"""Query Generator Component for Streamlit GUI
+
+User Experience Improvements:
+- Fixed display format selectbox to respond reliably on first click
+- Improved session state management for consistent UI behavior
+- Eliminated race conditions in widget state updates
+- Fixed slider value validation to prevent browser console errors
+- Fixed example query buttons to work immediately on first click
+"""
 import streamlit as st
 import json
 import time
@@ -26,19 +34,26 @@ def render_query_generator():
     with col1:
         st.subheader("Input")
         
-        # Check for example selection
+        # Handle example selection with immediate text area update
         default_prompt = "Find events labeled malicious on 2017-07-04"
-        if "example_prompt" in st.session_state:
-            default_prompt = st.session_state.example_prompt
-            st.session_state.pop("example_prompt")  # Remove after use
+        
+        # Check if an example was just selected
+        if "selected_example" in st.session_state:
+            default_prompt = st.session_state.selected_example
+            # Keep the example in session state until user changes it
         
         # Query input
         prompt = st.text_area(
             "Natural Language Query:",
             value=default_prompt,
             height=100,
+            key="query_text_input",
             help="Enter your query in natural language. Be specific about time ranges and conditions."
         )
+        
+        # Clear selected example if user modified the text
+        if "selected_example" in st.session_state and prompt != st.session_state.selected_example:
+            st.session_state.pop("selected_example", None)
         
         # Index and method selection in two columns
         method_col, index_col = st.columns(2)
@@ -237,16 +252,40 @@ def render_query_generator():
             exec_col1, exec_col2 = st.columns([3, 1])
             
             with exec_col1:
-                # Get current size limit from session state or default
-                current_size = st.session_state.get("execution_size_limit", 1000)
+                # Define slider constraints
+                min_val, max_val, step_val = 10, 10000, 50
+                default_val = 1000
+                
+                # Initialize and validate size limit in session state
+                if "execution_size_limit" not in st.session_state:
+                    st.session_state.execution_size_limit = default_val
+                
+                # Validate current session state value against slider constraints
+                current_val = st.session_state.execution_size_limit
+                
+                # Ensure value is within bounds
+                current_val = max(min_val, min(max_val, current_val))
+                
+                # Ensure value is compatible with step (round to nearest valid step)
+                # Example: if current_val=1075, step=50, min=10, result=1060 (valid step)
+                current_val = round((current_val - min_val) / step_val) * step_val + min_val
+                
+                # Update session state with validated value
+                st.session_state.execution_size_limit = current_val
+                
                 size_limit = st.slider(
                     "Max Results to Return:", 
-                    min_value=10, max_value=10000, value=current_size, step=50,
+                    min_value=min_val, 
+                    max_value=max_val, 
+                    value=current_val, 
+                    step=step_val,
                     key="size_limit_slider",
                     help="Limit the number of results returned to avoid overwhelming the interface"
                 )
-                # Store size limit in session state
-                st.session_state.execution_size_limit = size_limit
+                
+                # Update session state only when value actually changes
+                if size_limit != st.session_state.execution_size_limit:
+                    st.session_state.execution_size_limit = size_limit
             
             with exec_col2:
                 # Re-execute button
@@ -295,22 +334,30 @@ def render_query_generator():
                     display_cols = st.columns([3, 1, 1])
                     
                     with display_cols[0]:
-                        # Get current display format from session state or default
-                        current_format = st.session_state.get("execution_display_format", "Table")
                         format_options = ["Table", "JSON", "Raw Data"]
-                        default_index = 0
-                        if current_format in format_options:
-                            default_index = format_options.index(current_format)
                         
+                        # Initialize display format if not set
+                        if "execution_display_format" not in st.session_state:
+                            st.session_state.execution_display_format = "Table"
+                        
+                        # Ensure current selection is valid
+                        current_selection = st.session_state.execution_display_format
+                        if current_selection not in format_options:
+                            current_selection = "Table"
+                            st.session_state.execution_display_format = current_selection
+                        
+                        # Use a stable key for the selectbox
                         display_format = st.selectbox(
                             "Display Format:",
                             format_options,
-                            index=default_index,
-                            key="display_format_selector",
+                            index=format_options.index(current_selection),
+                            key="query_results_display_format",
                             help="Choose how to display the results"
                         )
-                        # Store format in session state
-                        st.session_state.execution_display_format = display_format
+                        
+                        # Update session state when selection changes
+                        if display_format != st.session_state.execution_display_format:
+                            st.session_state.execution_display_format = display_format
                     
                     with display_cols[1]:
                         # Export buttons
@@ -411,8 +458,11 @@ def render_query_generator():
     for i, (col, example) in enumerate(zip(example_cols, examples)):
         with col:
             if st.button(f"📝 Example {i+1}", key=f"example_{i}", use_container_width=True):
-                st.session_state.example_prompt = example
+                # Store selected example for immediate text area update
+                st.session_state.selected_example = example
                 st.toast(f"Example {i+1} selected!", icon="📝")
+                # Force rerun to immediately update text area with new value
+                st.rerun()
     
     # Note: Example handling is now done at the top of the component
     

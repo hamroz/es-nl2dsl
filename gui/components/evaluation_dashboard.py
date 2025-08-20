@@ -1,4 +1,10 @@
-"""Evaluation Dashboard Component for Streamlit GUI"""
+"""Evaluation Dashboard Component for Streamlit GUI
+
+User Experience Improvements:
+- Select All/Clear All buttons maintain user context without navigation disruption
+- Toast notifications provide immediate feedback
+- No unnecessary page reruns that would reset user's workflow
+"""
 import streamlit as st
 import pandas as pd
 import plotly.express as px
@@ -42,12 +48,14 @@ def render_evaluation_dashboard():
                 for scenario in scenarios:
                     st.session_state[f"scenario_{scenario['id']}"] = True
                 st.toast("All scenarios selected!", icon="✅")
+                # Don't call st.rerun() to avoid disrupting user workflow
         
         with select_col2:
             if st.button("❌ Clear All", use_container_width=True):
                 for scenario in scenarios:
                     st.session_state[f"scenario_{scenario['id']}"] = False
                 st.toast("All scenarios cleared!", icon="❌")
+                # Don't call st.rerun() to avoid disrupting user workflow
         
         st.markdown("---")
         

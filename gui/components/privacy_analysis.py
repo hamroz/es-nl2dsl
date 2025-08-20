@@ -1,4 +1,10 @@
-"""Privacy Analysis Component for Streamlit GUI"""
+"""Privacy Analysis Component for Streamlit GUI
+
+User Experience Improvements:
+- Tab navigation preserved when using Select All/Clear All buttons
+- No unnecessary page reruns that would reset user's current tab
+- Toast notifications provide feedback without disrupting workflow
+"""
 import streamlit as st
 import pandas as pd
 import plotly.express as px
@@ -134,12 +140,14 @@ def render_privacy_analysis():
                         for scenario in scenarios:
                             st.session_state[f"privacy_scenario_{scenario['id']}"] = True
                         st.toast("All scenarios selected for privacy analysis!", icon="✅")
+                        # Don't call st.rerun() to avoid tab reset
                 
                 with select_col2:
                     if st.button("❌ Clear All Scenarios", use_container_width=True):
                         for scenario in scenarios:
                             st.session_state[f"privacy_scenario_{scenario['id']}"] = False
                         st.toast("All scenarios cleared!", icon="❌")
+                        # Don't call st.rerun() to avoid tab reset
                 
                 # Scenario checkboxes
                 for scenario in scenarios[:6]:  # Limit for privacy analysis

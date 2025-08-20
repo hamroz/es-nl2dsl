@@ -168,7 +168,7 @@ def main():
     # Add refresh button in sidebar
     if st.sidebar.button("🔄 Refresh Status", use_container_width=True):
         st.session_state.pop("system_status", None)
-        # Don't call st.rerun() here to avoid navigation reset
+        # Don't call st.rerun() here to avoid navigation reset and maintain user's current tab
         st.toast("Status refreshed!", icon="✅")
     
     # Render selected page based on session state

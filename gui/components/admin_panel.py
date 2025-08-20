@@ -35,6 +35,7 @@ def render_admin_panel():
         if st.button("🔄 Refresh System Status", type="primary"):
             st.session_state.pop("system_status", None)
             st.toast("System status refreshed!", icon="✅")
+            # Note: No st.rerun() to avoid tab reset - status will refresh on next interaction
         
         # Get current system status
         status = check_system_status()
@@ -290,6 +291,7 @@ def render_admin_panel():
         if st.button("🔄 Refresh Index List"):
             st.session_state.pop("index_list", None)
             st.toast("Index list refreshed!", icon="✅")
+            # Note: No st.rerun() to avoid tab reset - list will refresh on next interaction
         
         # Get index information
         if "index_list" not in st.session_state:
