@@ -144,7 +144,13 @@ def main():
     mapping = es.indices.get_mapping(index=args.index)
     props = mapping[args.index]["mappings"]["properties"]
     mapping_types = {k: v.get("type") for k, v in props.items()}
-    allowed_fields = set(rules["fields"]["allowed"])
+    # Handle both formats for backwards compatibility
+    if "fields" in rules and "allowed" in rules["fields"]:
+        allowed_fields = set(rules["fields"]["allowed"])
+    elif "allowed_fields" in rules:
+        allowed_fields = set(rules["allowed_fields"])
+    else:
+        allowed_fields = set()  # Empty set if not defined
 
     # Log validation events
     log_dir = Path("artifacts/results")

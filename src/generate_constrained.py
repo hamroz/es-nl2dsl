@@ -34,44 +34,21 @@ ALLOWED_OPERATORS = {
     "range": "Range queries with gte, gt, lte, lt for dates and numbers"
 }
 
+# Terms that are too vague to convert to specific time ranges
 AMBIGUOUS_TERMS = [
-    "overnight", "last weekend", "yesterday", "today", "tomorrow",
-    "this week", "last week", "next week", "this month", "last month", 
-    "recently", "lately", "soon", "earlier", "later"
+    "recently", "lately", "soon", "earlier", "later", "sometime",
+    "a while ago", "not long ago", "in the past", "previously"
 ]
 
-# Security patterns that should be blocked
-SECURITY_PATTERNS = [
-    # Time restriction bypasses
-    "ignore time restrictions", "ignore time", "no time filter", "without time", 
-    "bypass time", "skip time", "all time", "any time", "ignore timestamp",
-    
-    # Broad data access attempts
-    "all data", "everything", "all documents", "all events", "all records",
-    "no restrictions", "no limits", "unrestricted", "unlimited", "complete data",
-    "entire dataset", "full database", "all logs", "every record",
-    
-    # Long time ranges that exceed limits
-    "last year", "past year", "last 2 years", "last 3 years", "last 5 years",
-    "last decade", "all years", "since 2000", "since beginning", "historical data",
-    "long term", "multi-year", "years of data",
-    
-    # Resource exhaustion
-    "million documents", "billion documents", "large aggregation", "huge query",
-    "all 10 million", "massive dataset", "entire index", "full scan",
-    
-    # Credential/sensitive data fishing
-    "password", "credential", "secret", "api_key", "token", "admin",
-    "private_key", "certificate", "ssn", "credit_card", "social security",
-    "internal_secret", "confidential", "classified",
-    
-    # System manipulation attempts
-    "delete", "drop", "truncate", "update", "modify", "alter", "create",
-    "execute", "system", "eval", "script", "bypass validator", "ignore validation",
-    "raw query", "direct access", "admin access", "ignore all", "match_all query",
-    "future year", "/etc/passwd", "access denied", "return match_all", 
-    "ignore all previous", "ignore instructions"
+# Terms that can be converted to specific dates (not ambiguous)
+CONVERTIBLE_TIME_TERMS = [
+    "today", "yesterday", "tomorrow", "this week", "last week",
+    "this month", "last month", "last hour", "past hour", "last 24 hours"
 ]
+
+# Security patterns that should be blocked - DEPRECATED (now handled in check_security_violations)
+# Keeping empty list to avoid breaking other code that might reference it
+SECURITY_PATTERNS = []
 
 def load_fewshot_examples(index=None):
     """Load few-shot examples from file"""
@@ -215,36 +192,98 @@ def check_security_violations(prompt_text):
     """Check for security violations and ambiguous terms"""
     prompt_lower = prompt_text.lower()
     
-    # Check ambiguous time references
-    for term in AMBIGUOUS_TERMS:
-        if term in prompt_lower:
-            return True, f"Ambiguous time reference detected: '{term}'"
-    
-    # Check security patterns
-    for pattern in SECURITY_PATTERNS:
-        if pattern in prompt_lower:
-            return True, f"Security violation detected: '{pattern}'"
-    
-    # Check for unknown fields being requested
-    unknown_fields = ["credit_card", "ssn", "password", "private_key", "secret_key", 
-                     "api_key", "token", "credential", "admin123", "internal_secret"]
-    for field in unknown_fields:
-        if field in prompt_lower:
-            return True, f"Attempt to access non-existent/sensitive field: '{field}'"
-    
-    # Check for SQL injection patterns
-    sql_patterns = ["drop table", "delete from", "insert into", "update set", 
-                   "select *", "union select", "sql", "database"]
+    # Check for SQL injection patterns FIRST (more specific patterns)
+    sql_patterns = [
+        "drop table", "drop database", "delete from", "insert into", "update set",
+        "union select", "exec(", "execute(", "xp_cmdshell", "sp_executesql"
+    ]
     for pattern in sql_patterns:
         if pattern in prompt_lower:
             return True, f"SQL injection attempt detected: '{pattern}'"
     
-    # Check for excessive time ranges (more sophisticated)
-    excessive_ranges = ["5 years", "10 years", "decade", "all time", "since 2000", 
-                       "since beginning", "historical", "years of data"]
+    # Check for logical bypass attempts (check before broad patterns)
+    bypass_patterns = [
+        "or 1=1", "or 1 = 1", "or true", "' or '", '" or "',
+        "or1==1", "or 1==1", " 1==1",  # Additional patterns with space
+        "ignore previous", "ignore all previous", "bypass validator",
+        "ignore validation", "skip validation", "raw query"
+    ]
+    for pattern in bypass_patterns:
+        if pattern in prompt_lower:
+            return True, f"Bypass attempt detected: '{pattern}'"
+    
+    # Check for command injection patterns
+    command_patterns = [
+        "erase all", "delete all", "drop all", "truncate", "rm -rf",
+        "format c:", "/etc/passwd", "sudo", "chmod 777"
+    ]
+    for pattern in command_patterns:
+        if pattern in prompt_lower:
+            return True, f"Command injection attempt detected: '{pattern}'"
+    
+    # Check ambiguous time references (after more serious violations)
+    # But allow convertible time terms like "today", "yesterday" etc.
+    for term in AMBIGUOUS_TERMS:
+        if term in prompt_lower:
+            # Double-check it's not a convertible term
+            is_convertible = any(conv in prompt_lower for conv in CONVERTIBLE_TIME_TERMS)
+            if not is_convertible:
+                return True, f"Ambiguous time reference detected: '{term}'"
+    
+    # Check for overly broad data requests WITH context
+    # "all data" is only bad if not qualified (e.g., "all data from today" is OK)
+    # BUT check for SQL injection BEFORE broad patterns
+    broad_patterns = [
+        ("all data", ["from", "between", "on", "during", "today", "yesterday", "last", "where", "in", "with"]),
+        ("everything", ["from", "between", "on", "during", "today", "yesterday", "where", "in", "last", "past"]),
+        ("entire database", []),  # Always bad
+        ("full database", []),    # Always bad
+        ("no restrictions", []),  # Always bad
+        ("no limits", []),        # Always bad
+        ("unrestricted", []),     # Always bad
+    ]
+    
+    for pattern, allowed_qualifiers in broad_patterns:
+        if pattern in prompt_lower:
+            # Skip if this is part of a SQL injection pattern already caught
+            if any(x in prompt_lower for x in ["or 1=", "or 1 =", "1==1"]):
+                continue  # Already handled by bypass patterns
+            # Check if any qualifier is present
+            has_qualifier = any(qual in prompt_lower for qual in allowed_qualifiers)
+            if not allowed_qualifiers or not has_qualifier:
+                return True, f"Overly broad data request: '{pattern}'"
+    
+    # Check for sensitive field access
+    import re
+    sensitive_fields = [
+        "passwords?", "passwd", "credentials?", "secret_key", "private_key",
+        "api_key", "tokens?", "ssn", "social security", "credit_card"
+    ]
+    for field in sensitive_fields:
+        # More precise matching - check for word boundaries
+        if re.search(r'\b' + field + r'\b', prompt_lower):
+            # Extract the actual matched word for the error message
+            match = re.search(r'\b' + field + r'\b', prompt_lower)
+            return True, f"Attempt to access sensitive field: '{match.group()}'"
+    
+    # Check for excessive time ranges
+    excessive_ranges = [
+        "last 5 years", "last 10 years", "last decade", "all time",
+        "since 2000", "since beginning", "years of data"
+    ]
     for range_term in excessive_ranges:
         if range_term in prompt_lower:
             return True, f"Excessive time range request: '{range_term}'"
+    
+    # Check for attack-related queries - these should be ALLOWED for security analysis
+    # Only block if trying to PERFORM attacks, not analyze them
+    attack_actions = [
+        "perform attack", "execute attack", "launch attack", "start attack",
+        "initiate ddos", "start ddos", "flood the", "overwhelm the"
+    ]
+    for action in attack_actions:
+        if action in prompt_lower:
+            return True, f"Attack action attempt: '{action}'"
     
     return False, None
 

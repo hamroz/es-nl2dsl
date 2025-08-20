@@ -532,18 +532,126 @@ def display_security_summary(results):
     blocked = sum(1 for r in results if (r.error if hasattr(r, 'error') else r.get('error')))
     passed = total - blocked
     
-    col1, col2, col3 = st.columns(3)
+    # Summary metrics
+    col1, col2, col3, col4 = st.columns(4)
     with col1:
         st.metric("Total Tests", total)
     with col2:
-        st.metric("Blocked", blocked, delta=f"{blocked/total*100:.1f}%")
+        st.metric("🚫 Blocked", blocked, delta=f"{blocked/total*100:.1f}%" if total > 0 else "0%")
     with col3:
-        st.metric("Passed", passed, delta=f"-{passed/total*100:.1f}%", delta_color="inverse")
+        st.metric("⚠️ Passed", passed, delta=f"-{passed/total*100:.1f}%" if total > 0 else "0%", delta_color="inverse")
+    with col4:
+        block_rate = (blocked/total*100) if total > 0 else 0
+        st.metric("Block Rate", f"{block_rate:.1f}%", 
+                 delta="Good" if block_rate > 60 else "Needs Review",
+                 delta_color="normal" if block_rate > 60 else "inverse")
     
-    if blocked > 0:
-        st.success(f"✅ Security measures blocked {blocked/total*100:.1f}% of adversarial prompts")
-    else:
-        st.warning("⚠️ All adversarial prompts passed - review security measures")
+    # Visual pie chart for quick overview
+    if total > 0:
+        col1, col2 = st.columns([1, 2])
+        with col1:
+            if blocked > 0:
+                st.success(f"✅ Security blocked {blocked/total*100:.1f}% of prompts")
+            else:
+                st.warning("⚠️ All prompts passed - review security")
+        
+        with col2:
+            # Create pie chart
+            fig = go.Figure(data=[go.Pie(
+                labels=['Blocked', 'Passed'],
+                values=[blocked, passed],
+                hole=.3,
+                marker_colors=['#ff4444', '#ffaa00'],
+                textinfo='label+percent',
+                textposition='auto'
+            )])
+            fig.update_layout(
+                height=200,
+                margin=dict(t=20, b=20, l=20, r=20),
+                showlegend=False
+            )
+            st.plotly_chart(fig, use_container_width=True)
+    
+    # Detailed results for each prompt
+    st.markdown("---")
+    st.markdown("### 📋 Detailed Test Results")
+    
+    # Create tabs for blocked and passed prompts
+    tab_blocked, tab_passed, tab_all = st.tabs(["🚫 Blocked", "⚠️ Passed", "📊 All Results"])
+    
+    with tab_blocked:
+        blocked_results = [r for r in results if (r.error if hasattr(r, 'error') else r.get('error'))]
+        if blocked_results:
+            st.markdown(f"**{len(blocked_results)} prompts were successfully blocked:**")
+            for i, result in enumerate(blocked_results, 1):
+                prompt = result.prompt if hasattr(result, 'prompt') else result.get('prompt', 'Unknown')
+                error = result.error if hasattr(result, 'error') else result.get('error', 'Unknown error')
+                
+                with st.expander(f"🚫 **Test {i}:** {prompt[:80]}...", expanded=False):
+                    st.markdown("**Prompt:**")
+                    st.code(prompt, language="text")
+                    st.markdown("**Blocking Reason:**")
+                    st.error(error)
+                    
+                    # Show validation details if available
+                    if hasattr(result, 'validation_result') and result.validation_result:
+                        st.markdown("**Validation Details:**")
+                        st.json(result.validation_result)
+        else:
+            st.info("No prompts were blocked")
+    
+    with tab_passed:
+        passed_results = [r for r in results if not (r.error if hasattr(r, 'error') else r.get('error'))]
+        if passed_results:
+            st.warning(f"**{len(passed_results)} prompts passed validation - review these carefully:**")
+            for i, result in enumerate(passed_results, 1):
+                prompt = result.prompt if hasattr(result, 'prompt') else result.get('prompt', 'Unknown')
+                
+                with st.expander(f"⚠️ **Test {i}:** {prompt[:80]}...", expanded=False):
+                    st.markdown("**Prompt:**")
+                    st.code(prompt, language="text")
+                    
+                    if result.generated_query:
+                        st.markdown("**Generated Query:**")
+                        st.json(result.generated_query)
+                    
+                    if hasattr(result, 'validation_result') and result.validation_result:
+                        st.markdown("**Validation Status:**")
+                        if result.validation_result.get('valid'):
+                            st.success("✅ Query passed all validation checks")
+                        else:
+                            st.error(f"❌ Validation issues: {result.validation_result.get('errors')}")
+        else:
+            st.success("No prompts passed - excellent security!")
+    
+    with tab_all:
+        st.markdown("**Complete test results:**")
+        
+        # Create a dataframe for easy viewing
+        results_data = []
+        for i, result in enumerate(results, 1):
+            prompt = result.prompt if hasattr(result, 'prompt') else result.get('prompt', 'Unknown')
+            error = result.error if hasattr(result, 'error') else result.get('error')
+            status = "🚫 Blocked" if error else "⚠️ Passed"
+            
+            results_data.append({
+                "Test #": i,
+                "Status": status,
+                "Prompt": prompt[:100] + "..." if len(prompt) > 100 else prompt,
+                "Reason": error[:100] + "..." if error and len(error) > 100 else (error or "Query generated successfully")
+            })
+        
+        df = pd.DataFrame(results_data)
+        
+        # Add color coding
+        def color_status(val):
+            if "Blocked" in val:
+                return 'background-color: #ffcccc'
+            else:
+                return 'background-color: #ffffcc'
+        
+        styled_df = df.style.applymap(color_status, subset=['Status'])
+        st.dataframe(styled_df, use_container_width=True, height=400)
 
 
 def display_cic_security_results(results):
@@ -582,18 +690,72 @@ def display_custom_security_results(results):
     """Display custom security test results"""
     st.markdown("#### Custom Prompt Results")
     
-    for result in results:
-        prompt = result.prompt if hasattr(result, 'prompt') else result.get('prompt', 'Unknown')
-        error = result.error if hasattr(result, 'error') else result.get('error')
-        
-        if error:
-            st.error(f"❌ **Blocked:** {prompt[:100]}...")
-            st.caption(f"Reason: {error}")
+    # Summary
+    total = len(results)
+    blocked = sum(1 for r in results if (r.error if hasattr(r, 'error') else r.get('error')))
+    passed = total - blocked
+    
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("Total Custom Tests", total)
+    with col2:
+        st.metric("Blocked", blocked, delta=f"{blocked/total*100:.1f}%" if total > 0 else "0%")
+    with col3:
+        st.metric("Passed", passed, delta=f"-{passed/total*100:.1f}%" if total > 0 else "0%", delta_color="inverse")
+    
+    st.markdown("---")
+    
+    # Detailed results
+    tab_blocked, tab_passed, tab_all = st.tabs(["🚫 Blocked", "⚠️ Passed", "📊 All Results"])
+    
+    with tab_blocked:
+        blocked_results = [r for r in results if (r.error if hasattr(r, 'error') else r.get('error'))]
+        if blocked_results:
+            for i, result in enumerate(blocked_results, 1):
+                prompt = result.prompt if hasattr(result, 'prompt') else result.get('prompt', 'Unknown')
+                error = result.error if hasattr(result, 'error') else result.get('error', 'Unknown error')
+                
+                with st.expander(f"🚫 **Custom Test {i}:** {prompt[:80]}...", expanded=False):
+                    st.markdown("**Prompt:**")
+                    st.code(prompt, language="text")
+                    st.markdown("**Blocking Reason:**")
+                    st.error(error)
         else:
-            st.success(f"✅ **Passed:** {prompt[:100]}...")
-            if result.generated_query:
-                with st.expander("Generated Query"):
-                    st.json(result.generated_query)
+            st.info("No custom prompts were blocked")
+    
+    with tab_passed:
+        passed_results = [r for r in results if not (r.error if hasattr(r, 'error') else r.get('error'))]
+        if passed_results:
+            for i, result in enumerate(passed_results, 1):
+                prompt = result.prompt if hasattr(result, 'prompt') else result.get('prompt', 'Unknown')
+                
+                with st.expander(f"⚠️ **Custom Test {i}:** {prompt[:80]}...", expanded=False):
+                    st.markdown("**Prompt:**")
+                    st.code(prompt, language="text")
+                    
+                    if result.generated_query:
+                        st.markdown("**Generated Query:**")
+                        st.json(result.generated_query)
+        else:
+            st.success("All custom prompts were blocked!")
+    
+    with tab_all:
+        # Summary table
+        results_data = []
+        for i, result in enumerate(results, 1):
+            prompt = result.prompt if hasattr(result, 'prompt') else result.get('prompt', 'Unknown')
+            error = result.error if hasattr(result, 'error') else result.get('error')
+            
+            results_data.append({
+                "Test #": i,
+                "Status": "🚫 Blocked" if error else "⚠️ Passed",
+                "Prompt": prompt[:80] + "..." if len(prompt) > 80 else prompt,
+                "Result": error[:80] + "..." if error and len(error) > 80 else (error or "Query generated")
+            })
+        
+        if results_data:
+            df = pd.DataFrame(results_data)
+            st.dataframe(df, use_container_width=True)
 
 
 def generate_security_report(results, model_stats, error_categories):
