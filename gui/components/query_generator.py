@@ -17,11 +17,21 @@ import sys
 project_root = Path(__file__).parent.parent.parent
 sys.path.append(str(project_root))
 
+from src.external_llm_manager import get_external_llm_manager
 from gui.utils.backend_interface import (
     run_query_generation, validate_query, get_available_models,
     get_available_indices, execute_elasticsearch_query, 
     export_results_as_csv, export_results_as_json
 )
+
+def get_external_llm_models():
+    """Get list of enabled external LLM models"""
+    try:
+        manager = get_external_llm_manager()
+        llms = manager.list_llms(enabled_only=True)
+        return [llm.name for llm in llms]
+    except:
+        return []
 
 def render_query_generator():
     """Render the query generator interface"""
@@ -87,24 +97,36 @@ def render_query_generator():
                 few_shot = st.checkbox("Few-shot Examples", value=True)
             
             with col1b:
-                # Get available models dynamically
+                # Get available models dynamically (both local and external)
                 available_models = get_available_models()
+                external_models = get_external_llm_models()
                 
-                # Set default model (prefer llama3.1 if available)
-                default_model = "llama3.1:latest"
-                if default_model not in available_models and available_models:
-                    default_model = available_models[0]
+                # Combine models with prefixes
+                all_models = []
+                if available_models:
+                    all_models.extend([f"Local: {m}" for m in available_models])
+                if external_models:
+                    all_models.extend([f"External: {m}" for m in external_models])
                 
-                default_index = 0
-                if default_model in available_models:
-                    default_index = available_models.index(default_model)
-                
-                model = st.selectbox(
-                    "Model:", 
-                    available_models,
-                    index=default_index,
-                    help=f"Available offline LLMs ({len(available_models)} models found)"
-                )
+                if not all_models:
+                    st.warning("No models available. Please configure LLMs.")
+                    model = None
+                else:
+                    # Set default model (prefer llama3.1 if available)
+                    default_model = "Local: llama3.1:latest"
+                    if default_model not in all_models and all_models:
+                        default_model = all_models[0]
+                    
+                    default_index = 0
+                    if default_model in all_models:
+                        default_index = all_models.index(default_model)
+                    
+                    model = st.selectbox(
+                        "Model:", 
+                        all_models,
+                        index=default_index,
+                        help=f"Available LLMs: {len(available_models)} local, {len(external_models)} external"
+                    )
                 max_retries = st.number_input("Max Retries:", min_value=1, max_value=5, value=2)
         
         # Generate button
@@ -137,7 +159,9 @@ def render_query_generator():
                 progress_bar.progress(50)
                 
                 # Run generation
-                success, output, data = run_query_generation(prompt, method, index=selected_index)
+                success, output, data = run_query_generation(
+                    prompt, method, index=selected_index, model=model
+                )
                 
                 # Step 3: Validation
                 status_text.text("✅ Validating output...")

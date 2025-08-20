@@ -75,13 +75,25 @@ def check_system_status() -> Dict[str, any]:
     return status
 
 def run_query_generation(prompt: str, method: str = "constrained", 
-                        task_id: Optional[str] = None, index: Optional[str] = None) -> Tuple[bool, str, Dict]:
+                        task_id: Optional[str] = None, index: Optional[str] = None,
+                        model: Optional[str] = None) -> Tuple[bool, str, Dict]:
     """Run query generation with specified method"""
     
     if not task_id:
         task_id = f"gui_{int(time.time())}"
     
-    if method == "constrained":
+    # Check if using external LLM
+    if model and model.startswith("External:"):
+        external_llm_name = model.replace("External: ", "")
+        cmd = [
+            sys.executable, "src/generate_with_external.py",
+            "--prompt", prompt,
+            "--llm", external_llm_name,
+            "--task-id", task_id
+        ]
+        if index:
+            cmd.extend(["--index", index])
+    elif method == "constrained":
         cmd = [
             sys.executable, "src/generate_constrained.py",
             "--prompt", prompt,
@@ -89,6 +101,10 @@ def run_query_generation(prompt: str, method: str = "constrained",
         ]
         if index:
             cmd.extend(["--index", index])
+        # Add model if it's a local model
+        if model and model.startswith("Local:"):
+            local_model = model.replace("Local: ", "")
+            cmd.extend(["--model", local_model])
     elif method == "rules":
         cmd = [
             sys.executable, "src/baseline_rules.py",

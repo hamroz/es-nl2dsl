@@ -13,6 +13,7 @@ project_root = Path(__file__).parent.parent.parent
 sys.path.append(str(project_root))
 
 from gui.utils.backend_interface import check_system_status
+from gui.components.external_llm_panel import render_external_llm_panel
 
 def render_admin_panel():
     """Render the system administration interface"""
@@ -20,10 +21,11 @@ def render_admin_panel():
     st.write("Monitor and manage system components, data, and configurations")
     
     # Create tabs for different admin functions
-    tab1, tab2, tab3, tab4, tab5 = st.tabs([
+    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
         "🔧 System Status", 
         "📊 Data Management", 
-        "🗂️ Index Management", 
+        "🗂️ Index Management",
+        "🤖 External LLMs",
         "🔄 Maintenance", 
         "📋 Logs & Monitoring"
     ])
@@ -579,6 +581,9 @@ def render_admin_panel():
             st.error("❌ Could not retrieve index list. Check Elasticsearch connection.")
     
     with tab4:
+        render_external_llm_panel()
+    
+    with tab5:
         st.subheader("🔄 System Maintenance")
         
         # Cleanup operations
@@ -671,7 +676,7 @@ def render_admin_panel():
                 total = len(health_results)
                 st.write(f"**Health Score:** {passed}/{total} checks passed ({(passed/total)*100:.0f}%)")
     
-    with tab5:
+    with tab6:
         st.subheader("📋 Logs & Monitoring")
         
         # System logs
