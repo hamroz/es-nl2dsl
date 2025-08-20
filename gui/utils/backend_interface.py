@@ -67,7 +67,7 @@ def check_system_status() -> Dict[str, any]:
     return status
 
 def run_query_generation(prompt: str, method: str = "constrained", 
-                        task_id: Optional[str] = None) -> Tuple[bool, str, Dict]:
+                        task_id: Optional[str] = None, index: Optional[str] = None) -> Tuple[bool, str, Dict]:
     """Run query generation with specified method"""
     
     if not task_id:
@@ -79,6 +79,8 @@ def run_query_generation(prompt: str, method: str = "constrained",
             "--prompt", prompt,
             "--task-id", task_id
         ]
+        if index:
+            cmd.extend(["--index", index])
     elif method == "rules":
         cmd = [
             sys.executable, "src/baseline_rules.py",

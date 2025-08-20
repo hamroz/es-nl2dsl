@@ -1,0 +1,21 @@
+{
+  "query": {
+    "bool": {
+      "filter": [
+        {
+          "range": {
+            "@timestamp": {
+              "gte": "2017-07-03T08:00:00",
+              "lt": "2017-07-03T10:00:00"
+            }
+          }
+        },
+        {
+          "term": {
+            "day_of_week": "Monday"
+          }
+        }
+      ]
+    }
+  }
+}

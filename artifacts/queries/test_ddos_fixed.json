@@ -1,0 +1,32 @@
+{
+  "query": {
+    "bool": {
+      "filter": [
+        {
+          "term": {
+            "attack_type": "dos"
+          }
+        },
+        {
+          "term": {
+            "day_of_week": "Friday"
+          }
+        },
+        {
+          "range": {
+            "flow_packets_s": {
+              "gte": 10000
+            }
+          }
+        },
+        {
+          "range": {
+            "@timestamp": {
+              "gte": "now-30d"
+            }
+          }
+        }
+      ]
+    }
+  }
+}

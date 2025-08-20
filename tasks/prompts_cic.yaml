@@ -1,0 +1,64 @@
+scenarios:
+  # Basic attack detection queries
+  - id: cic-001
+    prompt: "Find all DDoS attacks on July 7, 2017"
+    description: "Query for DDoS attack events"
+    
+  - id: cic-002
+    prompt: "Show me port scan activities from Friday"
+    description: "Detect port scanning attempts"
+    
+  - id: cic-003
+    prompt: "Find SSH brute force attacks on Tuesday"
+    description: "SSH-Patator brute force detection"
+    
+  - id: cic-004
+    prompt: "Get all malicious traffic with more than 1000 packets"
+    description: "High-volume malicious flows"
+    
+  # Advanced flow analysis queries
+  - id: cic-005
+    prompt: "Find flows with high packet rate (>10000 packets/s) in the last 7 days"
+    description: "High packet rate detection"
+    
+  - id: cic-006
+    prompt: "Show TCP connections with SYN flags greater than 5"
+    description: "SYN flood detection"
+    
+  - id: cic-007
+    prompt: "Find flows with duration over 100000 milliseconds from source IP 192.168.10.5"
+    description: "Long-duration flows from specific IP"
+    
+  - id: cic-008
+    prompt: "Get all traffic with RST flags on port 80"
+    description: "Reset flag analysis on HTTP"
+    
+  # Statistical analysis queries  
+  - id: cic-009
+    prompt: "Find flows where average packet size is greater than 1000 bytes"
+    description: "Large packet analysis"
+    
+  - id: cic-010
+    prompt: "Show all flows with flow bytes per second greater than 1000000"
+    description: "High bandwidth flow detection"
+    
+  - id: cic-011
+    prompt: "Find traffic on Monday morning between 8am and 12pm"
+    description: "Time-based filtering with day/hour"
+    
+  - id: cic-012
+    prompt: "Get infiltration attacks from Thursday afternoon"
+    description: "Specific attack type detection"
+    
+  # Complex pattern queries
+  - id: cic-013
+    prompt: "Find flows with both high packet count (>1000) and label not BENIGN"
+    description: "Combined flow and attack filtering"
+    
+  - id: cic-014
+    prompt: "Show web attacks with destination port 443 or 8080"
+    description: "Web attack on multiple ports"
+    
+  - id: cic-015
+    prompt: "Find all traffic where flow IAT mean is greater than 5000"
+    description: "Inter-arrival time analysis"

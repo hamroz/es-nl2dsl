@@ -1,0 +1,142 @@
+time_window:
+  required: true
+  max_days: 30
+fields:
+  allowed:
+    # Standard fields (compatible with existing system)
+    - "@timestamp"
+    - "src_ip"
+    - "dst_ip"
+    - "src_port"
+    - "dst_port"
+    - "protocol"
+    - "bytes_in"
+    - "bytes_out"
+    - "label"
+    - "attack_type"
+    - "message"
+    
+    # CIC-specific flow fields
+    - "flow_id"
+    - "flow_duration"
+    - "total_fwd_packets"
+    - "total_bwd_packets"
+    - "total_packets"
+    
+    # Packet length statistics
+    - "fwd_packet_length_max"
+    - "fwd_packet_length_min"
+    - "fwd_packet_length_mean"
+    - "fwd_packet_length_std"
+    - "bwd_packet_length_max"
+    - "bwd_packet_length_min"
+    - "bwd_packet_length_mean"
+    - "bwd_packet_length_std"
+    - "packet_length_min"
+    - "packet_length_max"
+    - "packet_length_mean"
+    - "packet_length_std"
+    - "packet_length_variance"
+    
+    # Flow statistics
+    - "flow_bytes_s"
+    - "flow_packets_s"
+    - "flow_iat_mean"
+    - "flow_iat_std"
+    - "flow_iat_max"
+    - "flow_iat_min"
+    
+    # Inter-arrival time statistics
+    - "fwd_iat_total"
+    - "fwd_iat_mean"
+    - "fwd_iat_std"
+    - "fwd_iat_max"
+    - "fwd_iat_min"
+    - "bwd_iat_total"
+    - "bwd_iat_mean"
+    - "bwd_iat_std"
+    - "bwd_iat_max"
+    - "bwd_iat_min"
+    
+    # TCP flags
+    - "fwd_psh_flags"
+    - "bwd_psh_flags"
+    - "fwd_urg_flags"
+    - "bwd_urg_flags"
+    - "fin_flag_count"
+    - "syn_flag_count"
+    - "rst_flag_count"
+    - "psh_flag_count"
+    - "ack_flag_count"
+    - "urg_flag_count"
+    
+    # Segment sizes
+    - "avg_packet_size"
+    - "avg_fwd_segment_size"
+    - "avg_bwd_segment_size"
+    
+    # Active/Idle statistics
+    - "active_mean"
+    - "active_std"
+    - "active_max"
+    - "active_min"
+    - "idle_mean"
+    - "idle_std"
+    - "idle_max"
+    - "idle_min"
+    
+    # Temporal fields
+    - "day_of_week"
+    - "hour_of_day"
+    
+types:
+  # Integer fields
+  src_port: integer
+  dst_port: integer
+  hour_of_day: integer
+  fwd_psh_flags: integer
+  bwd_psh_flags: integer
+  fwd_urg_flags: integer
+  bwd_urg_flags: integer
+  fin_flag_count: integer
+  syn_flag_count: integer
+  rst_flag_count: integer
+  psh_flag_count: integer
+  ack_flag_count: integer
+  urg_flag_count: integer
+  
+  # Long fields
+  bytes_in: long
+  bytes_out: long
+  flow_duration: long
+  total_fwd_packets: long
+  total_bwd_packets: long
+  total_packets: long
+  
+  # Float fields
+  flow_bytes_s: float
+  flow_packets_s: float
+  flow_iat_mean: float
+  flow_iat_std: float
+  flow_iat_max: float
+  flow_iat_min: float
+  fwd_iat_mean: float
+  fwd_iat_std: float
+  bwd_iat_mean: float
+  bwd_iat_std: float
+  packet_length_mean: float
+  packet_length_std: float
+  avg_packet_size: float
+  
+  # Keyword fields
+  protocol: keyword
+  label: keyword
+  attack_type: keyword
+  day_of_week: keyword
+
+cost:
+  max_docs: 200000  # Increased for CIC dataset
+regex:
+  bounded_required: true
+retries:
+  max: 2

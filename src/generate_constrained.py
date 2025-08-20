@@ -67,22 +67,51 @@ SECURITY_PATTERNS = [
     "ignore all previous", "ignore instructions"
 ]
 
-def load_fewshot_examples():
+def load_fewshot_examples(index=None):
     """Load few-shot examples from file"""
+    # Check for CIC-specific examples if CIC index is used
+    if index and "cic" in index.lower():
+        cic_path = Path(__file__).parent.parent / "artifacts" / "few_shot_cic.yaml"
+        if cic_path.exists():
+            with open(cic_path) as f:
+                data = yaml.safe_load(f)
+                return data.get('examples', [])
+    
+    # Default examples
     fewshot_path = Path(__file__).parent.parent / "tasks" / "fewshot.yaml"
     if fewshot_path.exists():
         with open(fewshot_path) as f:
             return yaml.safe_load(f)
     return []
 
-def build_prompt(task_prompt):
+def build_prompt(task_prompt, index=None):
     """Build the constrained generation prompt"""
     prompt = "You are an Elasticsearch DSL query generator for cybersecurity log analysis.\n\n"
     
-    prompt += "Available fields:\n"
-    for field, info in FIELD_CATALOG.items():
-        if field != "message":  # Skip non-searchable field
-            prompt += f"- {field} ({info['type']}): {info['description']}\n"
+    # Load appropriate field catalog based on index
+    if index and "cic" in index.lower():
+        prompt += "Dataset: CIC-IDS2017 network traffic with attack labels\n\n"
+        prompt += "Key fields for CIC data:\n"
+        prompt += "- attack_type (keyword): Attack category (normal, dos, scan, bruteforce, web_attack)\n"
+        prompt += "- label (keyword): Specific attack label (BENIGN, DDoS, PortScan, SSH-Patator, etc.)\n"
+        prompt += "- flow_packets_s (float): Packet rate per second\n"
+        prompt += "- flow_bytes_s (float): Bytes per second (bandwidth)\n"
+        prompt += "- flow_duration (long): Flow duration in milliseconds\n"
+        prompt += "- syn_flag_count (int): Number of SYN flags\n"
+        prompt += "- day_of_week (keyword): Day name (Monday, Tuesday, etc.)\n"
+        prompt += "- @timestamp (date): Event timestamp\n\n"
+        prompt += "IMPORTANT mappings:\n"
+        prompt += "- For 'DDoS attacks': use attack_type:dos\n"
+        prompt += "- For 'port scans': use attack_type:scan\n"
+        prompt += "- For 'high packet rate': use flow_packets_s >= 100 (typical DDoS)\n"
+        prompt += "- For 'high bandwidth': use flow_bytes_s >= 1000000 (1MB/s)\n"
+        prompt += "- Always include @timestamp range for time windowing\n"
+        prompt += "- Day names should match exactly: Monday, Tuesday, Wednesday, Thursday, Friday\n\n"
+    else:
+        prompt += "Available fields:\n"
+        for field, info in FIELD_CATALOG.items():
+            if field != "message":  # Skip non-searchable field
+                prompt += f"- {field} ({info['type']}): {info['description']}\n"
     
     prompt += "\nAllowed query operators:\n"
     for op, desc in ALLOWED_OPERATORS.items():
@@ -91,12 +120,13 @@ def build_prompt(task_prompt):
     prompt += "\nRules:\n"
     prompt += "- Always use bool.filter for combining conditions\n"
     prompt += "- Always include a time range filter using @timestamp\n"
+    prompt += "- For CIC data, use dates in 2017 (e.g., gte: '2017-01-01', lte: '2017-12-31')\n"
     prompt += "- Use term for exact matches, terms for multiple values\n"
     prompt += "- Use range only for date and numeric fields\n"
     prompt += "- Output only valid JSON, no explanations\n\n"
     
     prompt += "Examples:\n"
-    fewshot_examples = load_fewshot_examples()
+    fewshot_examples = load_fewshot_examples(index)
     for example in fewshot_examples[:3]:  # Use first 3 examples
         prompt += f"Input: {example['prompt']}\n"
         prompt += f"Output: {json.dumps(example['query'], indent=2)}\n\n"
@@ -194,7 +224,7 @@ def check_security_violations(prompt_text):
     
     return False, None
 
-def generate_with_retries(task_prompt, schema_path, rules_path, max_retries=2):
+def generate_with_retries(task_prompt, schema_path, rules_path, max_retries=2, index=None):
     """Generate query with validation and retries"""
     start_time = time.time()
     metrics = {
@@ -209,7 +239,7 @@ def generate_with_retries(task_prompt, schema_path, rules_path, max_retries=2):
         metrics["latency_seconds"] = time.time() - start_time
         return {"abstain": True, "reason": f"Security violation: {violation_reason}", "metrics": metrics}
     
-    prompt = build_prompt(task_prompt)
+    prompt = build_prompt(task_prompt, index)
     
     for attempt in range(max_retries + 1):
         metrics["attempts"] = attempt + 1
@@ -284,6 +314,7 @@ def main():
     parser.add_argument("--rules", default="artifacts/validator_rules.yaml", help="Validator rules")
     parser.add_argument("--output-dir", default="artifacts/generated", help="Output directory")
     parser.add_argument("--model", default="llama3.1:latest", help="Ollama model to use")
+    parser.add_argument("--index", help="Target index (auto-selects appropriate rules)")
     
     args = parser.parse_args()
     
@@ -291,8 +322,16 @@ def main():
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     
+    # Auto-select rules based on index
+    rules_file = args.rules
+    if args.index and "cic" in args.index.lower():
+        cic_rules = Path("artifacts/validator_rules_cic.yaml")
+        if cic_rules.exists():
+            rules_file = str(cic_rules)
+            print(f"Using CIC-IDS2017 validator rules for index: {args.index}")
+    
     # Generate query
-    result = generate_with_retries(args.prompt, args.schema, args.rules)
+    result = generate_with_retries(args.prompt, args.schema, rules_file, index=args.index)
     
     # Save result
     if args.task_id:

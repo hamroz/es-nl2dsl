@@ -1,0 +1,144 @@
+# Few-shot examples for CIC-IDS2017 queries
+examples:
+  - prompt: "Find DDoS attacks"
+    query:
+      query:
+        bool:
+          filter:
+            - term:
+                attack_type: "dos"
+            - range:
+                "@timestamp":
+                  gte: "2017-01-01"
+                  lte: "2017-12-31"
+    explanation: "Use attack_type field for categorized attacks with time range"
+    
+  - prompt: "Find traffic with high packet rate"
+    query:
+      query:
+        bool:
+          filter:
+            - range:
+                flow_packets_s:
+                  gte: 100
+            - range:
+                "@timestamp":
+                  gte: "2017-01-01"
+                  lte: "2017-12-31"
+    explanation: "Use flow_packets_s for packet rate (realistic threshold: 100+)"
+    
+  - prompt: "Find traffic on Friday"
+    query:
+      query:
+        bool:
+          filter:
+            - term:
+                day_of_week: "Friday"
+    explanation: "Use day_of_week field for weekday filtering"
+    
+  - prompt: "Find DDoS attacks with high packet rate"
+    query:
+      query:
+        bool:
+          filter:
+            - term:
+                attack_type: "dos"
+            - range:
+                flow_packets_s:
+                  gte: 100
+            - range:
+                "@timestamp":
+                  gte: "2017-01-01"
+                  lte: "2017-12-31"
+    explanation: "DDoS attacks typically have higher packet rates"
+    
+  - prompt: "Find port scans"
+    query:
+      query:
+        bool:
+          filter:
+            - term:
+                attack_type: "scan"
+    explanation: "Port scans are categorized as 'scan' in attack_type"
+    
+  - prompt: "Find brute force attacks"
+    query:
+      query:
+        bool:
+          filter:
+            - term:
+                attack_type: "bruteforce"
+            - range:
+                "@timestamp":
+                  gte: "2017-01-01"
+                  lte: "2017-12-31"
+    explanation: "Use attack_type:bruteforce for all brute force attacks"
+    
+  - prompt: "Find web attacks"
+    query:
+      query:
+        bool:
+          filter:
+            - wildcard:
+                label: "*Web*"
+            - range:
+                "@timestamp":
+                  gte: "2017-01-01"
+                  lte: "2017-12-31"
+    explanation: "Web attacks have 'Web' in the label field"
+    
+  - prompt: "Find high volume flows"
+    query:
+      query:
+        bool:
+          filter:
+            - range:
+                flow_bytes_s:
+                  gte: 1000000
+    explanation: "Use flow_bytes_s for bandwidth/volume analysis"
+    
+  - prompt: "Find SYN flood attacks"
+    query:
+      query:
+        bool:
+          filter:
+            - range:
+                syn_flag_count:
+                  gte: 5
+            - term:
+                protocol: "tcp"
+    explanation: "Use syn_flag_count for TCP flag analysis"
+    
+  - prompt: "Find long duration flows"
+    query:
+      query:
+        bool:
+          filter:
+            - range:
+                flow_duration:
+                  gte: 100000
+    explanation: "flow_duration is in milliseconds"
+    
+  - prompt: "Find malicious traffic"
+    query:
+      query:
+        bool:
+          must_not:
+            - term:
+                attack_type: "normal"
+    explanation: "Exclude normal traffic to find all attacks"
+
+# Field mappings for natural language understanding
+field_mappings:
+  "packet rate": "flow_packets_s"
+  "bandwidth": "flow_bytes_s"
+  "data rate": "flow_bytes_s"
+  "volume": "bytes_in OR bytes_out"
+  "duration": "flow_duration"
+  "SYN flags": "syn_flag_count"
+  "RST flags": "rst_flag_count"
+  "DDoS": "attack_type:dos"
+  "port scan": "attack_type:scan"
+  "brute force": "attack_type:bruteforce"
+  "web attack": "attack_type:web_attack"
+  "infiltration": "attack_type:infiltration"

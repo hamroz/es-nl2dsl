@@ -1,0 +1,88 @@
+{
+  "mappings": {
+    "dynamic": "strict",
+    "properties": {
+      "@timestamp": { "type": "date" },
+      "src_ip": { "type": "keyword" },
+      "dst_ip": { "type": "keyword" },
+      "src_port": { "type": "integer" },
+      "dst_port": { "type": "integer" },
+      "protocol": { "type": "keyword" },
+      "bytes_in": { "type": "long" },
+      "bytes_out": { "type": "long" },
+      "label": { "type": "keyword" },
+      "attack_type": { "type": "keyword" },
+      "message": { "type": "text", "index": false },
+      
+      "flow_id": { "type": "keyword" },
+      "flow_duration": { "type": "long" },
+      "total_fwd_packets": { "type": "long" },
+      "total_bwd_packets": { "type": "long" },
+      "total_packets": { "type": "long" },
+      
+      "fwd_packet_length_max": { "type": "float" },
+      "fwd_packet_length_min": { "type": "float" },
+      "fwd_packet_length_mean": { "type": "float" },
+      "fwd_packet_length_std": { "type": "float" },
+      
+      "bwd_packet_length_max": { "type": "float" },
+      "bwd_packet_length_min": { "type": "float" },
+      "bwd_packet_length_mean": { "type": "float" },
+      "bwd_packet_length_std": { "type": "float" },
+      
+      "flow_bytes_s": { "type": "float" },
+      "flow_packets_s": { "type": "float" },
+      "flow_iat_mean": { "type": "float" },
+      "flow_iat_std": { "type": "float" },
+      "flow_iat_max": { "type": "float" },
+      "flow_iat_min": { "type": "float" },
+      
+      "fwd_iat_total": { "type": "float" },
+      "fwd_iat_mean": { "type": "float" },
+      "fwd_iat_std": { "type": "float" },
+      "fwd_iat_max": { "type": "float" },
+      "fwd_iat_min": { "type": "float" },
+      
+      "bwd_iat_total": { "type": "float" },
+      "bwd_iat_mean": { "type": "float" },
+      "bwd_iat_std": { "type": "float" },
+      "bwd_iat_max": { "type": "float" },
+      "bwd_iat_min": { "type": "float" },
+      
+      "fwd_psh_flags": { "type": "integer" },
+      "bwd_psh_flags": { "type": "integer" },
+      "fwd_urg_flags": { "type": "integer" },
+      "bwd_urg_flags": { "type": "integer" },
+      
+      "fin_flag_count": { "type": "integer" },
+      "syn_flag_count": { "type": "integer" },
+      "rst_flag_count": { "type": "integer" },
+      "psh_flag_count": { "type": "integer" },
+      "ack_flag_count": { "type": "integer" },
+      "urg_flag_count": { "type": "integer" },
+      
+      "packet_length_min": { "type": "float" },
+      "packet_length_max": { "type": "float" },
+      "packet_length_mean": { "type": "float" },
+      "packet_length_std": { "type": "float" },
+      "packet_length_variance": { "type": "float" },
+      
+      "avg_packet_size": { "type": "float" },
+      "avg_fwd_segment_size": { "type": "float" },
+      "avg_bwd_segment_size": { "type": "float" },
+      
+      "active_mean": { "type": "float" },
+      "active_std": { "type": "float" },
+      "active_max": { "type": "float" },
+      "active_min": { "type": "float" },
+      
+      "idle_mean": { "type": "float" },
+      "idle_std": { "type": "float" },
+      "idle_max": { "type": "float" },
+      "idle_min": { "type": "float" },
+      
+      "day_of_week": { "type": "keyword" },
+      "hour_of_day": { "type": "integer" }
+    }
+  }
+}

@@ -18,12 +18,16 @@ def load_scenario(prompts_file, scenario_id):
     
     raise ValueError(f"Scenario {scenario_id} not found")
 
-def generate_query(prompt, task_id):
+def generate_query(prompt, task_id, index=None):
     """Generate a query using generate_constrained.py"""
+    cmd = [sys.executable, "src/generate_constrained.py", 
+           "--prompt", prompt,
+           "--task-id", task_id]
+    if index:
+        cmd.extend(["--index", index])
+    
     result = subprocess.run(
-        [sys.executable, "src/generate_constrained.py", 
-         "--prompt", prompt,
-         "--task-id", task_id],
+        cmd,
         capture_output=True,
         text=True
     )
@@ -41,8 +45,14 @@ def generate_query(prompt, task_id):
     
     return query, None
 
-def validate_query(query_file, rules_file="artifacts/validator_rules.yaml"):
+def validate_query(query_file, rules_file="artifacts/validator_rules.yaml", index=None):
     """Validate a query using validator.py"""
+    # Auto-select rules based on index
+    if index and "cic" in index.lower():
+        cic_rules = Path("artifacts/validator_rules_cic.yaml")
+        if cic_rules.exists():
+            rules_file = str(cic_rules)
+    
     result = subprocess.run(
         [sys.executable, "src/validator.py",
          "--dsl", query_file,
@@ -105,7 +115,7 @@ def main():
     # Determine candidate query path
     if args.gen:
         print("Generating query...")
-        query, error = generate_query(scenario['prompt'], scenario['id'])
+        query, error = generate_query(scenario['prompt'], scenario['id'], args.index)
         if error:
             print(f"Generation failed: {error}")
             sys.exit(1)
@@ -129,7 +139,7 @@ def main():
     
     # Validate query
     print("Validating query...")
-    valid, validation_output = validate_query(str(candidate_path))
+    valid, validation_output = validate_query(str(candidate_path), index=args.index)
     
     if not valid:
         print(f"Validation failed: {validation_output}")

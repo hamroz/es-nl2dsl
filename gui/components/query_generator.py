@@ -137,7 +137,7 @@ def render_query_generator():
                 progress_bar.progress(50)
                 
                 # Run generation
-                success, output, data = run_query_generation(prompt, method)
+                success, output, data = run_query_generation(prompt, method, index=selected_index)
                 
                 # Step 3: Validation
                 status_text.text("✅ Validating output...")

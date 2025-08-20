@@ -140,77 +140,254 @@ def render_admin_panel():
     with tab2:
         st.subheader("📊 Data Management")
         
-        # Data ingestion section
-        st.markdown("### 📥 Data Ingestion")
-        
-        # File upload for CSV data
-        uploaded_file = st.file_uploader(
-            "Upload CSV data for ingestion:",
-            type="csv",
-            help="Upload a CSV file to ingest into Elasticsearch"
+        # Choose ingestion type
+        ingestion_type = st.radio(
+            "Select data source:",
+            ["📁 General CSV Upload", "🛡️ CIC-IDS2017 Dataset"],
+            horizontal=True
         )
         
-        if uploaded_file:
-            # Preview data
-            try:
-                df = pd.read_csv(uploaded_file)
-                st.write(f"**Preview** ({len(df)} rows, {len(df.columns)} columns):")
-                st.dataframe(df.head(10), use_container_width=True)
+        if ingestion_type == "📁 General CSV Upload":
+            # Data ingestion section
+            st.markdown("### 📥 Standard Data Ingestion")
+            
+            # File upload for CSV data
+            uploaded_file = st.file_uploader(
+                "Upload CSV data for ingestion:",
+                type="csv",
+                help="Upload a CSV file to ingest into Elasticsearch"
+            )
+            
+            if uploaded_file:
+                # Preview data
+                try:
+                    df = pd.read_csv(uploaded_file)
+                    st.write(f"**Preview** ({len(df)} rows, {len(df.columns)} columns):")
+                    st.dataframe(df.head(10), use_container_width=True)
+                    
+                    # Ingestion options
+                    ingest_col1, ingest_col2 = st.columns(2)
+                    
+                    with ingest_col1:
+                        target_index = st.selectbox(
+                            "Target Index:",
+                            ["logs_net", "logs_net_test", "Create new index..."]
+                        )
+                        
+                        if target_index == "Create new index...":
+                            target_index = st.text_input("New index name:", "logs_net_custom")
+                    
+                    with ingest_col2:
+                        batch_size = st.number_input("Batch Size:", 100, 10000, 1000)
+                        overwrite_existing = st.checkbox("Overwrite existing data", value=False)
+                    
+                    if st.button("🚀 Start Ingestion", type="primary"):
+                        # Save uploaded file temporarily
+                        temp_file = Path(f"data_raw/temp_upload_{int(time.time())}.csv")
+                        temp_file.parent.mkdir(exist_ok=True)
+                        
+                        with open(temp_file, 'wb') as f:
+                            f.write(uploaded_file.getvalue())
+                        
+                        # Run ingestion
+                        with st.spinner(f"Ingesting {len(df)} records..."):
+                            try:
+                                cmd = [
+                                    sys.executable, "src/ingest.py",
+                                    "--file", str(temp_file),
+                                    "--index", target_index,
+                                    "--user", "elastic",
+                                    "--password", "ChangeMe_123"
+                                ]
+                                
+                                result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+                                
+                                if result.returncode == 0:
+                                    st.success("✅ Ingestion completed successfully!")
+                                    st.code(result.stdout)
+                                else:
+                                    st.error("❌ Ingestion failed")
+                                    st.code(result.stderr)
+                            
+                            except subprocess.TimeoutExpired:
+                                st.error("Ingestion timed out (5 minutes)")
+                            except Exception as e:
+                                st.error(f"Error: {e}")
+                            finally:
+                                # Clean up temp file
+                                temp_file.unlink(missing_ok=True)
+                                
+                except Exception as e:
+                    st.error(f"Error reading CSV file: {e}")
+        
+        elif ingestion_type == "🛡️ CIC-IDS2017 Dataset":
+            # CIC-IDS2017 dataset ingestion
+            st.markdown("### 🛡️ CIC-IDS2017 Dataset Ingestion")
+            st.info("📌 The CIC-IDS2017 dataset contains real network traffic with labeled cyberattacks.")
+            
+            # List available CIC files
+            cic_files = list(Path("data_raw").glob("*.pcap_ISCX.csv"))
+            
+            if cic_files:
+                st.write(f"**Found {len(cic_files)} CIC-IDS2017 files:**")
                 
-                # Ingestion options
-                ingest_col1, ingest_col2 = st.columns(2)
+                # File selection
+                file_info = []
+                for f in cic_files:
+                    size_mb = f.stat().st_size / (1024 * 1024)
+                    file_info.append({
+                        "File": f.name,
+                        "Size (MB)": f"{size_mb:.1f}",
+                        "Day": f.name.split('-')[0],
+                        "Type": "DDoS" if "DDos" in f.name else "PortScan" if "PortScan" in f.name else "WebAttacks" if "WebAttacks" in f.name else "Infiltration" if "Infilteration" in f.name else "Normal/Mixed"
+                    })
                 
-                with ingest_col1:
-                    target_index = st.selectbox(
-                        "Target Index:",
-                        ["logs_net", "logs_net_test", "Create new index..."]
+                df_files = pd.DataFrame(file_info)
+                st.dataframe(df_files, use_container_width=True)
+                
+                # Select file to process
+                selected_file = st.selectbox(
+                    "Select file to process:",
+                    [f.name for f in cic_files],
+                    help="Start with Monday (smallest workday file) for testing"
+                )
+                
+                # Processing options
+                col1, col2, col3 = st.columns(3)
+                
+                with col1:
+                    sample_size = st.number_input(
+                        "Sample size (0 = all):",
+                        min_value=0,
+                        max_value=500000,
+                        value=10000,
+                        step=5000,
+                        help="Process only first N rows for testing"
                     )
-                    
-                    if target_index == "Create new index...":
-                        target_index = st.text_input("New index name:", "logs_net_custom")
                 
-                with ingest_col2:
-                    batch_size = st.number_input("Batch Size:", 100, 10000, 1000)
-                    overwrite_existing = st.checkbox("Overwrite existing data", value=False)
+                with col2:
+                    chunk_size = st.number_input(
+                        "Chunk size:",
+                        min_value=1000,
+                        max_value=20000,
+                        value=5000,
+                        step=1000,
+                        help="Batch size for Elasticsearch ingestion"
+                    )
                 
-                if st.button("🚀 Start Ingestion", type="primary"):
-                    # Save uploaded file temporarily
-                    temp_file = Path(f"data_raw/temp_upload_{int(time.time())}.csv")
-                    temp_file.parent.mkdir(exist_ok=True)
+                with col3:
+                    create_index = st.checkbox(
+                        "Create index if not exists",
+                        value=True,
+                        help="Create logs_cic_ids2017 index with proper mappings"
+                    )
+                
+                # Process and ingest button
+                if st.button("🚀 Process & Ingest CIC Data", type="primary"):
+                    selected_path = Path("data_raw") / selected_file
+                    temp_jsonl = Path(f"data_raw/temp_cic_{int(time.time())}.jsonl")
                     
-                    with open(temp_file, 'wb') as f:
-                        f.write(uploaded_file.getvalue())
-                    
-                    # Run ingestion
-                    with st.spinner(f"Ingesting {len(df)} records..."):
+                    # Step 1: Convert CSV to JSONL
+                    with st.spinner(f"Processing {selected_file}..."):
                         try:
-                            cmd = [
-                                sys.executable, "src/ingest.py",
-                                "--file", str(temp_file),
-                                "--index", target_index,
+                            cmd_process = [
+                                sys.executable, "src/process_cic_ids2017.py",
+                                "--input", str(selected_path),
+                                "--output", str(temp_jsonl)
+                            ]
+                            
+                            if sample_size > 0:
+                                cmd_process.extend(["--sample", str(sample_size)])
+                            
+                            # Show processing command
+                            st.code(" ".join(cmd_process))
+                            
+                            result = subprocess.run(cmd_process, capture_output=True, text=True, timeout=600)
+                            
+                            if result.returncode == 0:
+                                st.success("✅ Processing completed!")
+                                st.text(result.stdout)
+                            else:
+                                st.error("❌ Processing failed")
+                                st.text(result.stderr)
+                                temp_jsonl.unlink(missing_ok=True)
+                                st.stop()
+                                
+                        except subprocess.TimeoutExpired:
+                            st.error("Processing timed out (10 minutes)")
+                            temp_jsonl.unlink(missing_ok=True)
+                            st.stop()
+                        except Exception as e:
+                            st.error(f"Processing error: {e}")
+                            temp_jsonl.unlink(missing_ok=True)
+                            st.stop()
+                    
+                    # Step 2: Ingest into Elasticsearch
+                    with st.spinner("Ingesting into Elasticsearch..."):
+                        try:
+                            cmd_ingest = [
+                                sys.executable, "src/ingest_large.py",
+                                "--file", str(temp_jsonl),
+                                "--index", "logs_cic_ids2017",
+                                "--chunk-size", str(chunk_size),
                                 "--user", "elastic",
                                 "--password", "ChangeMe_123"
                             ]
                             
-                            result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+                            if create_index:
+                                cmd_ingest.extend([
+                                    "--create-index",
+                                    "--mapping", "artifacts/mappings_cic_enhanced.json"
+                                ])
                             
-                            if result.returncode == 0:
+                            # Show ingestion command
+                            st.code(" ".join(cmd_ingest))
+                            
+                            # Create progress placeholder
+                            progress_placeholder = st.empty()
+                            
+                            # Run with real-time output
+                            process = subprocess.Popen(
+                                cmd_ingest,
+                                stdout=subprocess.PIPE,
+                                stderr=subprocess.STDOUT,
+                                text=True,
+                                bufsize=1
+                            )
+                            
+                            output_lines = []
+                            for line in process.stdout:
+                                output_lines.append(line.strip())
+                                # Show last 10 lines
+                                progress_placeholder.text_area(
+                                    "Progress:",
+                                    "\n".join(output_lines[-10:]),
+                                    height=200
+                                )
+                            
+                            process.wait()
+                            
+                            if process.returncode == 0:
                                 st.success("✅ Ingestion completed successfully!")
-                                st.code(result.stdout)
+                                st.text("\n".join(output_lines[-20:]))
                             else:
                                 st.error("❌ Ingestion failed")
-                                st.code(result.stderr)
-                        
-                        except subprocess.TimeoutExpired:
-                            st.error("Ingestion timed out (5 minutes)")
+                                st.text("\n".join(output_lines))
+                            
                         except Exception as e:
-                            st.error(f"Error: {e}")
+                            st.error(f"Ingestion error: {e}")
                         finally:
                             # Clean up temp file
-                            temp_file.unlink(missing_ok=True)
+                            temp_jsonl.unlink(missing_ok=True)
                             
-            except Exception as e:
-                st.error(f"Error reading CSV file: {e}")
+            else:
+                st.warning("⚠️ No CIC-IDS2017 files found in data_raw/")
+                st.info("""
+                **To use CIC-IDS2017 dataset:**
+                1. Download the CSV files from the official source
+                2. Place them in the `data_raw/` directory
+                3. Files should have `.pcap_ISCX.csv` extension
+                """)
         
         # Data export section
         st.markdown("### 📤 Data Export")
