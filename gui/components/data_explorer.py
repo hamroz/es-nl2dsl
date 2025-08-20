@@ -183,7 +183,9 @@ def render_data_explorer():
     if clear_button:
         if 'explorer_results' in st.session_state:
             del st.session_state.explorer_results
-        st.rerun()
+            st.toast("Results cleared successfully!", icon="🔄")
+        else:
+            st.info("No results to clear")
     
     if load_button:
         with st.spinner("Loading data..."):
@@ -400,20 +402,23 @@ def display_table_view(hits, index_name):
 
 def display_json_view(hits):
     """Display results in JSON format"""
-    # Create tabs for different JSON views
-    tab1, tab2, tab3 = st.tabs(["Pretty JSON", "Raw JSON", "Source Only"])
+    # Use selectbox instead of tabs for JSON view options
+    json_view_option = st.selectbox(
+        "JSON View Type:",
+        ["Pretty JSON", "Raw JSON", "Source Only"],
+        index=0,
+        help="Choose how to display the JSON data"
+    )
     
-    with tab1:
+    if json_view_option == "Pretty JSON":
         # Pretty printed JSON
         for i, hit in enumerate(hits):
             with st.expander(f"Document {i+1} - ID: {hit['_id']}", expanded=(i==0)):
                 st.json(hit['_source'])
-    
-    with tab2:
+    elif json_view_option == "Raw JSON":
         # Raw JSON including metadata
         st.json([hit for hit in hits])
-    
-    with tab3:
+    else:  # "Source Only"
         # Source data only
         sources = [hit['_source'] for hit in hits]
         st.json(sources)

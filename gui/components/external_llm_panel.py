@@ -21,16 +21,34 @@ def render_external_llm_panel():
 
     manager = get_external_llm_manager()
 
-    # Create tabs
-    tab1, tab2, tab3 = st.tabs(["➕ Add New LLM", "📋 Manage LLMs", "🧪 Test LLMs"])
-
-    with tab1:
+    # Initialize external LLM tab index in session state
+    if 'external_llm_current_tab' not in st.session_state:
+        st.session_state.external_llm_current_tab = 0
+    
+    # Create selectbox navigation instead of problematic tabs
+    tab_names = ["➕ Add New LLM", "📋 Manage LLMs", "🧪 Test LLMs"]
+    
+    # Navigation selectbox
+    current_tab_name = st.selectbox(
+        "External LLM Section:",
+        options=tab_names,
+        index=st.session_state.external_llm_current_tab,
+        key="external_llm_tab_selector",
+        help="Navigate between different External LLM management sections"
+    )
+    
+    # Update session state with current tab index
+    st.session_state.external_llm_current_tab = tab_names.index(current_tab_name)
+    
+    # Add separator
+    st.markdown("---")
+    
+    # Render the selected tab content
+    if current_tab_name == "➕ Add New LLM":
         render_add_llm_tab(manager)
-
-    with tab2:
+    elif current_tab_name == "📋 Manage LLMs":
         render_manage_llms_tab(manager)
-
-    with tab3:
+    else:  # "🧪 Test LLMs"
         render_test_llms_tab(manager)
 
 
@@ -135,7 +153,7 @@ def render_add_llm_tab(manager):
                     if ok:
                         st.success(f"✅ Successfully added '{llm_name}'!")
                         st.balloons()
-                        st.rerun()
+                        st.toast(f"LLM '{llm_name}' added successfully!", icon="✅")
                     else:
                         err = manager.last_error or "Failed to validate API key."
                         st.error(f"❌ {err}")
@@ -144,11 +162,7 @@ def render_add_llm_tab(manager):
     st.markdown("---")
     st.markdown("### 📚 Provider Setup Instructions")
 
-    setup_tab1, setup_tab2, setup_tab3, setup_tab4 = st.tabs(
-        ["OpenAI", "Google Gemini", "DeepSeek", "Qwen AI"]
-    )
-
-    with setup_tab1:
+    with st.expander("🤖 OpenAI Setup", expanded=False):
         st.markdown(
             """
 **OpenAI**
@@ -168,7 +182,7 @@ def render_add_llm_tab(manager):
 """
         )
 
-    with setup_tab2:
+    with st.expander("🧠 Google Gemini Setup", expanded=False):
         st.markdown(
             """
 **Google Gemini**
@@ -183,7 +197,7 @@ def render_add_llm_tab(manager):
 """
         )
 
-    with setup_tab3:
+    with st.expander("🚀 DeepSeek Setup", expanded=False):
         st.markdown(
             """
 **DeepSeek (OpenAI-compatible)**
@@ -197,7 +211,7 @@ def render_add_llm_tab(manager):
 """
         )
 
-    with setup_tab4:
+    with st.expander("☁️ Qwen AI Setup", expanded=False):
         st.markdown(
             """
 **Qwen AI (Alibaba Cloud)**
@@ -253,7 +267,7 @@ def render_manage_llms_tab(manager):
                 )
                 if new_status != llm.enabled:
                     manager.update_llm_status(llm.name, new_status)
-                    st.rerun()
+                    st.toast(f"LLM '{llm.name}' status updated!", icon="🔄")
 
             with col5:
                 # Delete button
@@ -261,7 +275,7 @@ def render_manage_llms_tab(manager):
                     if st.session_state.get(f"confirm_delete_{llm.name}", False):
                         manager.remove_llm(llm.name)
                         st.success(f"Deleted '{llm.name}'")
-                        st.rerun()
+                        st.toast(f"LLM '{llm.name}' deleted successfully!", icon="🗑️")
                     else:
                         st.session_state[f"confirm_delete_{llm.name}"] = True
                         st.warning("Click again to confirm deletion")

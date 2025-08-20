@@ -9,5 +9,27 @@
     "temperature": 0.7,
     "enabled": true,
     "added_date": "2025-08-20T17:56:12.582111"
+  },
+  "gemini flash": {
+    "name": "gemini flash",
+    "provider": "google",
+    "model_id": "gemini-2.5-flash",
+    "api_key": "AIzaSyDrMLgRn3qCRiLFfCZdDk83AvuTfJsKTts",
+    "endpoint": null,
+    "max_tokens": 2000,
+    "temperature": 0.7,
+    "enabled": true,
+    "added_date": "2025-08-20T18:39:32.521862"
+  },
+  "deepseek-r1": {
+    "name": "deepseek-r1",
+    "provider": "deepseek",
+    "model_id": "deepseek-reasoner",
+    "api_key": "sk-0b2d5d36dfc8495cb3343f6661977d1b",
+    "endpoint": null,
+    "max_tokens": 2000,
+    "temperature": 0.7,
+    "enabled": true,
+    "added_date": "2025-08-20T18:43:40.530925"
   }
 }
