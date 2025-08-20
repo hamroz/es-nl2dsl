@@ -15,6 +15,7 @@ from gui.components.evaluation_dashboard import render_evaluation_dashboard
 from gui.components.security_panel import render_security_panel
 from gui.components.privacy_analysis import render_privacy_analysis
 from gui.components.admin_panel import render_admin_panel
+from gui.components.data_explorer import render_data_explorer
 
 # Page configuration
 st.set_page_config(
@@ -140,6 +141,7 @@ def main():
     # Navigation buttons
     nav_options = [
         "🤖 Query Generator",
+        "🔍 Data Explorer",
         "📊 Evaluation Dashboard", 
         "🛡️ Security Testing",
         "🔒 Privacy Analysis",
@@ -175,6 +177,8 @@ def main():
     page = st.session_state.current_page
     if page == "🤖 Query Generator":
         render_query_generator()
+    elif page == "🔍 Data Explorer":
+        render_data_explorer()
     elif page == "📊 Evaluation Dashboard":
         render_evaluation_dashboard()
     elif page == "🛡️ Security Testing":

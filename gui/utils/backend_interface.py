@@ -14,6 +14,14 @@ from elasticsearch import Elasticsearch
 project_root = Path(__file__).parent.parent.parent
 sys.path.append(str(project_root))
 
+def get_elasticsearch_client():
+    """Get Elasticsearch client instance"""
+    return Elasticsearch(
+        ['http://localhost:9200'],
+        basic_auth=('elastic', 'ChangeMe_123'),
+        verify_certs=False
+    )
+
 def check_system_status() -> Dict[str, any]:
     """Check the status of all system components"""
     status = {
