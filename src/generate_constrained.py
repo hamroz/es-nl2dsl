@@ -150,19 +150,30 @@ def build_prompt(task_prompt, index=None):
     return prompt
 
 def call_local_model(prompt, model="llama3.1:latest"):
-    """Call Ollama local model"""
+    """Call Ollama local model with adaptive timeout"""
+    # Set timeout based on model size
+    timeout_seconds = 60  # Default
+    if "20b" in model.lower() or "gpt-oss" in model.lower():
+        timeout_seconds = 180  # 3 minutes for 20B models
+    elif "14b" in model.lower() or "13b" in model.lower():
+        timeout_seconds = 120  # 2 minutes for 13-14B models
+    elif "70b" in model.lower():
+        timeout_seconds = 240  # 4 minutes for 70B models
+    
+    print(f"Calling {model} with timeout={timeout_seconds}s...")
+    
     try:
         result = subprocess.run(
             ["ollama", "run", model, prompt],
             capture_output=True,
             text=True,
-            timeout=60
+            timeout=timeout_seconds
         )
         if result.returncode != 0:
             raise RuntimeError(f"Model call failed: {result.stderr}")
         return result.stdout.strip()
     except subprocess.TimeoutExpired:
-        raise RuntimeError("Model call timed out")
+        raise RuntimeError(f"Model call timed out after {timeout_seconds} seconds")
     except FileNotFoundError:
         raise RuntimeError("Ollama not found. Please install Ollama and pull a model.")
 

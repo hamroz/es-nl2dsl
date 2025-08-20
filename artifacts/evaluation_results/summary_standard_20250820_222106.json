@@ -1,0 +1,82 @@
+{
+  "total_evaluations": 36,
+  "timestamp": "2025-08-20T22:21:06.312735",
+  "by_method": {
+    "constrained": {
+      "count": 12,
+      "success_count": 12,
+      "success_rate": 1.0,
+      "avg_ast_similarity": 0.35555555555555557,
+      "avg_generation_time": 3.2334455847740173,
+      "avg_execution_time": 0.04914363225301107,
+      "avg_precision": 0.0,
+      "avg_recall": 0.0,
+      "avg_f1_score": 1.0,
+      "avg_jaccard": 0.0
+    },
+    "rules": {
+      "count": 12,
+      "success_count": 12,
+      "success_rate": 1.0,
+      "avg_ast_similarity": 0.5869047619047618,
+      "avg_generation_time": 3.4126735726992288,
+      "avg_execution_time": 0.03605091571807861,
+      "avg_precision": 0.3923611111111111,
+      "avg_recall": 0.5,
+      "avg_f1_score": 0.9204545454545454,
+      "avg_jaccard": 0.3923611111111111
+    },
+    "zeroshot": {
+      "count": 12,
+      "success_count": 12,
+      "success_rate": 1.0,
+      "avg_ast_similarity": 0.33888888888888896,
+      "avg_generation_time": 3.077040712038676,
+      "avg_execution_time": 0.04405564069747925,
+      "avg_precision": 0.0,
+      "avg_recall": 0.0,
+      "avg_f1_score": 1.0,
+      "avg_jaccard": 0.0
+    }
+  },
+  "by_model": {
+    "gpt-4o-mini": {
+      "count": 36,
+      "success_count": 36,
+      "success_rate": 1.0,
+      "avg_ast_similarity": 0.4271164021164021,
+      "avg_generation_time": 3.2410532898373074,
+      "avg_execution_time": 0.04308339622285631,
+      "avg_precision": 0.13452380952380952,
+      "avg_recall": 0.17142857142857143,
+      "avg_f1_score": 0.9727272727272728,
+      "avg_jaccard": 0.13452380952380952
+    }
+  },
+  "by_dataset": {
+    "standard": {
+      "count": 36,
+      "success_count": 36,
+      "success_rate": 1.0,
+      "avg_ast_similarity": 0.4271164021164021,
+      "avg_generation_time": 3.2410532898373074,
+      "avg_execution_time": 0.04308339622285631,
+      "avg_precision": 0.13452380952380952,
+      "avg_recall": 0.17142857142857143,
+      "avg_f1_score": 0.9727272727272728,
+      "avg_jaccard": 0.13452380952380952
+    }
+  },
+  "overall": {
+    "count": 36,
+    "success_count": 36,
+    "success_rate": 1.0,
+    "avg_ast_similarity": 0.4271164021164021,
+    "avg_generation_time": 3.2410532898373074,
+    "avg_execution_time": 0.04308339622285631,
+    "avg_precision": 0.13452380952380952,
+    "avg_recall": 0.17142857142857143,
+    "avg_f1_score": 0.9727272727272728,
+    "avg_jaccard": 0.13452380952380952
+  }
+}

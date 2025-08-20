@@ -1,0 +1,82 @@
+{
+  "total_evaluations": 9,
+  "timestamp": "2025-08-20T21:48:29.871472",
+  "by_method": {
+    "rules": {
+      "count": 3,
+      "success_count": 3,
+      "success_rate": 1.0,
+      "avg_ast_similarity": 0.3333333333333333,
+      "avg_generation_time": 0.00016657511393229166,
+      "avg_execution_time": 0.01888434092203776,
+      "avg_precision": 1.0,
+      "avg_recall": 1.0,
+      "avg_f1_score": 1.0,
+      "avg_jaccard": 1.0
+    },
+    "constrained": {
+      "count": 3,
+      "success_count": 3,
+      "success_rate": 1.0,
+      "avg_ast_similarity": 0.27777777777777773,
+      "avg_generation_time": 11.967809041341146,
+      "avg_execution_time": 0.4057820638020833,
+      "avg_precision": 0.0,
+      "avg_recall": 0.0,
+      "avg_f1_score": 1.0,
+      "avg_jaccard": 0.0
+    },
+    "zeroshot": {
+      "count": 3,
+      "success_count": 2,
+      "success_rate": 0.6666666666666666,
+      "avg_ast_similarity": 0.3333333333333333,
+      "avg_generation_time": 10.625685056050619,
+      "avg_execution_time": 0.059603214263916016,
+      "avg_precision": 1.0,
+      "avg_recall": 1.0,
+      "avg_f1_score": 1.0,
+      "avg_jaccard": 1.0
+    }
+  },
+  "by_model": {
+    "llama3.1:latest": {
+      "count": 9,
+      "success_count": 8,
+      "success_rate": 0.8888888888888888,
+      "avg_ast_similarity": 0.3148148148148148,
+      "avg_generation_time": 7.531220224168566,
+      "avg_execution_time": 0.1614232063293457,
+      "avg_precision": 0.6,
+      "avg_recall": 0.6,
+      "avg_f1_score": 1.0,
+      "avg_jaccard": 0.6
+    }
+  },
+  "by_dataset": {
+    "cic_ids2017": {
+      "count": 9,
+      "success_count": 8,
+      "success_rate": 0.8888888888888888,
+      "avg_ast_similarity": 0.3148148148148148,
+      "avg_generation_time": 7.531220224168566,
+      "avg_execution_time": 0.1614232063293457,
+      "avg_precision": 0.6,
+      "avg_recall": 0.6,
+      "avg_f1_score": 1.0,
+      "avg_jaccard": 0.6
+    }
+  },
+  "overall": {
+    "count": 9,
+    "success_count": 8,
+    "success_rate": 0.8888888888888888,
+    "avg_ast_similarity": 0.3148148148148148,
+    "avg_generation_time": 7.531220224168566,
+    "avg_execution_time": 0.1614232063293457,
+    "avg_precision": 0.6,
+    "avg_recall": 0.6,
+    "avg_f1_score": 1.0,
+    "avg_jaccard": 0.6
+  }
+}

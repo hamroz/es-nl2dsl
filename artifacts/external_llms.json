@@ -1,15 +1,4 @@
 {
-  "gpt-4o": {
-    "name": "gpt-4o",
-    "provider": "openai",
-    "model_id": "gpt-4o",
-    "api_key": "ENV",
-    "endpoint": null,
-    "max_tokens": 2000,
-    "temperature": 0.7,
-    "enabled": true,
-    "added_date": "2025-08-20T17:56:12.582111"
-  },
   "gemini flash": {
     "name": "gemini flash",
     "provider": "google",
@@ -31,5 +20,16 @@
     "temperature": 0.7,
     "enabled": true,
     "added_date": "2025-08-20T18:43:40.530925"
+  },
+  "gpt-4o-mini": {
+    "name": "gpt-4o-mini",
+    "provider": "openai",
+    "model_id": "gpt-4o-mini",
+    "api_key": "ENV",
+    "endpoint": null,
+    "max_tokens": 2000,
+    "temperature": 0.7,
+    "enabled": true,
+    "added_date": "2025-08-20T21:37:06.259524"
   }
 }

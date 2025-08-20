@@ -1,0 +1,464 @@
+[
+  {
+    "scenario_id": "scan-002",
+    "dataset": "standard",
+    "index": "logs_net",
+    "method": "constrained",
+    "model": "llama3.1:latest",
+    "prompt": "Find TCP connections with more than 10000 bytes transferred from source IP 10.42.42.1 between July 3-5, 2017.",
+    "generated_query": {
+      "query": {
+        "bool": {
+          "filter": [
+            {
+              "range": {
+                "@timestamp": {
+                  "gte": "2017-07-03T00:00:00Z",
+                  "lte": "2017-07-05T23:59:59Z"
+                }
+              }
+            },
+            {
+              "term": {
+                "src_ip": "10.42.42.1"
+              }
+            },
+            {
+              "range": {
+                "bytes_out": {
+                  "gt": 10000
+                }
+              }
+            },
+            {
+              "term": {
+                "protocol": "TCP"
+              }
+            }
+          ]
+        }
+      }
+    },
+    "expected_query": null,
+    "validation_result": {
+      "valid": false,
+      "errors": [
+        "Invalid fields: {'src_ip', 'bytes_out', '@timestamp', 'protocol'}"
+      ]
+    },
+    "ast_similarity": 0.0,
+    "execution_metrics": null,
+    "generation_time": 10.152979850769043,
+    "execution_time": 0.0,
+    "error": null,
+    "timestamp": "2025-08-20T21:57:30.684894"
+  },
+  {
+    "scenario_id": "scan-002",
+    "dataset": "standard",
+    "index": "logs_net",
+    "method": "rules",
+    "model": "llama3.1:latest",
+    "prompt": "Find TCP connections with more than 10000 bytes transferred from source IP 10.42.42.1 between July 3-5, 2017.",
+    "generated_query": {
+      "query": {
+        "bool": {
+          "filter": [
+            {
+              "range": {
+                "@timestamp": {
+                  "gte": "2017-07-03T00:00:00Z",
+                  "lte": "2017-07-05T23:59:59Z"
+                }
+              }
+            },
+            {
+              "term": {
+                "protocol": "TCP"
+              }
+            },
+            {
+              "term": {
+                "src_ip": "10.42.42.1"
+              }
+            },
+            {
+              "range": {
+                "bytes_out": {
+                  "gt": 10000
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "expected_query": null,
+    "validation_result": {
+      "valid": false,
+      "errors": [
+        "Invalid fields: {'src_ip', 'bytes_out', '@timestamp', 'protocol'}"
+      ]
+    },
+    "ast_similarity": 0.0,
+    "execution_metrics": null,
+    "generation_time": 0.0028562545776367188,
+    "execution_time": 0.0,
+    "error": null,
+    "timestamp": "2025-08-20T21:57:30.691155"
+  },
+  {
+    "scenario_id": "scan-002",
+    "dataset": "standard",
+    "index": "logs_net",
+    "method": "zeroshot",
+    "model": "llama3.1:latest",
+    "prompt": "Find TCP connections with more than 10000 bytes transferred from source IP 10.42.42.1 between July 3-5, 2017.",
+    "generated_query": {
+      "query": {
+        "bool": {
+          "filter": [
+            {
+              "range": {
+                "@timestamp": {
+                  "gte": "2017-07-03T00:00:00.000Z",
+                  "lte": "2017-07-05T23:59:59.999Z"
+                }
+              }
+            },
+            {
+              "term": {
+                "source_ip": "10.42.42.1"
+              }
+            },
+            {
+              "range": {
+                "size_in_bytes": {
+                  "gt": 10000
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "expected_query": null,
+    "validation_result": {
+      "valid": false,
+      "errors": [
+        "Invalid fields: {'size_in_bytes', '@timestamp', 'source_ip'}"
+      ]
+    },
+    "ast_similarity": 0.0,
+    "execution_metrics": null,
+    "generation_time": 13.748169898986816,
+    "execution_time": 0.0,
+    "error": null,
+    "timestamp": "2025-08-20T21:57:44.441405"
+  },
+  {
+    "scenario_id": "scan-005",
+    "dataset": "standard",
+    "index": "logs_net",
+    "method": "constrained",
+    "model": "llama3.1:latest",
+    "prompt": "Find benign TCP traffic to ports 22 or 80 with less than 5000 total bytes on July 4, 2017.",
+    "generated_query": {
+      "query": {
+        "bool": {
+          "filter": [
+            {
+              "range": {
+                "@timestamp": {
+                  "gte": "2017-07-04T00:00:00Z",
+                  "lte": "2017-07-04T23:59:59Z"
+                }
+              }
+            },
+            {
+              "terms": {
+                "dst_port": [
+                  22,
+                  80
+                ]
+              }
+            },
+            {
+              "term": {
+                "protocol": "TCP"
+              }
+            },
+            {
+              "term": {
+                "label": "benign"
+              }
+            },
+            {
+              "range": {
+                "bytes_out": {
+                  "lt": 5000
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "expected_query": null,
+    "validation_result": {
+      "valid": false,
+      "errors": [
+        "Invalid fields: {'label', 'bytes_out', '@timestamp', 'protocol'}"
+      ]
+    },
+    "ast_similarity": 0.0,
+    "execution_metrics": null,
+    "generation_time": 9.711297988891602,
+    "execution_time": 0.0,
+    "error": null,
+    "timestamp": "2025-08-20T21:57:54.154285"
+  },
+  {
+    "scenario_id": "scan-005",
+    "dataset": "standard",
+    "index": "logs_net",
+    "method": "rules",
+    "model": "llama3.1:latest",
+    "prompt": "Find benign TCP traffic to ports 22 or 80 with less than 5000 total bytes on July 4, 2017.",
+    "generated_query": {
+      "query": {
+        "bool": {
+          "filter": [
+            {
+              "range": {
+                "@timestamp": {
+                  "gte": "2017-07-04T00:00:00Z",
+                  "lte": "2017-07-04T23:59:59Z"
+                }
+              }
+            },
+            {
+              "term": {
+                "label": "benign"
+              }
+            },
+            {
+              "term": {
+                "protocol": "TCP"
+              }
+            },
+            {
+              "terms": {
+                "dst_port": [
+                  22,
+                  80
+                ]
+              }
+            }
+          ]
+        }
+      }
+    },
+    "expected_query": null,
+    "validation_result": {
+      "valid": false,
+      "errors": [
+        "Invalid fields: {'protocol', 'label', '@timestamp'}"
+      ]
+    },
+    "ast_similarity": 0.0,
+    "execution_metrics": null,
+    "generation_time": 0.00013899803161621094,
+    "execution_time": 0.0,
+    "error": null,
+    "timestamp": "2025-08-20T21:57:54.155465"
+  },
+  {
+    "scenario_id": "scan-005",
+    "dataset": "standard",
+    "index": "logs_net",
+    "method": "zeroshot",
+    "model": "llama3.1:latest",
+    "prompt": "Find benign TCP traffic to ports 22 or 80 with less than 5000 total bytes on July 4, 2017.",
+    "generated_query": {
+      "query": {
+        "bool": {
+          "filter": [
+            {
+              "term": {
+                "protocol": "tcp"
+              }
+            },
+            {
+              "terms": {
+                "port": [
+                  22,
+                  80
+                ]
+              }
+            },
+            {
+              "range": {
+                "bytes": {
+                  "lt": 5000
+                }
+              }
+            }
+          ]
+        }
+      },
+      "aggs": {
+        "*": {}
+      },
+      "time_filter": {
+        "gte": "2017-07-04T00:00:00.000Z",
+        "lte": "2017-07-04T23:59:59.999Z"
+      }
+    },
+    "expected_query": null,
+    "validation_result": {
+      "valid": false,
+      "errors": [
+        "Invalid fields: {'bytes', 'protocol'}"
+      ]
+    },
+    "ast_similarity": 0.0,
+    "execution_metrics": null,
+    "generation_time": 13.642129898071289,
+    "execution_time": 0.0,
+    "error": null,
+    "timestamp": "2025-08-20T21:58:07.800558"
+  },
+  {
+    "scenario_id": "scan-009",
+    "dataset": "standard",
+    "index": "logs_net",
+    "method": "constrained",
+    "model": "llama3.1:latest",
+    "prompt": "Find connections with more than 5000 bytes received between July 3-4, 2017.",
+    "generated_query": {
+      "query": {
+        "bool": {
+          "filter": [
+            {
+              "range": {
+                "@timestamp": {
+                  "gte": "2017-07-03T00:00:00Z",
+                  "lte": "2017-07-04T23:59:59Z"
+                }
+              }
+            },
+            {
+              "range": {
+                "bytes_in": {
+                  "gt": 5000
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "expected_query": null,
+    "validation_result": {
+      "valid": false,
+      "errors": [
+        "Invalid fields: {'bytes_in', '@timestamp'}"
+      ]
+    },
+    "ast_similarity": 0.0,
+    "execution_metrics": null,
+    "generation_time": 7.0125908851623535,
+    "execution_time": 0.0,
+    "error": null,
+    "timestamp": "2025-08-20T21:58:14.815902"
+  },
+  {
+    "scenario_id": "scan-009",
+    "dataset": "standard",
+    "index": "logs_net",
+    "method": "rules",
+    "model": "llama3.1:latest",
+    "prompt": "Find connections with more than 5000 bytes received between July 3-4, 2017.",
+    "generated_query": {
+      "query": {
+        "bool": {
+          "filter": [
+            {
+              "range": {
+                "@timestamp": {
+                  "gte": "2017-07-03T00:00:00Z",
+                  "lte": "2017-07-04T23:59:59Z"
+                }
+              }
+            },
+            {
+              "range": {
+                "bytes_in": {
+                  "gt": 5000
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "expected_query": null,
+    "validation_result": {
+      "valid": false,
+      "errors": [
+        "Invalid fields: {'bytes_in', '@timestamp'}"
+      ]
+    },
+    "ast_similarity": 0.0,
+    "execution_metrics": null,
+    "generation_time": 0.0003597736358642578,
+    "execution_time": 0.0,
+    "error": null,
+    "timestamp": "2025-08-20T21:58:14.817447"
+  },
+  {
+    "scenario_id": "scan-009",
+    "dataset": "standard",
+    "index": "logs_net",
+    "method": "zeroshot",
+    "model": "llama3.1:latest",
+    "prompt": "Find connections with more than 5000 bytes received between July 3-4, 2017.",
+    "generated_query": {
+      "query": {
+        "bool": {
+          "filter": [
+            {
+              "range": {
+                "@timestamp": {
+                  "gte": "2017-07-03T00:00:00.000Z",
+                  "lte": "2017-07-04T23:59:59.999Z"
+                }
+              }
+            },
+            {
+              "range": {
+                "bytes_received": {
+                  "gt": 5000
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "expected_query": null,
+    "validation_result": {
+      "valid": false,
+      "errors": [
+        "Invalid fields: {'@timestamp', 'bytes_received'}"
+      ]
+    },
+    "ast_similarity": 0.0,
+    "execution_metrics": null,
+    "generation_time": 8.154942035675049,
+    "execution_time": 0.0,
+    "error": null,
+    "timestamp": "2025-08-20T21:58:22.974460"
+  }
+]

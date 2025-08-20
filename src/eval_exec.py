@@ -14,7 +14,15 @@ except ImportError:
     from .config import get_es_client_config, ES_READER_CREDS, ES_DEFAULT_INDEX
 
 def run_query(es, index, dsl: dict, size=10000):
-    res = es.search(index=index, body=dsl, size=size, track_total_hits=True)
+    # Remove 'size' from dsl if it exists to avoid conflict
+    query_dsl = dsl.copy()
+    if 'size' in query_dsl:
+        # Use the size from the query if specified
+        query_size = query_dsl.pop('size')
+        size = min(query_size, size)  # Use the smaller of the two
+    
+    # Use the newer search API format
+    res = es.search(index=index, query=query_dsl.get('query'), size=size, track_total_hits=True)
     ids = sorted({h["_id"] for h in res["hits"]["hits"]})
     total = res["hits"]["total"]["value"] if isinstance(res["hits"]["total"], dict) else res["hits"]["total"]
     return ids, total

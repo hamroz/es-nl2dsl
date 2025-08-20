@@ -123,18 +123,69 @@ class EnhancedEvaluator:
                     full_prompt = generate_constrained.build_prompt(prompt, index=index)
                     result = generate_constrained.call_local_model(full_prompt, model=ollama_model)
                 elif method == "rules":
-                    # Use rules-based generation
-                    result = baseline_rules.generate_query(prompt)
+                    # Use rules-based generation (doesn't use LLM, just pattern matching)
+                    # This returns a dict directly, not a JSON string
+                    result = baseline_rules.generate_rule_based_query(prompt)
+                    generated_query = result  # Already a dict
                 elif method == "zeroshot":
                     # Use zero-shot generation (baseline_zeroshot handles prompt internally)
                     result = baseline_zeroshot.call_model_zeroshot(prompt, model=ollama_model)
                 else:
                     raise ValueError(f"Unknown method: {method}")
                 
-                if isinstance(result, str):
-                    generated_query = json.loads(result)
-                else:
-                    generated_query = result
+                # Extract JSON from response (only for string responses from models)
+                if method != "rules":  # Rules method already set generated_query
+                    if isinstance(result, str):
+                        # Try to extract JSON from markdown code blocks
+                        if "```json" in result:
+                            result = result.split("```json")[1].split("```")[0]
+                        elif "```" in result:
+                            result = result.split("```")[1].split("```")[0]
+                        
+                        # Strip whitespace
+                        result = result.strip()
+                        
+                        # If result is empty, raise an error
+                        if not result:
+                            raise ValueError("Model returned empty response")
+                        
+                        # Try to parse as JSON
+                        try:
+                            generated_query = json.loads(result)
+                        except json.JSONDecodeError as e:
+                            # Try to find JSON-like content in the response
+                            import re
+                            
+                            # First try to find a complete JSON object
+                            json_match = re.search(r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}', result, re.DOTALL)
+                            if json_match:
+                                try:
+                                    # Clean up the matched JSON
+                                    json_str = json_match.group()
+                                    # Remove any trailing commas before closing braces/brackets
+                                    json_str = re.sub(r',(\s*[}\]])', r'\1', json_str)
+                                    # Try to parse the cleaned JSON
+                                    generated_query = json.loads(json_str)
+                                except json.JSONDecodeError:
+                                    # If that fails, try a more aggressive approach
+                                    # Find the first { and last }
+                                    start = result.find('{')
+                                    end = result.rfind('}')
+                                    if start != -1 and end != -1 and end > start:
+                                        json_str = result[start:end+1]
+                                        # Clean up common issues
+                                        json_str = re.sub(r',(\s*[}\]])', r'\1', json_str)  # Remove trailing commas
+                                        json_str = re.sub(r'(\w+):', r'"\1":', json_str)  # Quote unquoted keys
+                                        try:
+                                            generated_query = json.loads(json_str)
+                                        except:
+                                            raise ValueError(f"Could not parse JSON after cleaning: {e}")
+                                    else:
+                                        raise ValueError(f"Could not find valid JSON structure in response")
+                            else:
+                                raise ValueError(f"Could not extract valid JSON from response: {result[:200]}...")
+                    else:
+                        generated_query = result
                     
             else:
                 # Use external LLM
@@ -200,7 +251,8 @@ class EnhancedEvaluator:
         scenario_id = scenario['id']
         prompt = scenario['prompt']
         index = scenario.get('index', 'logs_net' if dataset == 'standard' else 'logs_cic_ids2017')
-        expected_query = scenario.get('expected_query')
+        # Handle both 'expected_query' and 'expert_dsl' field names
+        expected_query = scenario.get('expected_query') or scenario.get('expert_dsl')
         
         if isinstance(expected_query, str):
             expected_query = yaml.safe_load(expected_query)
