@@ -1,5 +1,65 @@
 # Few-shot examples for CIC-IDS2017 queries
 examples:
+  # Complex queries with multiple constraints
+  - prompt: "Find port scans where destination port is 443"
+    query:
+      query:
+        bool:
+          filter:
+            - term:
+                attack_type: "scan"
+            - term:
+                dst_port: 443
+            - range:
+                "@timestamp":
+                  gte: "2017-01-01"
+                  lte: "2017-12-31"
+    explanation: "Combine attack type with specific port constraint"
+    
+  - prompt: "Find DDoS attacks from IP 192.168.1.100"
+    query:
+      query:
+        bool:
+          filter:
+            - term:
+                attack_type: "dos"
+            - term:
+                src_ip: "192.168.1.100"
+            - range:
+                "@timestamp":
+                  gte: "2017-01-01"
+                  lte: "2017-12-31"
+    explanation: "Combine attack type with source IP constraint"
+    
+  - prompt: "Find traffic to port 80 or port 443"
+    query:
+      query:
+        bool:
+          filter:
+            - terms:
+                dst_port: [80, 443]
+            - range:
+                "@timestamp":
+                  gte: "2017-01-01"
+                  lte: "2017-12-31"
+    explanation: "Use terms for multiple port values"
+    
+  - prompt: "Find brute force attacks on port 22"
+    query:
+      query:
+        bool:
+          filter:
+            - term:
+                attack_type: "bruteforce"
+            - term:
+                dst_port: 22
+            - range:
+                "@timestamp":
+                  gte: "2017-01-01"
+                  lte: "2017-12-31"
+    explanation: "SSH brute force typically targets port 22"
+    
+  # Basic attack type queries
   - prompt: "Find DDoS attacks"
     query:
       query:

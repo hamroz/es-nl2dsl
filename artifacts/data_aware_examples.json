@@ -1,0 +1,58 @@
+{
+  "statistics": {
+    "attack_types": {
+      "normal": 249051,
+      "dos": 12561,
+      "bruteforce": 3305,
+      "scan": 220,
+      "botnet": 1
+    },
+    "dos_src_ips": [
+      "172.16.0.1"
+    ],
+    "scan_src_ips": [
+      "172.16.0.1"
+    ],
+    "bruteforce_src_ips": [
+      "172.16.0.1"
+    ],
+    "common_attack_ports": [
+      80,
+      21,
+      443,
+      22,
+      444,
+      8080
+    ],
+    "dos_packet_rate_percentiles": {
+      "25.0": 0.41496873789596755,
+      "50.0": 0.8121691806579996,
+      "75.0": 4.516692392533891,
+      "90.0": 21.85935892398848,
+      "95.0": 95.32310600790515,
+      "99.0": 280.5894559410427
+    }
+  },
+  "examples": [
+    {
+      "prompt": "Find DDoS attacks from 172.16.0.1",
+      "description": "DDoS with actual source IP from data",
+      "expected_results": ">10000"
+    },
+    {
+      "prompt": "Find DDoS attacks with packet rate over 4",
+      "description": "DDoS with realistic packet rate threshold",
+      "expected_results": ">1000"
+    },
+    {
+      "prompt": "Find port scans targeting port 80",
+      "description": "Port scan with common target port",
+      "expected_results": ">0"
+    },
+    {
+      "prompt": "Find brute force attacks from 172.16.0.1",
+      "description": "Brute force with actual source IP",
+      "expected_results": ">0"
+    }
+  ]
+}

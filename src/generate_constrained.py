@@ -7,6 +7,12 @@ import yaml
 import time
 from pathlib import Path
 from jsonschema import validate, ValidationError
+# Import prompt enhancer if available
+try:
+    from prompt_enhancer import enhance_prompt, build_enhanced_prompt
+    ENHANCER_AVAILABLE = True
+except ImportError:
+    ENHANCER_AVAILABLE = False
 
 FIELD_CATALOG = {
     "@timestamp": {"type": "date", "description": "Event timestamp"},
@@ -92,6 +98,11 @@ def build_prompt(task_prompt, index=None):
     if index and "cic" in index.lower():
         prompt += "Dataset: CIC-IDS2017 network traffic with attack labels\n\n"
         prompt += "Key fields for CIC data:\n"
+        prompt += "- src_ip (keyword): Source IP address\n"
+        prompt += "- dst_ip (keyword): Destination IP address\n"
+        prompt += "- src_port (integer): Source port number\n"
+        prompt += "- dst_port (integer): Destination port number\n"
+        prompt += "- protocol (keyword): Network protocol (tcp/udp/icmp)\n"
         prompt += "- attack_type (keyword): Attack category (normal, dos, scan, bruteforce, web_attack)\n"
         prompt += "- label (keyword): Specific attack label (BENIGN, DDoS, PortScan, SSH-Patator, etc.)\n"
         prompt += "- flow_packets_s (float): Packet rate per second\n"
@@ -103,10 +114,12 @@ def build_prompt(task_prompt, index=None):
         prompt += "IMPORTANT mappings:\n"
         prompt += "- For 'DDoS attacks': use attack_type:dos\n"
         prompt += "- For 'port scans': use attack_type:scan\n"
-        prompt += "- For 'high packet rate': use flow_packets_s >= 100 (typical DDoS)\n"
-        prompt += "- For 'high bandwidth': use flow_bytes_s >= 1000000 (1MB/s)\n"
-        prompt += "- Always include @timestamp range for time windowing\n"
-        prompt += "- Day names should match exactly: Monday, Tuesday, Wednesday, Thursday, Friday\n\n"
+        prompt += "- For 'brute force': use attack_type:bruteforce\n"
+        prompt += "- ALWAYS include specific ports if mentioned (e.g., 'port 443' → dst_port:443)\n"
+        prompt += "- ALWAYS include IP addresses if mentioned (e.g., 'from 192.168.1.1' → src_ip:192.168.1.1)\n"
+        prompt += "- For 'high packet rate': use flow_packets_s >= 100\n"
+        prompt += "- For 'high bandwidth': use flow_bytes_s >= 1000000\n"
+        prompt += "- Always include @timestamp range for time windowing\n\n"
     else:
         prompt += "Available fields:\n"
         for field, info in FIELD_CATALOG.items():
@@ -239,7 +252,15 @@ def generate_with_retries(task_prompt, schema_path, rules_path, max_retries=2, i
         metrics["latency_seconds"] = time.time() - start_time
         return {"abstain": True, "reason": f"Security violation: {violation_reason}", "metrics": metrics}
     
-    prompt = build_prompt(task_prompt, index)
+    # Enhance prompt if CIC index and enhancer available
+    enhanced_task_prompt = task_prompt
+    if ENHANCER_AVAILABLE and index and "cic" in index.lower():
+        enhancements = enhance_prompt(task_prompt)
+        if enhancements['field_constraints'] or enhancements['time_constraints']:
+            enhanced_task_prompt = build_enhanced_prompt(task_prompt, enhancements)
+            print(f"Enhanced prompt with extracted constraints")
+    
+    prompt = build_prompt(enhanced_task_prompt, index)
     
     for attempt in range(max_retries + 1):
         metrics["attempts"] = attempt + 1
