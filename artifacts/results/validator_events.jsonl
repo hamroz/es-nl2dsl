@@ -580,3 +580,4 @@
 {"timestamp": "2025-08-20T05:33:19.303533", "dsl_file": "/var/folders/k9/410c4xgn0r9494l65rnrw_lm0000gn/T/tmpcsmnyju7.json", "check_passed": false, "failure_category": "invalid_time_window_format"}
 {"timestamp": "2025-08-20T05:43:00.303823", "dsl_file": "/var/folders/k9/410c4xgn0r9494l65rnrw_lm0000gn/T/tmp_rrbquft.json", "check_passed": false, "failure_category": "invalid_time_window_format"}
 {"timestamp": "2025-08-20T05:43:50.755918", "dsl_file": "/var/folders/k9/410c4xgn0r9494l65rnrw_lm0000gn/T/tmp23y37nqi.json", "check_passed": false, "failure_category": "time_window_exceeds_7_days"}
+{"timestamp": "2025-08-20T17:57:22.534209", "dsl_file": "/var/folders/k9/410c4xgn0r9494l65rnrw_lm0000gn/T/tmp2ayl926k.json", "check_passed": false, "failure_category": "invalid_time_window_format"}
