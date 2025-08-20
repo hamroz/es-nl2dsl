@@ -1,7 +1,17 @@
 #!/usr/bin/env python3
 import argparse, json, time, pathlib, orjson
+import sys
+import os
 from elasticsearch import Elasticsearch
-from config import get_es_client_config, ES_READER_CREDS, ES_DEFAULT_INDEX
+
+# Add src directory to path for imports
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+try:
+    from config import get_es_client_config, ES_READER_CREDS, ES_DEFAULT_INDEX
+except ImportError:
+    # If direct import fails, try relative import
+    from .config import get_es_client_config, ES_READER_CREDS, ES_DEFAULT_INDEX
 
 def run_query(es, index, dsl: dict, size=10000):
     res = es.search(index=index, body=dsl, size=size, track_total_hits=True)
@@ -53,6 +63,39 @@ def main():
     outpath = outdir / f"eval_{stamp}.json"
     outpath.write_bytes(orjson.dumps(rec, option=orjson.OPT_INDENT_2))
     print(f"Wrote {outpath}"); print(orjson.dumps(rec, option=orjson.OPT_INDENT_2).decode())
+
+def execute_query(dsl: dict, index: str = ES_DEFAULT_INDEX, size: int = 10000):
+    """Execute a query and return results - for use by enhanced_evaluation"""
+    try:
+        es = Elasticsearch(**get_es_client_config(use_admin=False), request_timeout=60)
+        ids, total = run_query(es, index, dsl, size)
+        return {'ids': ids, 'total': total}
+    except Exception as e:
+        print(f"Error executing query: {e}")
+        return None
+
+def calculate_metrics(expected_results, generated_results):
+    """Calculate evaluation metrics - for use by enhanced_evaluation"""
+    if not expected_results or not generated_results:
+        return {
+            'precision': 0.0,
+            'recall': 0.0,
+            'f1_score': 0.0,
+            'jaccard_similarity': 0.0
+        }
+    
+    exp_ids = expected_results.get('ids', [])
+    gen_ids = generated_results.get('ids', [])
+    
+    jac = jaccard(exp_ids, gen_ids)
+    p, r, f1 = prf1(gen_ids, exp_ids)
+    
+    return {
+        'precision': p,
+        'recall': r,
+        'f1_score': f1,
+        'jaccard_similarity': jac
+    }
 
 if __name__ == "__main__":
     main()

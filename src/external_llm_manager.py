@@ -6,10 +6,15 @@ External LLM Manager for integrating OpenAI, Google, DeepSeek, and Qwen AI.
 """
 
 import json
+import os
 from pathlib import Path
 from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, asdict
 from datetime import datetime
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 
 @dataclass
@@ -133,12 +138,16 @@ class ExternalLLMManager:
         self.load_config()
 
     def load_config(self):
-        """Load LLM configurations from file"""
+        """Load LLM configurations from file and merge with environment variables"""
         if self.config_file.exists():
             try:
                 with open(self.config_file, 'r') as f:
                     data = json.load(f)
                     for name, config in data.items():
+                        # Load API key from environment if not in config or if placeholder
+                        if 'api_key' not in config or not config['api_key'] or config['api_key'] == 'ENV':
+                            env_key = self._get_env_key_name(config.get('provider', ''))
+                            config['api_key'] = os.getenv(env_key, '')
                         self.llms[name] = ExternalLLM(**config)
             except Exception as e:
                 print(f"Error loading LLM config: {e}")
@@ -150,9 +159,15 @@ class ExternalLLMManager:
             self.save_config()
 
     def save_config(self):
-        """Save LLM configurations to file"""
+        """Save LLM configurations to file (with API keys as placeholders)"""
         self.config_file.parent.mkdir(parents=True, exist_ok=True)
-        data = {name: asdict(llm) for name, llm in self.llms.items()}
+        data = {}
+        for name, llm in self.llms.items():
+            llm_dict = asdict(llm)
+            # Replace actual API key with placeholder for security
+            if llm_dict.get('api_key'):
+                llm_dict['api_key'] = 'ENV'  # Placeholder indicating to load from environment
+            data[name] = llm_dict
         with open(self.config_file, 'w') as f:
             json.dump(data, f, indent=2)
 
@@ -160,6 +175,14 @@ class ExternalLLMManager:
         """Add or update an LLM configuration"""
         self.last_error = None
         try:
+            # If API key is not provided, try to load from environment
+            if not llm.api_key or llm.api_key == 'ENV':
+                env_key = self._get_env_key_name(llm.provider)
+                llm.api_key = os.getenv(env_key, '')
+                if not llm.api_key:
+                    self.last_error = f"No API key found in environment variable {env_key}"
+                    return False
+            
             if self.validate_llm(llm):
                 self.llms[llm.name] = llm
                 self.save_config()
@@ -466,6 +489,16 @@ class ExternalLLMManager:
             ],
         }
 
+    def _get_env_key_name(self, provider: str) -> str:
+        """Get the environment variable name for a provider's API key"""
+        env_mapping = {
+            'openai': 'OPENAI_API_KEY',
+            'google': 'GOOGLE_API_KEY',
+            'deepseek': 'DEEPSEEK_API_KEY',
+            'qwen': 'QWEN_API_KEY'
+        }
+        return env_mapping.get(provider.lower(), f'{provider.upper()}_API_KEY')
+    
     def update_llm_status(self, name: str, enabled: bool) -> bool:
         """Enable or disable an LLM"""
         if name in self.llms:
@@ -473,6 +506,11 @@ class ExternalLLMManager:
             self.save_config()
             return True
         return False
+    
+    def get_api_key_from_env(self, provider: str) -> Optional[str]:
+        """Get API key from environment variables for a provider"""
+        env_key = self._get_env_key_name(provider)
+        return os.getenv(env_key)
 
 
 # Singleton instance

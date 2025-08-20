@@ -1,9 +1,19 @@
 #!/usr/bin/env python3
 import argparse, json, math, re, datetime as dt, orjson, yaml
+import sys
+import os
 from pathlib import Path
 from datetime import datetime
 from elasticsearch import Elasticsearch
-from config import get_es_client_config, ES_READER_CREDS, ES_DEFAULT_INDEX
+
+# Add src directory to path for imports
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+try:
+    from config import get_es_client_config, ES_READER_CREDS, ES_DEFAULT_INDEX
+except ImportError:
+    # If direct import fails, try relative import
+    from .config import get_es_client_config, ES_READER_CREDS, ES_DEFAULT_INDEX
 
 def load_rules(path):
     with open(path, "r") as f:

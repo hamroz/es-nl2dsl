@@ -16,10 +16,13 @@
           }
         },
         {
-          "terms": {
-            "label": [
-              "benign"
-            ]
+          "term": {
+            "protocol": "TCP"
+          }
+        },
+        {
+          "term": {
+            "label": "benign"
           }
         }
       ]

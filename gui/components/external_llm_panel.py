@@ -12,6 +12,7 @@ project_root = Path(__file__).parent.parent.parent
 sys.path.append(str(project_root))
 
 from src.external_llm_manager import ExternalLLM, get_external_llm_manager
+import os
 
 
 def render_external_llm_panel():
@@ -86,13 +87,31 @@ def render_add_llm_tab(manager):
         )
 
     with col2:
-        # API Key
-        api_key = st.text_input(
-            "API Key",
-            type="password",
-            placeholder="Enter your API key",
-            help="Your API key for the selected provider",
-        )
+        # Check if API key exists in environment
+        env_key_name = manager.get_api_key_from_env(provider)
+        has_env_key = bool(manager.get_api_key_from_env(provider))
+        
+        # API Key input with environment variable info
+        if has_env_key:
+            st.info(f"✅ API key found in environment variable: {manager._get_env_key_name(provider)}")
+            use_env_key = st.checkbox("Use API key from environment", value=True, key="use_env_key")
+            if use_env_key:
+                api_key = "ENV"  # Placeholder to indicate using environment variable
+            else:
+                api_key = st.text_input(
+                    "API Key (Override Environment)",
+                    type="password",
+                    placeholder="Enter a different API key",
+                    help="Enter a different API key to override the environment variable",
+                )
+        else:
+            st.warning(f"⚠️ No API key found in environment. Set {manager._get_env_key_name(provider)} in .env file")
+            api_key = st.text_input(
+                "API Key",
+                type="password",
+                placeholder="Enter your API key or set in .env file",
+                help=f"Your API key for {provider}. You can also set {manager._get_env_key_name(provider)} in .env file",
+            )
 
         # Advanced settings
         with st.expander("Advanced Settings"):
@@ -132,8 +151,8 @@ def render_add_llm_tab(manager):
         if st.button("🚀 Add LLM", type="primary", use_container_width=True):
             if not llm_name:
                 st.error("Please provide a configuration name")
-            elif not api_key:
-                st.error("Please provide an API key")
+            elif not api_key and not has_env_key:
+                st.error(f"Please provide an API key or set {manager._get_env_key_name(provider)} in .env file")
             elif llm_name in [llm.name for llm in manager.list_llms()]:
                 st.error(f"Configuration '{llm_name}' already exists")
             else:
@@ -158,6 +177,31 @@ def render_add_llm_tab(manager):
                         err = manager.last_error or "Failed to validate API key."
                         st.error(f"❌ {err}")
 
+    # Show environment variable configuration info
+    st.markdown("---")
+    with st.expander("🔐 Security Best Practice: Using Environment Variables", expanded=False):
+        st.markdown("""
+        **Recommended: Store API keys in `.env` file**
+        
+        1. Create or edit `.env` file in project root
+        2. Add your API keys:
+        ```
+        OPENAI_API_KEY=your_openai_key_here
+        GOOGLE_API_KEY=your_google_key_here
+        DEEPSEEK_API_KEY=your_deepseek_key_here
+        QWEN_API_KEY=your_qwen_key_here
+        ```
+        3. The system will automatically load these keys
+        4. API keys won't be stored in JSON files (more secure)
+        5. `.env` file is gitignored - safe from version control
+        
+        **Benefits:**
+        - ✅ API keys not exposed in configuration files
+        - ✅ Safe to commit code to GitHub
+        - ✅ Different keys for dev/prod environments
+        - ✅ Automatic loading on system start
+        """)
+    
     # Show provider-specific instructions
     st.markdown("---")
     st.markdown("### 📚 Provider Setup Instructions")
@@ -167,16 +211,20 @@ def render_add_llm_tab(manager):
             """
 **OpenAI**
 1. Create an API key at [platform.openai.com](https://platform.openai.com/api-keys)
-2. Available models:
+2. **Set up API key** (choose one method):
+   - **Recommended**: Add `OPENAI_API_KEY=your_key` to `.env` file
+   - **Alternative**: Paste directly in the form above
+3. Available models:
    - **gpt-4o**: Latest and most capable model
    - **gpt-4o-mini**: Faster, more affordable variant
    - **gpt-4-turbo**: Previous generation turbo model
    - **o1**: Advanced reasoning model
    - **o1-mini**: Smaller reasoning model
    - **o3-mini**: Latest mini model
-3. Paste your API key and click **Add LLM**
+4. Click **Add LLM**
 
 **Notes**
+- API keys in `.env` file are more secure (not stored in JSON)
 - The app automatically handles both Chat Completions and Responses API
 - For proxies/self-hosted gateways, set a **Custom Endpoint**
 """
@@ -187,13 +235,16 @@ def render_add_llm_tab(manager):
             """
 **Google Gemini**
 1. Create an API key at [Google AI Studio](https://aistudio.google.com/apikey)
-2. Available models:
+2. **Set up API key** (choose one method):
+   - **Recommended**: Add `GOOGLE_API_KEY=your_key` to `.env` file
+   - **Alternative**: Paste directly in the form above
+3. Available models:
    - **gemini-2.5-pro**: Most capable Gemini model
    - **gemini-2.5-flash**: Fast and efficient
    - **gemini-2.0-flash-thinking-exp**: Experimental thinking model
    - **gemini-1.5-pro**: Previous generation pro model
    - **gemini-1.5-flash**: Previous generation flash model
-3. Paste your API key and click **Add LLM**
+4. Click **Add LLM**
 """
         )
 
@@ -202,12 +253,15 @@ def render_add_llm_tab(manager):
             """
 **DeepSeek (OpenAI-compatible)**
 1. Create an API key at [DeepSeek Platform](https://platform.deepseek.com)
-2. Available models:
+2. **Set up API key** (choose one method):
+   - **Recommended**: Add `DEEPSEEK_API_KEY=your_key` to `.env` file
+   - **Alternative**: Paste directly in the form above
+3. Available models:
    - **deepseek-reasoner**: R1-style reasoning model
    - **deepseek-chat**: Standard chat model
    - **deepseek-coder**: Specialized for code generation
-3. Endpoint: `https://api.deepseek.com/v1` (auto-filled)
-4. Paste your API key and click **Add LLM**
+4. Endpoint: `https://api.deepseek.com/v1` (auto-filled)
+5. Click **Add LLM**
 """
         )
 
@@ -216,14 +270,17 @@ def render_add_llm_tab(manager):
             """
 **Qwen AI (Alibaba Cloud)**
 1. Create an API key at [Alibaba Cloud DashScope](https://dashscope.console.aliyun.com)
-2. Available models:
+2. **Set up API key** (choose one method):
+   - **Recommended**: Add `QWEN_API_KEY=your_key` to `.env` file
+   - **Alternative**: Paste directly in the form above
+3. Available models:
    - **qwen-max**: Most capable Qwen model
    - **qwen-plus**: Balanced performance and cost
    - **qwen-turbo**: Fast and efficient
    - **qwen-long**: Extended context window
    - **qwen2.5-coder-32b-instruct**: Specialized for coding
-3. Endpoint: `https://dashscope.aliyuncs.com/compatible-mode/v1` (auto-filled)
-4. Paste your API key and click **Add LLM**
+4. Endpoint: `https://dashscope.aliyuncs.com/compatible-mode/v1` (auto-filled)
+5. Click **Add LLM**
 
 **Note**: Qwen uses OpenAI-compatible API format
 """

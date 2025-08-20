@@ -1,0 +1,306 @@
+# CIC-IDS2017 Ground Truth Scenarios for Evaluation
+# Each scenario includes natural language prompt and expected DSL query
+
+scenarios:
+  # DDoS Attack Scenarios
+  - id: cic-ddos-001
+    category: DDoS Attack Detection
+    prompt: "Find all DDoS attack events from July 3rd 2017"
+    index: logs_cic_ids2017
+    expected_query: |
+      {
+        "query": {
+          "bool": {
+            "must": [
+              {
+                "range": {
+                  "@timestamp": {
+                    "gte": "2017-07-03T00:00:00",
+                    "lte": "2017-07-03T23:59:59"
+                  }
+                }
+              },
+              {
+                "match": {
+                  "attack_type": "DDoS"
+                }
+              }
+            ]
+          }
+        }
+      }
+    
+  - id: cic-ddos-002
+    category: DDoS Attack Analysis
+    prompt: "Show top 10 source IPs involved in DDoS attacks with packet counts"
+    index: logs_cic_ids2017
+    expected_query: |
+      {
+        "query": {
+          "match": {
+            "attack_type": "DDoS"
+          }
+        },
+        "aggs": {
+          "top_attackers": {
+            "terms": {
+              "field": "src_ip",
+              "size": 10
+            },
+            "aggs": {
+              "total_packets": {
+                "sum": {
+                  "field": "total_packets"
+                }
+              }
+            }
+          }
+        },
+        "size": 0
+      }
+
+  # Port Scan Scenarios
+  - id: cic-portscan-001
+    category: Port Scan Detection
+    prompt: "Detect port scan attempts where source IP contacted more than 50 different destination ports"
+    index: logs_cic_ids2017
+    expected_query: |
+      {
+        "aggs": {
+          "potential_scanners": {
+            "terms": {
+              "field": "src_ip",
+              "size": 100
+            },
+            "aggs": {
+              "unique_ports": {
+                "cardinality": {
+                  "field": "dst_port"
+                }
+              },
+              "scanner_filter": {
+                "bucket_selector": {
+                  "buckets_path": {
+                    "port_count": "unique_ports"
+                  },
+                  "script": "params.port_count > 50"
+                }
+              }
+            }
+          }
+        },
+        "size": 0
+      }
+
+  # Brute Force Scenarios
+  - id: cic-bruteforce-001
+    category: Brute Force Detection
+    prompt: "Find SSH brute force attacks on port 22 from the last 24 hours"
+    index: logs_cic_ids2017
+    expected_query: |
+      {
+        "query": {
+          "bool": {
+            "must": [
+              {
+                "range": {
+                  "@timestamp": {
+                    "gte": "now-24h"
+                  }
+                }
+              },
+              {
+                "term": {
+                  "dst_port": 22
+                }
+              },
+              {
+                "match": {
+                  "attack_type": "SSH-Patator"
+                }
+              }
+            ]
+          }
+        }
+      }
+
+  # Web Attack Scenarios
+  - id: cic-web-001
+    category: Web Attack Detection
+    prompt: "Identify web attacks on port 80 or 443 with high packet rates"
+    index: logs_cic_ids2017
+    expected_query: |
+      {
+        "query": {
+          "bool": {
+            "must": [
+              {
+                "terms": {
+                  "dst_port": [80, 443]
+                }
+              },
+              {
+                "match": {
+                  "attack_type": "Web Attack"
+                }
+              },
+              {
+                "range": {
+                  "flow_packets_s": {
+                    "gte": 1000
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+
+  # Botnet Scenarios
+  - id: cic-botnet-001
+    category: Botnet Detection
+    prompt: "Find botnet activity with abnormal flow durations"
+    index: logs_cic_ids2017
+    expected_query: |
+      {
+        "query": {
+          "bool": {
+            "must": [
+              {
+                "match": {
+                  "attack_type": "Bot"
+                }
+              },
+              {
+                "range": {
+                  "flow_duration": {
+                    "gte": 10000000
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+
+  # Infiltration Scenarios
+  - id: cic-infiltration-001
+    category: Infiltration Detection
+    prompt: "Detect infiltration attempts with suspicious packet patterns"
+    index: logs_cic_ids2017
+    expected_query: |
+      {
+        "query": {
+          "bool": {
+            "must": [
+              {
+                "match": {
+                  "attack_type": "Infiltration"
+                }
+              },
+              {
+                "range": {
+                  "packet_length_std": {
+                    "gte": 100
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+
+  # Time-based Analysis
+  - id: cic-temporal-001  
+    category: Temporal Analysis
+    prompt: "Show attack distribution by hour of day"
+    index: logs_cic_ids2017
+    expected_query: |
+      {
+        "query": {
+          "bool": {
+            "must_not": {
+              "match": {
+                "label": "BENIGN"
+              }
+            }
+          }
+        },
+        "aggs": {
+          "attacks_by_hour": {
+            "terms": {
+              "field": "hour_of_day",
+              "size": 24,
+              "order": {
+                "_key": "asc"
+              }
+            }
+          }
+        },
+        "size": 0
+      }
+
+  # Multi-criteria Scenarios
+  - id: cic-complex-001
+    category: Complex Detection
+    prompt: "Find high-volume attacks with more than 1000 bytes per second from specific IP range 192.168.0.0/16"
+    index: logs_cic_ids2017
+    expected_query: |
+      {
+        "query": {
+          "bool": {
+            "must": [
+              {
+                "range": {
+                  "flow_bytes_s": {
+                    "gte": 1000
+                  }
+                }
+              },
+              {
+                "prefix": {
+                  "src_ip": "192.168."
+                }
+              },
+              {
+                "bool": {
+                  "must_not": {
+                    "match": {
+                      "label": "BENIGN"
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+
+  # TCP Flag Analysis
+  - id: cic-tcpflags-001
+    category: TCP Flag Analysis
+    prompt: "Detect SYN flood attacks with high SYN flag count"
+    index: logs_cic_ids2017
+    expected_query: |
+      {
+        "query": {
+          "bool": {
+            "must": [
+              {
+                "range": {
+                  "syn_flag_count": {
+                    "gte": 5
+                  }
+                }
+              },
+              {
+                "range": {
+                  "ack_flag_count": {
+                    "lte": 1
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }

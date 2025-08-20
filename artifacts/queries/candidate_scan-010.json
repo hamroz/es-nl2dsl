@@ -19,11 +19,8 @@
           }
         },
         {
-          "terms": {
-            "protocol": [
-              "HTTP",
-              "HTTPS"
-            ]
+          "term": {
+            "protocol": "TCP"
           }
         }
       ]
