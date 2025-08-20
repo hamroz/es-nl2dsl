@@ -16,51 +16,36 @@ from gui.utils.backend_interface import check_system_status
 from gui.components.external_llm_panel import render_external_llm_panel
 
 def render_admin_panel():
-    """Render the system administration interface with fixed navigation"""
+    """Render the system administration interface"""
     st.header("⚙️ System Administration")
     st.write("Monitor and manage system components, data, and configurations")
     
-    # Initialize admin tab index in session state
-    if 'admin_current_tab' not in st.session_state:
-        st.session_state.admin_current_tab = 0
-    
-    # Create selectbox navigation instead of problematic tabs
-    tab_names = [
+    # Create tabs for different admin functions
+    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
         "🔧 System Status", 
         "📊 Data Management", 
         "🗂️ Index Management",
         "🤖 External LLMs",
         "🔄 Maintenance", 
         "📋 Logs & Monitoring"
-    ]
+    ])
     
-    # Navigation selectbox
-    current_tab_name = st.selectbox(
-        "Select Admin Section:",
-        options=tab_names,
-        index=st.session_state.admin_current_tab,
-        key="admin_tab_selector",
-        help="Navigate between different admin sections"
-    )
-    
-    # Update session state with current tab index
-    st.session_state.admin_current_tab = tab_names.index(current_tab_name)
-    
-    # Add separator
-    st.markdown("---")
-    
-    # Render the selected tab content
-    if current_tab_name == "🔧 System Status":
+    with tab1:
         render_system_status_tab()
-    elif current_tab_name == "📊 Data Management":
+    
+    with tab2:
         render_data_management_tab()
-    elif current_tab_name == "🗂️ Index Management":
+    
+    with tab3:
         render_index_management_tab()
-    elif current_tab_name == "🤖 External LLMs":
+    
+    with tab4:
         render_external_llm_panel()
-    elif current_tab_name == "🔄 Maintenance":
+    
+    with tab5:
         render_maintenance_tab()
-    else:  # "📋 Logs & Monitoring"
+    
+    with tab6:
         render_logs_monitoring_tab()
 
 
