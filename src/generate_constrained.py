@@ -14,6 +14,13 @@ try:
 except ImportError:
     ENHANCER_AVAILABLE = False
 
+# Import sophisticated security filter
+try:
+    from security_filter import check_security_violations_advanced, SophisticatedSecurityFilter
+    ADVANCED_SECURITY = True
+except ImportError:
+    ADVANCED_SECURITY = False
+
 FIELD_CATALOG = {
     "@timestamp": {"type": "date", "description": "Event timestamp"},
     "src_ip": {"type": "keyword", "description": "Source IP address"},
@@ -37,13 +44,15 @@ ALLOWED_OPERATORS = {
 # Terms that are too vague to convert to specific time ranges
 AMBIGUOUS_TERMS = [
     "recently", "lately", "soon", "earlier", "later", "sometime",
-    "a while ago", "not long ago", "in the past", "previously"
+    "a while ago", "not long ago", "previously"
 ]
 
 # Terms that can be converted to specific dates (not ambiguous)
 CONVERTIBLE_TIME_TERMS = [
     "today", "yesterday", "tomorrow", "this week", "last week",
-    "this month", "last month", "last hour", "past hour", "last 24 hours"
+    "this month", "last month", "last hour", "past hour", "last 24 hours",
+    "past 24 hours", "past day", "past week", "past month", "in the past 24",
+    "in the past day", "in the past week", "in the past month", "in the last"
 ]
 
 # Security patterns that should be blocked - DEPRECATED (now handled in check_security_violations)
@@ -189,6 +198,19 @@ def validate_with_validator(query_json, rules_path):
         return False, str(e)
 
 def check_security_violations(prompt_text):
+    """Check for security violations using sophisticated filtering when available"""
+    # Use advanced security filter if available
+    if ADVANCED_SECURITY:
+        is_violation, reason = check_security_violations_advanced(prompt_text)
+        if is_violation:
+            return is_violation, reason
+        # If advanced filter passes, still do basic checks for compatibility
+        return check_security_violations_basic(prompt_text)
+    else:
+        # Fallback to basic checks
+        return check_security_violations_basic(prompt_text)
+
+def check_security_violations_basic(prompt_text):
     """Check for security violations and ambiguous terms"""
     prompt_lower = prompt_text.lower()
     
@@ -225,6 +247,10 @@ def check_security_violations(prompt_text):
     # But allow convertible time terms like "today", "yesterday" etc.
     for term in AMBIGUOUS_TERMS:
         if term in prompt_lower:
+            # Special case: "in the past X" is usually specific enough
+            import re
+            if re.search(r'in the past \d+ (hours?|days?|weeks?|months?)', prompt_lower):
+                continue
             # Double-check it's not a convertible term
             is_convertible = any(conv in prompt_lower for conv in CONVERTIBLE_TIME_TERMS)
             if not is_convertible:

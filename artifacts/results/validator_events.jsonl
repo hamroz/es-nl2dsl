@@ -735,3 +735,8 @@
 {"timestamp": "2025-08-20T23:47:55.433399", "dsl_file": "/var/folders/k9/410c4xgn0r9494l65rnrw_lm0000gn/T/tmps930jv6a.json", "check_passed": false, "failure_category": "invalid_time_window_format"}
 {"timestamp": "2025-08-20T23:48:13.970932", "dsl_file": "/var/folders/k9/410c4xgn0r9494l65rnrw_lm0000gn/T/tmpgqzgj911.json", "check_passed": false, "failure_category": "invalid_time_window_format"}
 {"timestamp": "2025-08-20T23:48:21.114373", "dsl_file": "/var/folders/k9/410c4xgn0r9494l65rnrw_lm0000gn/T/tmpt1ijztfu.json", "check_passed": false, "failure_category": "invalid_time_window_format"}
+{"timestamp": "2025-08-21T00:01:18.032539", "dsl_file": "/var/folders/k9/410c4xgn0r9494l65rnrw_lm0000gn/T/tmpz8pcgqfx.json", "check_passed": true, "failure_category": null}
+{"timestamp": "2025-08-21T00:01:18.033010", "dsl_file": "/var/folders/k9/410c4xgn0r9494l65rnrw_lm0000gn/T/tmpz8pcgqfx.json", "check_passed": true, "failure_category": null}
+{"timestamp": "2025-08-21T00:01:18.033054", "dsl_file": "/var/folders/k9/410c4xgn0r9494l65rnrw_lm0000gn/T/tmpz8pcgqfx.json", "check_passed": true, "failure_category": null}
+{"timestamp": "2025-08-21T00:01:18.048738", "dsl_file": "/var/folders/k9/410c4xgn0r9494l65rnrw_lm0000gn/T/tmpz8pcgqfx.json", "check_passed": true, "failure_category": null}
+{"timestamp": "2025-08-21T00:01:18.048866", "dsl_file": "/var/folders/k9/410c4xgn0r9494l65rnrw_lm0000gn/T/tmpz8pcgqfx.json", "check_passed": true, "failure_category": null}
