@@ -2,7 +2,17 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
-    path('scenarios/', views.ScenarioListView.as_view(), name='scenario-list'),
-    path('scenarios/<str:scenario_id>/run/', views.RunEvaluationView.as_view(), name='run-evaluation'),
-    path('results/', views.EvaluationResultsView.as_view(), name='evaluation-results'),
+    # Scenario management
+    path('scenarios/', views.EvaluationScenarioListView.as_view(), name='evaluation-scenarios'),
+    
+    # Evaluation runs
+    path('runs/', views.EvaluationRunListView.as_view(), name='evaluation-runs'),
+    path('runs/scenario/<str:scenario_id>/', views.run_scenario_evaluation, name='run-scenario-evaluation'),
+    
+    # Batch evaluations
+    path('batches/', views.EvaluationBatchListView.as_view(), name='evaluation-batches'),
+    path('batches/run/', views.run_batch_evaluation, name='run-batch-evaluation'),
+    
+    # Metrics
+    path('metrics/', views.get_evaluation_metrics, name='evaluation-metrics'),
 ]
