@@ -1,0 +1,139 @@
+version: "3.8"
+
+services:
+  # Existing Elasticsearch (preserved)
+  es:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.3
+    container_name: es8113
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=true
+      - xpack.security.http.ssl.enabled=false
+      - ELASTIC_PASSWORD=ChangeMe_123
+      - ES_JAVA_OPTS=-Xms2g -Xmx2g
+    ports: ["9200:9200","9300:9300"]
+    ulimits:
+      memlock: { soft: -1, hard: -1 }
+    volumes:
+      - ./data_es:/usr/share/elasticsearch/data
+    networks:
+      - es_nl2dsl_network
+
+  # PostgreSQL Database
+  db:
+    image: postgres:15
+    container_name: es_nl2dsl_db
+    environment:
+      POSTGRES_DB: es_nl2dsl
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports: ["5432:5432"]
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - es_nl2dsl_network
+
+  # Redis (for Celery and Channels)
+  redis:
+    image: redis:7-alpine
+    container_name: es_nl2dsl_redis
+    ports: ["6379:6379"]
+    volumes:
+      - redis_data:/data
+    networks:
+      - es_nl2dsl_network
+
+  # Django API Backend
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: es_nl2dsl_api
+    environment:
+      - DJANGO_SETTINGS_MODULE=es_nl2dsl_api.settings
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/es_nl2dsl
+      - REDIS_URL=redis://redis:6379/0
+      - ELASTICSEARCH_HOST=es:9200
+      - ELASTICSEARCH_USER=elastic
+      - ELASTICSEARCH_PASSWORD=ChangeMe_123
+    ports: ["8000:8000"]
+    volumes:
+      - ./artifacts:/app/artifacts
+      - ./data_raw:/app/data_raw
+      - ./src:/app/src
+    depends_on:
+      - db
+      - redis
+      - es
+    networks:
+      - es_nl2dsl_network
+    command: python manage.py runserver 0.0.0.0:8000
+
+  # Celery Worker
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: es_nl2dsl_worker
+    environment:
+      - DJANGO_SETTINGS_MODULE=es_nl2dsl_api.settings
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/es_nl2dsl
+      - REDIS_URL=redis://redis:6379/0
+      - ELASTICSEARCH_HOST=es:9200
+      - ELASTICSEARCH_USER=elastic
+      - ELASTICSEARCH_PASSWORD=ChangeMe_123
+    volumes:
+      - ./artifacts:/app/artifacts
+      - ./data_raw:/app/data_raw
+      - ./src:/app/src
+    depends_on:
+      - db
+      - redis
+      - es
+    networks:
+      - es_nl2dsl_network
+    command: celery -A es_nl2dsl_api worker --loglevel=info
+
+  # Celery Beat (for scheduled tasks)
+  beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: es_nl2dsl_beat
+    environment:
+      - DJANGO_SETTINGS_MODULE=es_nl2dsl_api.settings
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/es_nl2dsl
+      - REDIS_URL=redis://redis:6379/0
+    volumes:
+      - ./artifacts:/app/artifacts
+    depends_on:
+      - db
+      - redis
+    networks:
+      - es_nl2dsl_network
+    command: celery -A es_nl2dsl_api beat --loglevel=info
+
+  # React Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: es_nl2dsl_frontend
+    ports: ["3000:3000"]
+    environment:
+      - REACT_APP_API_URL=http://localhost:8000/api/v1
+      - REACT_APP_WS_URL=ws://localhost:8000/ws
+    volumes:
+      - ./frontend/src:/app/src
+    depends_on:
+      - api
+    networks:
+      - es_nl2dsl_network
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  es_nl2dsl_network:
+    driver: bridge
