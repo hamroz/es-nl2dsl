@@ -11,6 +11,8 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
 from pathlib import Path
+from datetime import timedelta
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -39,9 +41,12 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     # Third party apps
     "rest_framework",
+    "rest_framework_simplejwt",
     "corsheaders",
     "channels",
     # Local apps
+    "authentication",
+    "analytics",
     "queries",
     "evaluation", 
     "security",
@@ -59,6 +64,8 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "authentication.middleware.AuditLogMiddleware",
+    "authentication.middleware.RateLimitMiddleware",
 ]
 
 ROOT_URLCONF = "es_nl2dsl_api.urls"
@@ -139,11 +146,16 @@ REST_FRAMEWORK = {
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 20,
     'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
         'rest_framework.authentication.SessionAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.AllowAny',  # For development only
+        'rest_framework.permissions.IsAuthenticated',
     ],
+    'DEFAULT_RENDERER_CLASSES': [
+        'rest_framework.renderers.JSONRenderer',
+    ],
+    'EXCEPTION_HANDLER': 'authentication.exceptions.custom_exception_handler',
 }
 
 # CORS settings (for React frontend)
@@ -178,6 +190,75 @@ CHANNEL_LAYERS = {
 ELASTICSEARCH_HOST = "localhost:9200"
 ELASTICSEARCH_USER = "elastic"
 ELASTICSEARCH_PASSWORD = "ChangeMe_123"
+
+# Custom user model
+AUTH_USER_MODEL = 'authentication.CustomUser'
+
+# Simple JWT Configuration
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(hours=1),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
+    'UPDATE_LAST_LOGIN': True,
+    
+    'ALGORITHM': 'HS256',
+    'SIGNING_KEY': SECRET_KEY,
+    'VERIFYING_KEY': None,
+    'AUDIENCE': None,
+    'ISSUER': 'es-nl2dsl-api',
+    'JSON_ENCODER': None,
+    'JWK_URL': None,
+    
+    'AUTH_HEADER_TYPES': ('Bearer',),
+    'AUTH_HEADER_NAME': 'HTTP_AUTHORIZATION',
+    'USER_ID_FIELD': 'id',
+    'USER_ID_CLAIM': 'user_id',
+    'USER_AUTHENTICATION_RULE': 'rest_framework_simplejwt.authentication.default_user_authentication_rule',
+    
+    'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
+    'TOKEN_TYPE_CLAIM': 'token_type',
+    
+    'SLIDING_TOKEN_REFRESH_EXP_CLAIM': 'refresh_exp',
+    'SLIDING_TOKEN_LIFETIME': timedelta(hours=1),
+    'SLIDING_TOKEN_REFRESH_LIFETIME': timedelta(days=7),
+}
+
+# Security Settings
+SECURE_BROWSER_XSS_FILTER = True
+SECURE_CONTENT_TYPE_NOSNIFF = True
+X_FRAME_OPTIONS = 'DENY'
+SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
+
+# Session Settings
+SESSION_COOKIE_SECURE = not DEBUG  # Set to True in production
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = 'Strict'
+SESSION_COOKIE_AGE = 3600  # 1 hour
+
+# CSRF Settings
+CSRF_COOKIE_SECURE = not DEBUG  # Set to True in production
+CSRF_COOKIE_HTTPONLY = True
+CSRF_COOKIE_SAMESITE = 'Strict'
+
+# Rate Limiting Configuration
+RATE_LIMITING = {
+    'DEFAULT_RATE': '60/min',
+    'LOGIN_RATE': '10/min',
+    'QUERY_GENERATION_RATE': '30/min',
+    'QUERY_EXECUTION_RATE': '100/min',
+    'DATA_EXPORT_RATE': '20/min',
+}
+
+# Audit Logging Configuration
+AUDIT_LOGGING = {
+    'ENABLED': True,
+    'LOG_SENSITIVE_DATA': False,
+    'RETENTION_DAYS': 90,
+    'LOG_SUCCESSFUL_LOGINS': True,
+    'LOG_FAILED_LOGINS': True,
+    'LOG_QUERY_OPERATIONS': True,
+}
 
 # File storage paths (preserve existing structure)
 ARTIFACTS_PATH = BASE_DIR.parent / "artifacts"

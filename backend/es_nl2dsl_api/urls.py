@@ -19,6 +19,11 @@ from django.urls import path, include
 
 urlpatterns = [
     path("admin/", admin.site.urls),
+    # Authentication endpoints
+    path("api/v1/auth/", include("authentication.urls")),
+    # Analytics endpoints
+    path("api/v1/analytics/", include("analytics.urls")),
+    # Application endpoints (now require authentication)
     path("api/v1/queries/", include("queries.urls")),
     path("api/v1/evaluation/", include("evaluation.urls")),
     path("api/v1/security/", include("security.urls")),

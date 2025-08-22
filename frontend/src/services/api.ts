@@ -10,6 +10,62 @@ const api = axios.create({
   },
 });
 
+// Request interceptor to add auth token
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('es_nl2dsl_access_token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    
+    const sessionToken = localStorage.getItem('es_nl2dsl_session_token');
+    if (sessionToken) {
+      config.headers['X-Session-Token'] = sessionToken;
+    }
+    
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+// Response interceptor to handle token refresh
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+    
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+      
+      const refreshToken = localStorage.getItem('es_nl2dsl_refresh_token');
+      if (refreshToken) {
+        try {
+          const response = await axios.post(`${API_BASE_URL}/auth/refresh/`, {
+            refresh: refreshToken
+          });
+          
+          const { access } = response.data;
+          localStorage.setItem('es_nl2dsl_access_token', access);
+          
+          originalRequest.headers.Authorization = `Bearer ${access}`;
+          return api(originalRequest);
+        } catch (refreshError) {
+          // Refresh failed, redirect to login
+          localStorage.removeItem('es_nl2dsl_access_token');
+          localStorage.removeItem('es_nl2dsl_refresh_token');
+          localStorage.removeItem('es_nl2dsl_session_token');
+          window.location.href = '/login';
+        }
+      } else {
+        // No refresh token, redirect to login
+        window.location.href = '/login';
+      }
+    }
+    
+    return Promise.reject(error);
+  }
+);
+
 // Types for API responses
 export interface QueryTask {
   task_id: string;
