@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { apiService } from '../services/api';
 import { PlayIcon, ArrowDownTrayIcon, ClockIcon } from '@heroicons/react/24/outline';
+import QueryBuilder from '../components/QueryBuilder';
 
 interface QueryTask {
   task_id: string;
@@ -43,6 +44,8 @@ const QueryGenerator: React.FC = () => {
   const [currentTask, setCurrentTask] = useState<QueryTask | null>(null);
   const [queryResult, setQueryResult] = useState<QueryResult | null>(null);
   const [maxSize, setMaxSize] = useState(1000);
+  const [activeTab, setActiveTab] = useState<'natural' | 'visual'>('natural');
+  const [visualQuery, setVisualQuery] = useState<any>(null);
 
   // Get available indices
   const { data: availableIndices } = useQuery({
@@ -109,13 +112,54 @@ const QueryGenerator: React.FC = () => {
   const canExecute = currentTask?.status === 'completed' && 
                     currentTask?.validation?.status === 'PASS';
 
+  const handleVisualQueryExecute = (query: any) => {
+    setVisualQuery(query);
+    // For visual queries, we can execute them directly
+    executeMutation.mutate({
+      taskId: 'visual-query', // Special handling for visual queries
+      maxSize
+    });
+  };
+
+  const handleVisualQuerySave = (query: any, name: string) => {
+    console.log('Saving query:', name, query);
+    // TODO: Implement query saving functionality
+  };
+
   return (
     <div className="space-y-6">
       <div className="bg-white shadow rounded-lg p-6">
         <h1 className="text-2xl font-bold text-gray-900 mb-6">🤖 Query Generator</h1>
         
-        {/* Query Generation Form */}
-        <form onSubmit={handleGenerate} className="space-y-4">
+        {/* Tab Navigation */}
+        <div className="border-b border-gray-200 mb-6">
+          <nav className="-mb-px flex space-x-8">
+            <button
+              onClick={() => setActiveTab('natural')}
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'natural'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Natural Language
+            </button>
+            <button
+              onClick={() => setActiveTab('visual')}
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'visual'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Visual Query Builder
+            </button>
+          </nav>
+        </div>
+
+        {activeTab === 'natural' ? (
+          /* Natural Language Query Generation Form */
+          <form onSubmit={handleGenerate} className="space-y-4">
           <div>
             <label htmlFor="prompt" className="block text-sm font-medium text-gray-700 mb-1">
               Natural Language Query
@@ -196,6 +240,61 @@ const QueryGenerator: React.FC = () => {
             )}
           </button>
         </form>
+        ) : (
+          /* Visual Query Builder */
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+              <div>
+                <label htmlFor="visual-index" className="block text-sm font-medium text-gray-700 mb-1">
+                  Target Index
+                </label>
+                <select
+                  id="visual-index"
+                  value={selectedIndex}
+                  onChange={(e) => setSelectedIndex(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  {availableIndices?.map(index => (
+                    <option key={index} value={index}>{index}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label htmlFor="visual-max-size" className="block text-sm font-medium text-gray-700 mb-1">
+                  Max Results
+                </label>
+                <input
+                  id="visual-max-size"
+                  type="number"
+                  value={maxSize}
+                  onChange={(e) => setMaxSize(parseInt(e.target.value))}
+                  min="10"
+                  max="10000"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+
+              <div className="flex items-end">
+                <div className="text-sm text-gray-600">
+                  Build your query visually using the interface below, then execute it directly.
+                </div>
+              </div>
+            </div>
+
+            <QueryBuilder
+              onQueryChange={setVisualQuery}
+              onExecute={handleVisualQueryExecute}
+              onSave={handleVisualQuerySave}
+              availableFields={availableIndices?.includes(selectedIndex) ? 
+                (selectedIndex.includes('cic') ? 
+                  ['@timestamp', 'src_ip', 'dst_ip', 'src_port', 'dst_port', 'protocol', 'bytes_in', 'bytes_out', 'label', 'attack_type', 'flow_duration', 'total_packets'] :
+                  ['@timestamp', 'src_ip', 'dst_ip', 'src_port', 'dst_port', 'protocol', 'bytes_in', 'bytes_out', 'label', 'message']
+                ) : undefined
+              }
+            />
+          </div>
+        )}
       </div>
 
       {/* Query Status and Results */}
