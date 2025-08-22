@@ -1,0 +1,9 @@
+{
+  "abstain": true,
+  "reason": "Generation error: Model call timed out after 60 seconds",
+  "metrics": {
+    "attempts": 1,
+    "latency_seconds": 60.01126575469971,
+    "retry_reasons": []
+  }
+}

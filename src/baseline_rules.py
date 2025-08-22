@@ -6,6 +6,51 @@ import argparse
 from datetime import datetime, timedelta
 from pathlib import Path
 
+# Common field mapping errors from LLMs (maps incorrect field names to correct ones)
+FIELD_CORRECTIONS = {
+    # ECS-style fields to actual fields
+    "event.label": "label",
+    "event.type": "label",
+    "source.ip": "src_ip",
+    "source.port": "src_port",
+    "destination.ip": "dst_ip",
+    "destination.port": "dst_port",
+    "destination_port": "dst_port",
+    "source_port": "src_port",
+    "timestamp": "@timestamp",
+    # Common variants
+    "bytes_received": "bytes_in",
+    "bytes_sent": "bytes_out",
+    "traffic_type": "label",
+}
+
+def correct_field_mappings(query_json):
+    """Recursively correct common field name mistakes in the query"""
+    if isinstance(query_json, dict):
+        corrected = {}
+        for key, value in query_json.items():
+            # For term/terms/range operators, check field names inside
+            if key in ["term", "terms", "range", "match", "exists"]:
+                if isinstance(value, dict):
+                    corrected_value = {}
+                    for field, field_value in value.items():
+                        if field in FIELD_CORRECTIONS:
+                            corrected_field = FIELD_CORRECTIONS[field]
+                            print(f"Field correction: '{field}' → '{corrected_field}'")
+                            corrected_value[corrected_field] = field_value
+                        else:
+                            corrected_value[field] = field_value
+                    corrected[key] = corrected_value
+                else:
+                    corrected[key] = correct_field_mappings(value)
+            else:
+                corrected[key] = correct_field_mappings(value)
+        return corrected
+    elif isinstance(query_json, list):
+        return [correct_field_mappings(item) for item in query_json]
+    else:
+        return query_json
+
 def extract_date_patterns(prompt):
     """Extract date patterns from prompt"""
     # Specific date patterns
@@ -183,6 +228,9 @@ def main():
     
     # Generate query
     query = generate_rule_based_query(args.prompt)
+    
+    # Apply field corrections
+    query = correct_field_mappings(query)
     
     # Save result
     output_dir = Path(args.output_dir)

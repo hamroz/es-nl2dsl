@@ -1,14 +1,14 @@
 {
-  "gemini flash": {
-    "name": "gemini flash",
-    "provider": "google",
-    "model_id": "gemini-2.5-flash",
+  "gpt-4o-mini": {
+    "name": "gpt-4o-mini",
+    "provider": "openai",
+    "model_id": "gpt-4o-mini",
     "api_key": "ENV",
     "endpoint": null,
     "max_tokens": 2000,
     "temperature": 0.7,
     "enabled": true,
-    "added_date": "2025-08-20T18:39:32.521862"
+    "added_date": "2025-08-21T00:49:37.548130"
   },
   "deepseek-r1": {
     "name": "deepseek-r1",
@@ -19,17 +19,17 @@
     "max_tokens": 2000,
     "temperature": 0.7,
     "enabled": true,
-    "added_date": "2025-08-20T18:43:40.530925"
+    "added_date": "2025-08-21T00:49:59.358021"
   },
-  "gpt-4o-mini": {
-    "name": "gpt-4o-mini",
-    "provider": "openai",
-    "model_id": "gpt-4o-mini",
+  "gemini-2.5-flash": {
+    "name": "gemini-2.5-flash",
+    "provider": "google",
+    "model_id": "gemini-2.5-flash",
     "api_key": "ENV",
     "endpoint": null,
     "max_tokens": 2000,
     "temperature": 0.7,
     "enabled": true,
-    "added_date": "2025-08-20T21:37:06.259524"
+    "added_date": "2025-08-21T00:50:34.378723"
   }
 }

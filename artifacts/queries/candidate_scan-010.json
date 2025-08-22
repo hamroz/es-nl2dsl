@@ -20,7 +20,7 @@
         },
         {
           "term": {
-            "protocol": "TCP"
+            "protocol": "HTTP"
           }
         }
       ]

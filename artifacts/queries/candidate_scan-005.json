@@ -12,15 +12,9 @@
         },
         {
           "terms": {
-            "dst_port": [
-              22,
-              80
+            "protocol": [
+              "TCP"
             ]
-          }
-        },
-        {
-          "term": {
-            "protocol": "TCP"
           }
         },
         {
@@ -29,9 +23,17 @@
           }
         },
         {
+          "terms": {
+            "dst_port": [
+              22,
+              80
+            ]
+          }
+        },
+        {
           "range": {
             "bytes_out": {
-              "lt": 5000
+              "lte": 5000
             }
           }
         }

@@ -34,6 +34,49 @@ FIELD_CATALOG = {
     "message": {"type": "text", "description": "Log message (not searchable)"}
 }
 
+# Common field mapping errors from LLMs (maps incorrect field names to correct ones)
+FIELD_CORRECTIONS = {
+    # ECS-style fields to actual fields
+    "event.label": "label",
+    "event.type": "label",
+    "event.category": "label",
+    "source.ip": "src_ip",
+    "source.port": "src_port",
+    "destination.ip": "dst_ip",
+    "destination.port": "dst_port",
+    "destination_port": "dst_port",
+    "source_port": "src_port",
+    "source_ip": "src_ip",
+    "destination_ip": "dst_ip",
+    "network.protocol": "protocol",
+    "network.bytes_in": "bytes_in",
+    "network.bytes_out": "bytes_out",
+    # Common variants
+    "timestamp": "@timestamp",
+    "time": "@timestamp",
+    "datetime": "@timestamp",
+    "src": "src_ip",
+    "dst": "dst_ip",
+    "srcip": "src_ip",
+    "dstip": "dst_ip",
+    "srcport": "src_port",
+    "dstport": "dst_port",
+    "bytes_received": "bytes_in",
+    "bytes_sent": "bytes_out",
+    "bytes_transferred": "bytes_out",
+    "inbound_bytes": "bytes_in",
+    "outbound_bytes": "bytes_out",
+    "traffic_type": "label",
+    "attack_label": "label",
+    "malicious": "label",
+    # CIC-specific corrections
+    "flow.packets_s": "flow_packets_s",
+    "flow.bytes_s": "flow_bytes_s",
+    "attack.type": "attack_type",
+    "day": "day_of_week",
+    "weekday": "day_of_week"
+}
+
 ALLOWED_OPERATORS = {
     "bool": "Combines multiple conditions with filter (AND) or must (AND)",
     "term": "Exact match for a single value",
@@ -313,6 +356,39 @@ def check_security_violations_basic(prompt_text):
     
     return False, None
 
+def correct_field_mappings(query_json):
+    """Recursively correct common field name mistakes in the query"""
+    if isinstance(query_json, dict):
+        corrected = {}
+        for key, value in query_json.items():
+            # Check if this key is a field name that needs correction
+            if key in FIELD_CORRECTIONS:
+                corrected_key = FIELD_CORRECTIONS[key]
+                print(f"Field correction: '{key}' → '{corrected_key}'")
+                corrected[corrected_key] = correct_field_mappings(value)
+            else:
+                # For term/terms/range operators, check field names inside
+                if key in ["term", "terms", "range", "match", "exists"]:
+                    if isinstance(value, dict):
+                        corrected_value = {}
+                        for field, field_value in value.items():
+                            if field in FIELD_CORRECTIONS:
+                                corrected_field = FIELD_CORRECTIONS[field]
+                                print(f"Field correction: '{field}' → '{corrected_field}'")
+                                corrected_value[corrected_field] = field_value
+                            else:
+                                corrected_value[field] = field_value
+                        corrected[key] = corrected_value
+                    else:
+                        corrected[key] = correct_field_mappings(value)
+                else:
+                    corrected[key] = correct_field_mappings(value)
+        return corrected
+    elif isinstance(query_json, list):
+        return [correct_field_mappings(item) for item in query_json]
+    else:
+        return query_json
+
 def generate_with_retries(task_prompt, schema_path, rules_path, max_retries=2, index=None):
     """Generate query with validation and retries"""
     start_time = time.time()
@@ -354,6 +430,9 @@ def generate_with_retries(task_prompt, schema_path, rules_path, max_retries=2, i
             
             # Parse JSON
             query_json = json.loads(response)
+            
+            # Apply field corrections BEFORE validation
+            query_json = correct_field_mappings(query_json)
             
             # Validate against schema
             schema_valid, schema_error = validate_against_schema(query_json, schema_path)

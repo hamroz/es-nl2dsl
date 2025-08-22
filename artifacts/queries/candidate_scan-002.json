@@ -16,17 +16,15 @@
           }
         },
         {
-          "terms": {
-            "protocol": [
-              "TCP"
-            ]
-          }
-        },
-        {
           "range": {
             "bytes_out": {
               "gt": 10000
             }
+          }
+        },
+        {
+          "term": {
+            "protocol": "TCP"
           }
         }
       ]

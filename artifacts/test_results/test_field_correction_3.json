@@ -12,17 +12,7 @@
         },
         {
           "term": {
-            "dst_port": 22
-          }
-        },
-        {
-          "term": {
-            "label": "benign"
-          }
-        },
-        {
-          "term": {
-            "protocol": "TCP"
+            "label": "malicious"
           }
         }
       ]
