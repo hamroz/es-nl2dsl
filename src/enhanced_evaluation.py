@@ -1,607 +1,339 @@
 #!/usr/bin/env python3
-"""
-Enhanced Evaluation Framework for ES-NL2DSL
-Supports both standard and CIC-IDS2017 datasets with local and external LLMs
-"""
-
+"""Enhanced evaluation methodology for comprehensive query assessment"""
 import json
-import yaml
+import argparse
 import time
-import hashlib
 from pathlib import Path
-from typing import Dict, List, Optional, Any, Tuple
-from dataclasses import dataclass, asdict
-from datetime import datetime
-import subprocess
+from typing import Dict, List, Tuple, Any, Optional
+from dataclasses import dataclass
+from enum import Enum
 
-# Import existing modules
-import sys
-import os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from src import generate_constrained, baseline_rules, baseline_zeroshot
-from src import validator
-from src import ast_normalize
-from src.eval_exec import execute_query, calculate_metrics
-from src.external_llm_manager import get_external_llm_manager
-
+class QueryQuality(Enum):
+    """Quality assessment levels for generated queries"""
+    PERFECT = "perfect"  # Exact semantic match
+    COMPREHENSIVE = "comprehensive"  # More complete than ground truth
+    EQUIVALENT = "equivalent"  # Different structure, same results
+    PARTIAL = "partial"  # Captures some but not all requirements
+    INCORRECT = "incorrect"  # Wrong results or approach
+    INVALID = "invalid"  # Syntax errors or execution failures
 
 @dataclass
-class EvaluationResult:
-    """Result of a single evaluation"""
-    scenario_id: str
-    dataset: str  # 'standard' or 'cic_ids2017'
-    index: str
-    method: str
-    model: str  # 'local' or external LLM name
-    prompt: str
-    generated_query: Optional[Dict]
-    expected_query: Optional[Dict]
-    validation_result: Optional[Dict]
-    ast_similarity: float
-    execution_metrics: Optional[Dict]  # precision, recall, f1
-    generation_time: float
-    execution_time: float
-    error: Optional[str] = None
-    timestamp: str = ""
+class EvaluationMetrics:
+    """Enhanced metrics for query evaluation"""
+    # Traditional metrics
+    jaccard_similarity: float
+    precision: float
+    recall: float
+    f1_score: float
     
-    def __post_init__(self):
-        if not self.timestamp:
-            self.timestamp = datetime.now().isoformat()
-
-
-class EnhancedEvaluator:
-    """Enhanced evaluation system supporting multiple datasets and LLMs"""
+    # New comprehensive metrics
+    semantic_similarity: float  # AST-based semantic comparison
+    comprehensiveness_score: float  # How comprehensive vs ground truth
+    efficiency_score: float  # Query complexity vs results
+    quality_level: QueryQuality
     
-    def __init__(self, config_file: str = "artifacts/config.yaml"):
-        self.config_file = Path(config_file)
-        self.load_config()
-        self.llm_manager = get_external_llm_manager()
-        self.results: List[EvaluationResult] = []
-        
-    def load_config(self):
-        """Load configuration including ES credentials"""
-        if self.config_file.exists():
-            with open(self.config_file, 'r') as f:
-                self.config = yaml.safe_load(f)
-        else:
-            # Default configuration
-            self.config = {
-                'elasticsearch': {
-                    'host': 'localhost',
-                    'port': 9200,
-                    'user': 'reader',
-                    'password': 'ReaderPwd_123'
-                }
+    # Execution metrics
+    execution_time_ms: Optional[float] = None
+    result_count: Optional[int] = None
+    
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "traditional": {
+                "jaccard_similarity": self.jaccard_similarity,
+                "precision": self.precision,
+                "recall": self.recall,
+                "f1_score": self.f1_score
+            },
+            "enhanced": {
+                "semantic_similarity": self.semantic_similarity,
+                "comprehensiveness_score": self.comprehensiveness_score,
+                "efficiency_score": self.efficiency_score,
+                "quality_level": self.quality_level.value
+            },
+            "execution": {
+                "execution_time_ms": self.execution_time_ms,
+                "result_count": self.result_count
             }
+        }
+
+class SemanticQueryAnalyzer:
+    """Analyzes query semantics beyond simple AST comparison"""
     
-    def load_scenarios(self, dataset: str = "standard") -> List[Dict]:
-        """Load scenarios for evaluation"""
-        if dataset == "standard":
-            scenario_file = Path("tasks/prompts.yaml")
-        elif dataset == "cic_ids2017":
-            scenario_file = Path("artifacts/cic_ids2017_scenarios.yaml")
+    def __init__(self):
+        # Core semantic components every query should have
+        self.core_components = {
+            "time_filter": ["range", "@timestamp"],
+            "field_filters": ["term", "terms"],
+            "logical_structure": ["bool", "filter", "must", "should"]
+        }
+    
+    def extract_semantic_components(self, query: Dict) -> Dict[str, Any]:
+        """Extract semantic components from a query"""
+        components = {
+            "time_constraints": [],
+            "field_constraints": [],
+            "logical_operators": [],
+            "aggregations": [],
+            "complexity_score": 0
+        }
+        
+        def analyze_clause(clause, context=""):
+            if isinstance(clause, dict):
+                for key, value in clause.items():
+                    if key == "range" and "@timestamp" in str(value):
+                        components["time_constraints"].append(value)
+                        components["complexity_score"] += 1
+                    elif key in ["term", "terms", "match"]:
+                        components["field_constraints"].append({key: value})
+                        components["complexity_score"] += 1
+                    elif key in ["bool", "filter", "must", "should"]:
+                        components["logical_operators"].append(key)
+                        if isinstance(value, list):
+                            for sub_clause in value:
+                                analyze_clause(sub_clause, f"{context}.{key}")
+                        else:
+                            analyze_clause(value, f"{context}.{key}")
+                    elif key == "aggs":
+                        components["aggregations"].append(value)
+                        components["complexity_score"] += 2
+        
+        analyze_clause(query)
+        return components
+    
+    def calculate_semantic_similarity(self, generated: Dict, ground_truth: Dict) -> float:
+        """Calculate semantic similarity between queries"""
+        gen_components = self.extract_semantic_components(generated)
+        truth_components = self.extract_semantic_components(ground_truth)
+        
+        similarities = []
+        
+        # Time constraint similarity
+        if truth_components["time_constraints"] and gen_components["time_constraints"]:
+            # Both have time constraints - check overlap
+            similarities.append(0.8)  # Good - both handle time
+        elif not truth_components["time_constraints"] and not gen_components["time_constraints"]:
+            similarities.append(1.0)  # Both don't use time (perfect match)
         else:
-            raise ValueError(f"Unknown dataset: {dataset}")
+            similarities.append(0.3)  # One has time constraint, other doesn't
         
-        if not scenario_file.exists():
-            return []
+        # Field constraint similarity
+        truth_fields = set()
+        gen_fields = set()
         
-        with open(scenario_file, 'r') as f:
-            data = yaml.safe_load(f)
-            # Handle both list format (standard) and dict with 'scenarios' key (CIC)
-            if isinstance(data, list):
-                return data
-            elif isinstance(data, dict):
-                return data.get('scenarios', data.get('tasks', []))
-            else:
-                return []
+        for constraint in truth_components["field_constraints"]:
+            for op, fields in constraint.items():
+                if isinstance(fields, dict):
+                    truth_fields.update(fields.keys())
+        
+        for constraint in gen_components["field_constraints"]:
+            for op, fields in constraint.items():
+                if isinstance(fields, dict):
+                    gen_fields.update(fields.keys())
+        
+        if truth_fields and gen_fields:
+            field_overlap = len(truth_fields & gen_fields) / len(truth_fields | gen_fields)
+            similarities.append(field_overlap)
+        elif not truth_fields and not gen_fields:
+            similarities.append(1.0)
+        else:
+            similarities.append(0.0)
+        
+        # Logical structure similarity
+        truth_logic = set(truth_components["logical_operators"])
+        gen_logic = set(gen_components["logical_operators"])
+        
+        if truth_logic and gen_logic:
+            logic_overlap = len(truth_logic & gen_logic) / len(truth_logic | gen_logic)
+            similarities.append(logic_overlap)
+        elif not truth_logic and not gen_logic:
+            similarities.append(1.0)
+        else:
+            similarities.append(0.5)  # Different logical structure
+        
+        return sum(similarities) / len(similarities) if similarities else 0.0
     
-    def generate_query_with_model(
-        self, 
-        prompt: str, 
-        method: str, 
-        model: str,
-        index: str = "logs_net"
-    ) -> Tuple[Optional[Dict], float, Optional[str]]:
-        """Generate query using specified method and model"""
-        start_time = time.time()
-        generated_query = None
-        error = None
+    def calculate_comprehensiveness_score(self, generated: Dict, ground_truth: Dict, 
+                                        generated_results: List, truth_results: List) -> float:
+        """Calculate how comprehensive the generated query is vs ground truth"""
+        gen_components = self.extract_semantic_components(generated)
+        truth_components = self.extract_semantic_components(ground_truth)
         
-        try:
-            # Check if model is a local Ollama model (contains ':' or is in known local models)
-            local_models = ["llama3.1:latest", "deepseek-r1:14b", "gpt-oss:20b", "local"]
+        # Base score from complexity comparison
+        truth_complexity = truth_components["complexity_score"]
+        gen_complexity = gen_components["complexity_score"]
+        
+        if truth_complexity == 0:
+            complexity_ratio = 1.0
+        else:
+            complexity_ratio = min(gen_complexity / truth_complexity, 2.0)  # Cap at 2x
+        
+        # Adjust based on result coverage
+        if truth_results and generated_results:
+            truth_set = set(truth_results)
+            gen_set = set(generated_results)
             
-            if model in local_models or ":" in model or model == "local":
-                # Use local Ollama models by calling their main functions
-                # If model is just "local", use default llama3.1:latest
-                ollama_model = "llama3.1:latest" if model == "local" else model
-                
-                if method == "constrained":
-                    # Build and execute constrained generation
-                    full_prompt = generate_constrained.build_prompt(prompt, index=index)
-                    result = generate_constrained.call_local_model(full_prompt, model=ollama_model)
-                elif method == "rules":
-                    # Use rules-based generation (doesn't use LLM, just pattern matching)
-                    # This returns a dict directly, not a JSON string
-                    result = baseline_rules.generate_rule_based_query(prompt)
-                    generated_query = result  # Already a dict
-                elif method == "zeroshot":
-                    # Use zero-shot generation (baseline_zeroshot handles prompt internally)
-                    result = baseline_zeroshot.call_model_zeroshot(prompt, model=ollama_model)
-                else:
-                    raise ValueError(f"Unknown method: {method}")
-                
-                # Extract JSON from response (only for string responses from models)
-                if method != "rules":  # Rules method already set generated_query
-                    if isinstance(result, str):
-                        # Try to extract JSON from markdown code blocks
-                        if "```json" in result:
-                            result = result.split("```json")[1].split("```")[0]
-                        elif "```" in result:
-                            result = result.split("```")[1].split("```")[0]
-                        
-                        # Strip whitespace
-                        result = result.strip()
-                        
-                        # If result is empty, raise an error
-                        if not result:
-                            raise ValueError("Model returned empty response")
-                        
-                        # Try to parse as JSON
-                        try:
-                            generated_query = json.loads(result)
-                        except json.JSONDecodeError as e:
-                            # Try to find JSON-like content in the response
-                            import re
-                            
-                            # First try to find a complete JSON object
-                            json_match = re.search(r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}', result, re.DOTALL)
-                            if json_match:
-                                try:
-                                    # Clean up the matched JSON
-                                    json_str = json_match.group()
-                                    # Remove any trailing commas before closing braces/brackets
-                                    json_str = re.sub(r',(\s*[}\]])', r'\1', json_str)
-                                    # Try to parse the cleaned JSON
-                                    generated_query = json.loads(json_str)
-                                except json.JSONDecodeError:
-                                    # If that fails, try a more aggressive approach
-                                    # Find the first { and last }
-                                    start = result.find('{')
-                                    end = result.rfind('}')
-                                    if start != -1 and end != -1 and end > start:
-                                        json_str = result[start:end+1]
-                                        # Clean up common issues
-                                        json_str = re.sub(r',(\s*[}\]])', r'\1', json_str)  # Remove trailing commas
-                                        json_str = re.sub(r'(\w+):', r'"\1":', json_str)  # Quote unquoted keys
-                                        try:
-                                            generated_query = json.loads(json_str)
-                                        except:
-                                            raise ValueError(f"Could not parse JSON after cleaning: {e}")
-                                    else:
-                                        raise ValueError(f"Could not find valid JSON structure in response")
-                            else:
-                                raise ValueError(f"Could not extract valid JSON from response: {result[:200]}...")
-                    else:
-                        generated_query = result
-                    
+            # If generated query finds all expected results plus more
+            if truth_set.issubset(gen_set):
+                coverage_bonus = 1.2  # Bonus for being comprehensive
+            elif len(gen_set & truth_set) / len(truth_set) > 0.8:
+                coverage_bonus = 1.0  # Good coverage
             else:
-                # Use external LLM
-                system_prompt = f"""You are an Elasticsearch DSL query generator. 
-                Convert the natural language query to a valid Elasticsearch DSL JSON query.
-                Target index: {index}
-                Return only the JSON query without explanation."""
-                
-                if method == "constrained":
-                    # Add constraints to prompt
-                    enhanced_prompt = f"""{prompt}
-                    
-                    Constraints:
-                    - Must include time range if temporal reference exists
-                    - Use appropriate field names for index {index}
-                    - Return valid JSON only"""
-                    
-                elif method == "rules":
-                    # Add rule-based structure
-                    enhanced_prompt = f"""{prompt}
-                    
-                    Follow these rules:
-                    - If IP mentioned, use src_ip or dst_ip fields
-                    - If port mentioned, use src_port or dst_port fields
-                    - If time mentioned, use @timestamp field with range query
-                    - If attack type mentioned, use attack_type or label field"""
-                    
-                else:  # zeroshot
-                    enhanced_prompt = prompt
-                
-                response = self.llm_manager.call_llm(
-                    model, 
-                    enhanced_prompt,
-                    system_prompt=system_prompt
-                )
-                
-                if response:
-                    # Clean response
-                    if "```json" in response:
-                        response = response.split("```json")[1].split("```")[0]
-                    elif "```" in response:
-                        response = response.split("```")[1].split("```")[0]
-                    
-                    generated_query = json.loads(response.strip())
-                
-        except Exception as e:
-            error = str(e)
-            print(f"Error generating query with {model}/{method}: {e}")
-        
-        generation_time = time.time() - start_time
-        return generated_query, generation_time, error
-    
-    def evaluate_scenario(
-        self,
-        scenario: Dict,
-        method: str,
-        model: str,
-        dataset: str = "standard"
-    ) -> EvaluationResult:
-        """Evaluate a single scenario"""
-        
-        # Extract scenario details
-        scenario_id = scenario['id']
-        prompt = scenario['prompt']
-        index = scenario.get('index', 'logs_net' if dataset == 'standard' else 'logs_cic_ids2017')
-        # Handle both 'expected_query' and 'expert_dsl' field names
-        expected_query = scenario.get('expected_query') or scenario.get('expert_dsl')
-        
-        if isinstance(expected_query, str):
-            expected_query = yaml.safe_load(expected_query)
-        
-        # Check for suspicious prompt patterns (security bypass attempts)
-        suspicious_patterns = [
-            "ignore", "bypass", "drop table", "or 1=1", "regardless of",
-            "all data", "everything", "no limit", "no restriction",
-            "unlimited", "beginning of time", "all historical"
-        ]
-        
-        prompt_lower = prompt.lower()
-        for pattern in suspicious_patterns:
-            if pattern in prompt_lower:
-                # For security testing, we should still try to generate but flag it
-                print(f"⚠️ Suspicious pattern detected: '{pattern}' in prompt")
-                break
-        
-        # Generate query
-        generated_query, generation_time, error = self.generate_query_with_model(
-            prompt, method, model, index
-        )
-        
-        # Validate query
-        validation_result = None
-        if generated_query and not error:
-            # Validate using the validator module's approach
-            try:
-                rules = validator.load_rules("artifacts/validator_rules.yaml")
-                validation_errors = []
-                
-                # 1. Check time window (REQUIRED for security)
-                time_valid, time_error = validator.check_time_window(generated_query, rules)
-                if not time_valid:
-                    validation_errors.append(f"Time window check failed: {time_error}")
-                else:
-                    # Additional check: ensure time window has both gte and lte
-                    def check_complete_time_window(obj):
-                        if isinstance(obj, dict):
-                            if "range" in obj and "@timestamp" in obj["range"]:
-                                ts_range = obj["range"]["@timestamp"]
-                                if not ("gte" in ts_range and "lte" in ts_range):
-                                    return False
-                                # Check for unbounded ranges (e.g., lte: "now" without gte)
-                                if "lte" in ts_range and ts_range["lte"] == "now" and "gte" not in ts_range:
-                                    return False
-                                # Check for overly broad ranges (e.g., from 1970)
-                                if "gte" in ts_range and "1970" in str(ts_range["gte"]):
-                                    return False
-                                return True
-                            for v in obj.values():
-                                result = check_complete_time_window(v)
-                                if result is not None:
-                                    return result
-                        elif isinstance(obj, list):
-                            for v in obj:
-                                result = check_complete_time_window(v)
-                                if result is not None:
-                                    return result
-                        return None
-                    
-                    time_window_complete = check_complete_time_window(generated_query)
-                    if time_window_complete is False:
-                        validation_errors.append("Time window must have both start (gte) and end (lte) boundaries")
-                
-                # 2. Check fields
-                fields = validator.collect_fields(generated_query)
-                allowed_fields = set(rules.get('allowed_fields', []))
-                invalid_fields = fields - allowed_fields
-                if invalid_fields:
-                    validation_errors.append(f"Invalid fields: {invalid_fields}")
-                
-                # 3. Check field types for range queries
-                mapping_types = rules.get('mapping_types', {})
-                types_valid, types_error = validator.check_fields_types(
-                    generated_query, allowed_fields, mapping_types
-                )
-                if not types_valid:
-                    validation_errors.append(f"Field type check failed: {types_error}")
-                
-                # 4. Check aggregation selectivity (no match_all in aggregations)
-                if "aggs" in generated_query or "aggregations" in generated_query:
-                    query_part = generated_query.get("query", {})
-                    if query_part == {"match_all": {}}:
-                        validation_errors.append("Aggregations require filtered queries, not match_all")
-                
-                # Set validation result and error based on all checks
-                if validation_errors:
-                    validation_result = {'valid': False, 'errors': validation_errors}
-                    # Set error when validation fails
-                    error = f"Validation failed: {'; '.join(validation_errors)}"
-                else:
-                    validation_result = {'valid': True, 'errors': []}
-            except Exception as e:
-                validation_result = {'valid': False, 'errors': [str(e)]}
-                # Set error when validation fails
-                error = f"Validation failed: {str(e)}"
-        
-        # Compare AST
-        ast_similarity = 0.0
-        if generated_query and expected_query:
-            try:
-                # Normalize both queries for comparison
-                norm_expected = ast_normalize.flatten_bool(expected_query)
-                norm_generated = ast_normalize.flatten_bool(generated_query)
-                
-                # Simple similarity based on normalized structure
-                if json.dumps(norm_expected, sort_keys=True) == json.dumps(norm_generated, sort_keys=True):
-                    ast_similarity = 1.0
-                else:
-                    # Basic similarity score based on common fields
-                    exp_fields = validator.collect_fields(expected_query)
-                    gen_fields = validator.collect_fields(generated_query)
-                    if exp_fields or gen_fields:
-                        common = len(exp_fields & gen_fields)
-                        total = len(exp_fields | gen_fields)
-                        ast_similarity = common / total if total > 0 else 0.0
-            except Exception as e:
-                print(f"Error comparing AST: {e}")
-        
-        # Execute and compare results
-        execution_metrics = None
-        execution_time = 0.0
-        
-        if generated_query and expected_query and not error:
-            try:
-                start_exec = time.time()
-                
-                # Execute both queries
-                expected_results = execute_query(expected_query, index=index)
-                generated_results = execute_query(generated_query, index=index)
-                
-                # Calculate metrics
-                if expected_results and generated_results:
-                    metrics = calculate_metrics(expected_results, generated_results)
-                    execution_metrics = {
-                        'precision': metrics.get('precision', 0.0),
-                        'recall': metrics.get('recall', 0.0),
-                        'f1_score': metrics.get('f1_score', 0.0),
-                        'jaccard': metrics.get('jaccard_similarity', 0.0)
-                    }
-                
-                execution_time = time.time() - start_exec
-                
-            except Exception as e:
-                print(f"Error executing queries: {e}")
-                error = str(e) if not error else f"{error}; Execution: {e}"
-        
-        # Create result
-        return EvaluationResult(
-            scenario_id=scenario_id,
-            dataset=dataset,
-            index=index,
-            method=method,
-            model=model,
-            prompt=prompt,
-            generated_query=generated_query,
-            expected_query=expected_query,
-            validation_result=validation_result,
-            ast_similarity=ast_similarity,
-            execution_metrics=execution_metrics,
-            generation_time=generation_time,
-            execution_time=execution_time,
-            error=error
-        )
-    
-    def run_evaluation(
-        self,
-        dataset: str = "standard",
-        scenarios: Optional[List[str]] = None,
-        methods: List[str] = ["constrained", "rules", "zeroshot"],
-        models: List[str] = ["local"],
-        save_results: bool = True
-    ) -> Dict[str, Any]:
-        """Run comprehensive evaluation"""
-        
-        # Load scenarios
-        all_scenarios = self.load_scenarios(dataset)
-        
-        # Filter scenarios if specified
-        if scenarios:
-            all_scenarios = [s for s in all_scenarios if s['id'] in scenarios]
-        
-        if not all_scenarios:
-            return {"error": "No scenarios to evaluate"}
-        
-        # Clear previous results
-        self.results = []
-        
-        # Run evaluations
-        total_evaluations = len(all_scenarios) * len(methods) * len(models)
-        completed = 0
-        
-        for scenario in all_scenarios:
-            for method in methods:
-                for model in models:
-                    print(f"Evaluating {scenario['id']} with {method}/{model} ({completed+1}/{total_evaluations})")
-                    
-                    result = self.evaluate_scenario(
-                        scenario=scenario,
-                        method=method,
-                        model=model,
-                        dataset=dataset
-                    )
-                    
-                    self.results.append(result)
-                    completed += 1
-        
-        # Calculate summary statistics
-        summary = self.calculate_summary()
-        
-        # Save results
-        if save_results:
-            self.save_results(dataset)
-        
-        return summary
-    
-    def calculate_summary(self) -> Dict[str, Any]:
-        """Calculate summary statistics from results"""
-        if not self.results:
-            return {}
-        
-        summary = {
-            'total_evaluations': len(self.results),
-            'timestamp': datetime.now().isoformat(),
-            'by_method': {},
-            'by_model': {},
-            'by_dataset': {},
-            'overall': {
-                'avg_ast_similarity': 0.0,
-                'avg_precision': 0.0,
-                'avg_recall': 0.0,
-                'avg_f1_score': 0.0,
-                'success_rate': 0.0,
-                'avg_generation_time': 0.0
-            }
-        }
-        
-        # Calculate metrics by method
-        for method in set(r.method for r in self.results):
-            method_results = [r for r in self.results if r.method == method]
-            summary['by_method'][method] = self._calculate_metrics(method_results)
-        
-        # Calculate metrics by model
-        for model in set(r.model for r in self.results):
-            model_results = [r for r in self.results if r.model == model]
-            summary['by_model'][model] = self._calculate_metrics(model_results)
-        
-        # Calculate metrics by dataset
-        for dataset in set(r.dataset for r in self.results):
-            dataset_results = [r for r in self.results if r.dataset == dataset]
-            summary['by_dataset'][dataset] = self._calculate_metrics(dataset_results)
-        
-        # Overall metrics
-        summary['overall'] = self._calculate_metrics(self.results)
-        
-        return summary
-    
-    def _calculate_metrics(self, results: List[EvaluationResult]) -> Dict[str, float]:
-        """Calculate average metrics for a set of results"""
-        if not results:
-            return {}
-        
-        metrics = {
-            'count': len(results),
-            'success_count': sum(1 for r in results if not r.error),
-            'success_rate': sum(1 for r in results if not r.error) / len(results),
-            'avg_ast_similarity': sum(r.ast_similarity for r in results) / len(results),
-            'avg_generation_time': sum(r.generation_time for r in results) / len(results),
-            'avg_execution_time': sum(r.execution_time for r in results) / len(results)
-        }
-        
-        # Calculate execution metrics averages
-        valid_exec_results = [r for r in results if r.execution_metrics]
-        if valid_exec_results:
-            metrics['avg_precision'] = sum(r.execution_metrics['precision'] for r in valid_exec_results) / len(valid_exec_results)
-            metrics['avg_recall'] = sum(r.execution_metrics['recall'] for r in valid_exec_results) / len(valid_exec_results)
-            metrics['avg_f1_score'] = sum(r.execution_metrics['f1_score'] for r in valid_exec_results) / len(valid_exec_results)
-            metrics['avg_jaccard'] = sum(r.execution_metrics['jaccard'] for r in valid_exec_results) / len(valid_exec_results)
+                coverage_bonus = 0.8  # Incomplete coverage
         else:
-            metrics['avg_precision'] = 0.0
-            metrics['avg_recall'] = 0.0
-            metrics['avg_f1_score'] = 0.0
-            metrics['avg_jaccard'] = 0.0
+            coverage_bonus = 1.0
         
-        return metrics
+        return min(complexity_ratio * coverage_bonus, 2.0)  # Cap at 2.0
     
-    def save_results(self, dataset: str):
-        """Save evaluation results to file"""
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        output_dir = Path("artifacts/evaluation_results")
-        output_dir.mkdir(parents=True, exist_ok=True)
+    def assess_query_quality(self, generated: Dict, ground_truth: Dict,
+                           generated_results: List, truth_results: List,
+                           semantic_similarity: float, comprehensiveness: float) -> QueryQuality:
+        """Assess overall query quality level"""
         
-        # Save detailed results
-        results_file = output_dir / f"eval_{dataset}_{timestamp}.json"
-        with open(results_file, 'w') as f:
-            json.dump(
-                [asdict(r) for r in self.results],
-                f,
-                indent=2,
-                default=str
-            )
+        if not generated_results and not truth_results:
+            return QueryQuality.PERFECT  # Both return nothing (edge case)
         
-        # Save summary
-        summary = self.calculate_summary()
-        summary_file = output_dir / f"summary_{dataset}_{timestamp}.json"
-        with open(summary_file, 'w') as f:
-            json.dump(summary, f, indent=2)
+        if not generated_results:
+            return QueryQuality.INCORRECT  # Generated query returns nothing
         
-        print(f"Results saved to {results_file}")
-        print(f"Summary saved to {summary_file}")
+        if not truth_results:
+            if len(generated_results) > 0:
+                return QueryQuality.COMPREHENSIVE  # Generated finds results where ground truth doesn't
         
-        return results_file, summary_file
+        truth_set = set(truth_results) if truth_results else set()
+        gen_set = set(generated_results) if generated_results else set()
+        
+        # Perfect match
+        if truth_set == gen_set and semantic_similarity > 0.9:
+            return QueryQuality.PERFECT
+        
+        # Comprehensive (superset with good semantic similarity)
+        if truth_set.issubset(gen_set) and semantic_similarity > 0.7 and comprehensiveness > 1.1:
+            return QueryQuality.COMPREHENSIVE
+        
+        # Equivalent (same results, different approach)
+        if truth_set == gen_set:
+            return QueryQuality.EQUIVALENT
+        
+        # Partial match
+        overlap_ratio = len(truth_set & gen_set) / len(truth_set) if truth_set else 0
+        if overlap_ratio > 0.6:
+            return QueryQuality.PARTIAL
+        
+        # Incorrect
+        return QueryQuality.INCORRECT
 
+def enhanced_evaluate_query(generated_query: Dict, ground_truth_query: Dict,
+                          generated_results: List, ground_truth_results: List,
+                          execution_time: Optional[float] = None) -> EvaluationMetrics:
+    """Perform enhanced evaluation of a query"""
+    
+    analyzer = SemanticQueryAnalyzer()
+    
+    # Traditional metrics
+    gen_set = set(generated_results) if generated_results else set()
+    truth_set = set(ground_truth_results) if ground_truth_results else set()
+    
+    if not gen_set and not truth_set:
+        precision = recall = f1 = 1.0
+        jaccard = 1.0
+    elif not gen_set or not truth_set:
+        precision = recall = f1 = 0.0
+        jaccard = 0.0
+    else:
+        intersection = len(gen_set & truth_set)
+        precision = intersection / len(gen_set)
+        recall = intersection / len(truth_set)
+        f1 = (2 * precision * recall / (precision + recall)) if (precision + recall) > 0 else 0.0
+        jaccard = intersection / len(gen_set | truth_set)
+    
+    # Enhanced metrics
+    semantic_similarity = analyzer.calculate_semantic_similarity(generated_query, ground_truth_query)
+    comprehensiveness_score = analyzer.calculate_comprehensiveness_score(
+        generated_query, ground_truth_query, generated_results, ground_truth_results
+    )
+    
+    # Efficiency score (simpler queries are better if they get same results)
+    gen_complexity = analyzer.extract_semantic_components(generated_query)["complexity_score"]
+    truth_complexity = analyzer.extract_semantic_components(ground_truth_query)["complexity_score"]
+    
+    if gen_complexity == 0:
+        efficiency_score = 1.0
+    else:
+        # Prefer simpler queries that achieve same or better results
+        result_quality = f1 * comprehensiveness_score
+        efficiency_score = result_quality / (gen_complexity + 1)  # +1 to avoid division by zero
+    
+    # Quality assessment
+    quality_level = analyzer.assess_query_quality(
+        generated_query, ground_truth_query, generated_results, ground_truth_results,
+        semantic_similarity, comprehensiveness_score
+    )
+    
+    return EvaluationMetrics(
+        jaccard_similarity=jaccard,
+        precision=precision,
+        recall=recall,
+        f1_score=f1,
+        semantic_similarity=semantic_similarity,
+        comprehensiveness_score=comprehensiveness_score,
+        efficiency_score=efficiency_score,
+        quality_level=quality_level,
+        execution_time_ms=execution_time,
+        result_count=len(generated_results) if generated_results else 0
+    )
 
 def main():
-    """CLI interface for enhanced evaluation"""
-    import argparse
-    
-    parser = argparse.ArgumentParser(description="Enhanced ES-NL2DSL Evaluation")
-    parser.add_argument("--dataset", choices=["standard", "cic_ids2017"], 
-                       default="standard", help="Dataset to evaluate")
-    parser.add_argument("--scenarios", nargs="+", help="Specific scenario IDs to run")
-    parser.add_argument("--methods", nargs="+", 
-                       default=["constrained", "rules", "zeroshot"],
-                       help="Methods to evaluate")
-    parser.add_argument("--models", nargs="+", default=["local"],
-                       help="Models to use (local or external LLM names)")
-    parser.add_argument("--no-save", action="store_true", 
-                       help="Don't save results to file")
+    parser = argparse.ArgumentParser(description="Enhanced query evaluation")
+    parser.add_argument("--generated", required=True, help="Generated query JSON")
+    parser.add_argument("--ground-truth", required=True, help="Ground truth query JSON")
+    parser.add_argument("--generated-results", help="Generated query results JSON")
+    parser.add_argument("--ground-truth-results", help="Ground truth results JSON")
+    parser.add_argument("--output", help="Output file for results")
     
     args = parser.parse_args()
     
-    # Run evaluation
-    evaluator = EnhancedEvaluator()
-    summary = evaluator.run_evaluation(
-        dataset=args.dataset,
-        scenarios=args.scenarios,
-        methods=args.methods,
-        models=args.models,
-        save_results=not args.no_save
+    # Load queries
+    with open(args.generated) as f:
+        generated_query = json.load(f)
+    with open(args.ground_truth) as f:
+        ground_truth_query = json.load(f)
+    
+    # Load results if provided
+    generated_results = []
+    ground_truth_results = []
+    
+    if args.generated_results:
+        with open(args.generated_results) as f:
+            generated_results = json.load(f)
+    
+    if args.ground_truth_results:
+        with open(args.ground_truth_results) as f:
+            ground_truth_results = json.load(f)
+    
+    # Perform evaluation
+    metrics = enhanced_evaluate_query(
+        generated_query, ground_truth_query,
+        generated_results, ground_truth_results
     )
     
-    # Print summary
-    print("\n" + "="*50)
-    print("EVALUATION SUMMARY")
-    print("="*50)
-    print(json.dumps(summary, indent=2))
-
+    # Output results
+    result = {
+        "enhanced_evaluation": metrics.to_dict(),
+        "timestamp": time.time(),
+        "input_files": {
+            "generated": args.generated,
+            "ground_truth": args.ground_truth,
+            "generated_results": args.generated_results,
+            "ground_truth_results": args.ground_truth_results
+        }
+    }
+    
+    if args.output:
+        with open(args.output, 'w') as f:
+            json.dump(result, f, indent=2)
+        print(f"Enhanced evaluation saved to {args.output}")
+    else:
+        print(json.dumps(result, indent=2))
 
 if __name__ == "__main__":
     main()

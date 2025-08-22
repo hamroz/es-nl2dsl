@@ -174,11 +174,20 @@ def main():
     else:
         cand = cand_data
 
+    start_time = time.time()
     exp_ids, exp_total, exp_error = run_query(es, args.index, expert)
+    can_start = time.time()
     can_ids, can_total, can_error = run_query(es, args.index, cand)
+    can_execution_time = (time.time() - can_start) * 1000  # Convert to ms
 
+    # Traditional metrics for backward compatibility
     jac = jaccard(exp_ids, can_ids)
     p, r, f1 = prf1(can_ids, exp_ids)  # candidate vs expert as "gold"
+    
+    # Enhanced metrics
+    enhanced_metrics = enhanced_calculate_metrics(
+        expert, cand, exp_ids, can_ids, can_execution_time
+    )
 
     outdir = pathlib.Path(args.out); outdir.mkdir(parents=True, exist_ok=True)
     stamp = int(time.time())
@@ -190,7 +199,10 @@ def main():
         "candidate_ids": can_ids,
         "candidate_total": can_total,
         "candidate_error": can_error.to_dict() if can_error else None,
+        # Traditional metrics (for backward compatibility)
         "jaccard": jac, "precision": p, "recall": r, "f1": f1,
+        # Enhanced metrics
+        "enhanced_metrics": enhanced_metrics,
         "ts": stamp,
     }
     outpath = outdir / f"eval_{stamp}.json"
@@ -229,6 +241,46 @@ def calculate_metrics(expected_results, generated_results):
         'f1_score': f1,
         'jaccard_similarity': jac
     }
+
+def enhanced_calculate_metrics(expert_query, candidate_query, expert_ids, candidate_ids, 
+                             execution_time=None):
+    """Calculate enhanced metrics using the new evaluation system"""
+    try:
+        # Import the enhanced evaluation system
+        from enhanced_evaluation import enhanced_evaluate_query
+        
+        # Perform enhanced evaluation
+        enhanced_metrics = enhanced_evaluate_query(
+            candidate_query, expert_query,
+            candidate_ids, expert_ids,
+            execution_time
+        )
+        
+        return enhanced_metrics.to_dict()
+    except ImportError:
+        # Fallback to traditional metrics if enhanced evaluation not available
+        print("Enhanced evaluation not available, using traditional metrics")
+        jac = jaccard(expert_ids, candidate_ids)
+        p, r, f1 = prf1(candidate_ids, expert_ids)
+        
+        return {
+            "traditional": {
+                "jaccard_similarity": jac,
+                "precision": p,
+                "recall": r,
+                "f1_score": f1
+            },
+            "enhanced": {
+                "semantic_similarity": None,
+                "comprehensiveness_score": None,
+                "efficiency_score": None,
+                "quality_level": "unknown"
+            },
+            "execution": {
+                "execution_time_ms": execution_time,
+                "result_count": len(candidate_ids)
+            }
+        }
 
 if __name__ == "__main__":
     main()

@@ -167,10 +167,30 @@ def main():
     
     # Print summary
     print("\nResults Summary:")
+    print("=== Traditional Metrics ===")
     print(f"  Jaccard Similarity: {metrics.get('jaccard', 'N/A'):.3f}")
     print(f"  F1 Score: {metrics.get('f1', 'N/A'):.3f}")
     print(f"  Precision: {metrics.get('precision', 'N/A'):.3f}")
     print(f"  Recall: {metrics.get('recall', 'N/A'):.3f}")
+    
+    # Enhanced metrics if available
+    enhanced = metrics.get('enhanced_metrics', {})
+    if enhanced:
+        enhanced_data = enhanced.get('enhanced', {})
+        execution_data = enhanced.get('execution', {})
+        
+        print("\n=== Enhanced Metrics ===")
+        print(f"  Quality Level: {enhanced_data.get('quality_level', 'N/A').upper()}")
+        print(f"  Semantic Similarity: {enhanced_data.get('semantic_similarity', 'N/A'):.3f}")
+        print(f"  Comprehensiveness: {enhanced_data.get('comprehensiveness_score', 'N/A'):.3f}")
+        print(f"  Efficiency Score: {enhanced_data.get('efficiency_score', 'N/A'):.3f}")
+        
+        exec_time = execution_data.get('execution_time_ms', 'N/A')
+        if exec_time != 'N/A':
+            print(f"  Execution Time: {exec_time:.1f}ms")
+        print(f"  Results Found: {execution_data.get('result_count', 'N/A')}")
+    
+    print(f"\n=== Validation ===")
     print(f"  Validator Status: {'PASS' if valid else 'FAIL'}")
     
     # Save combined results
