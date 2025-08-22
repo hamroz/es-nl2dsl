@@ -19,7 +19,7 @@ from .serializers import (
     QueryExecutionRequestSerializer,
     QueryExecutionSerializer
 )
-# from .tasks import generate_query_task, execute_query_task  # Disabled for development
+from .tasks import generate_query_task, execute_query_task
 
 class QueryListCreateView(APIView):
     """
@@ -40,11 +40,10 @@ class QueryListCreateView(APIView):
             model=serializer.validated_data.get('model', '')
         )
         
-        # For now, we'll simulate async behavior but run synchronously
-        # In production with Redis/Celery, uncomment the line below:
-        # generate_query_task.delay(task_id, task.prompt, task.method, task.index, task.model)
+        # Start async query generation
+        generate_query_task.delay(task_id, task.prompt, task.method, task.index, task.model)
         
-        # Temporary: Return task immediately for development
+        # Estimated completion time
         estimated_completion = timezone.now() + timezone.timedelta(minutes=2)
         
         return Response({
@@ -120,23 +119,20 @@ class QueryExecuteView(APIView):
         
         max_size = serializer.validated_data['max_size']
         
-        # Execute query synchronously for now
-        # In production with Celery: execute_query_task.delay(...)
+        # Execute query asynchronously with Celery
         try:
-            # Temporary direct execution without Celery
-            result = self._execute_query_direct(
+            execute_query_task.delay(
                 task_id=task_id,
                 query_data=task.generated_query.elasticsearch_dsl,
                 index=task.index,
                 max_size=max_size
             )
             
-            if result.get('status') == 'failed':
-                return Response({
-                    'error': result.get('error', 'Execution failed')
-                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-            
-            return Response(result)
+            return Response({
+                'task_id': task_id,
+                'status': 'executing',
+                'message': 'Query execution started. Check status for results.'
+            }, status=status.HTTP_202_ACCEPTED)
             
         except Exception as e:
             return Response({
