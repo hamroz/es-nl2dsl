@@ -218,18 +218,18 @@ const SystemAdmin: React.FC = () => {
   });
 
   // Chart data preparation
-  const systemUsageData = systemHealth ? [
-    { name: 'CPU', usage: systemHealth.system.cpu_usage, color: '#8884d8' },
-    { name: 'Memory', usage: systemHealth.system.memory_usage, color: '#82ca9d' },
-    { name: 'Disk', usage: systemHealth.system.disk_usage, color: '#ffc658' },
+  const systemUsageData = systemHealth?.system ? [
+    { name: 'CPU', usage: systemHealth.system.cpu_usage || 0, color: '#8884d8' },
+    { name: 'Memory', usage: systemHealth.system.memory_usage || 0, color: '#82ca9d' },
+    { name: 'Disk', usage: systemHealth.system.disk_usage || 0, color: '#ffc658' },
   ] : [];
 
-  const indexHealthData = systemHealth?.indices.map(index => ({
-    name: index.name,
-    docs: index.docs_count,
-    size_mb: parseInt(index.store_size.replace(/[^0-9]/g, '')) || 0,
-    health: index.health,
-  })) || [];
+  const indexHealthData = Array.isArray(systemHealth?.indices) ? systemHealth.indices.map(index => ({
+    name: index.name || 'unknown',
+    docs: index.docs_count || 0,
+    size_mb: parseInt((index.store_size || '0').replace(/[^0-9]/g, '')) || 0,
+    health: index.health || 'unknown',
+  })) : [];
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -353,11 +353,11 @@ const SystemAdmin: React.FC = () => {
                     <div>
                       <p className="text-sm font-medium text-gray-600">Elasticsearch</p>
                       <p className="text-2xl font-bold text-gray-900 capitalize">
-                        {systemHealth.elasticsearch.status}
+                        {systemHealth?.elasticsearch?.status || 'unknown'}
                       </p>
                     </div>
                     <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                      {systemHealth.elasticsearch.status === 'healthy' ? (
+                      {systemHealth?.elasticsearch?.status === 'healthy' ? (
                         <CheckCircle className="w-4 h-4 text-green-600" />
                       ) : (
                         <XCircle className="w-4 h-4 text-red-600" />
@@ -365,7 +365,7 @@ const SystemAdmin: React.FC = () => {
                     </div>
                   </div>
                   <p className="text-sm text-gray-500 mt-1">
-                    {systemHealth.elasticsearch.docs_count.toLocaleString()} docs, {systemHealth.elasticsearch.indices_count} indices
+                    {systemHealth?.elasticsearch?.docs_count?.toLocaleString() || 0} docs, {systemHealth?.elasticsearch?.indices_count || 0} indices
                   </p>
                 </div>
 
@@ -374,11 +374,11 @@ const SystemAdmin: React.FC = () => {
                     <div>
                       <p className="text-sm font-medium text-gray-600">Ollama</p>
                       <p className="text-2xl font-bold text-gray-900 capitalize">
-                        {systemHealth.ollama.status}
+                        {systemHealth?.ollama?.status || 'unknown'}
                       </p>
                     </div>
                     <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
-                      {systemHealth.ollama.status === 'healthy' ? (
+                      {systemHealth?.ollama?.status === 'healthy' ? (
                         <CheckCircle className="w-4 h-4 text-purple-600" />
                       ) : (
                         <XCircle className="w-4 h-4 text-red-600" />
@@ -386,7 +386,7 @@ const SystemAdmin: React.FC = () => {
                     </div>
                   </div>
                   <p className="text-sm text-gray-500 mt-1">
-                    {systemHealth.ollama.running_models.length} running, {systemHealth.ollama.models.length} total models
+                    {systemHealth?.ollama?.running_models?.length || 0} running, {systemHealth?.ollama?.models?.length || 0} total models
                   </p>
                 </div>
 
@@ -395,7 +395,7 @@ const SystemAdmin: React.FC = () => {
                     <div>
                       <p className="text-sm font-medium text-gray-600">System Load</p>
                       <p className="text-2xl font-bold text-gray-900">
-                        {systemHealth.system.load_average[0]?.toFixed(2)}
+                        {systemHealth?.system?.load_average?.[0]?.toFixed(2) || '0.00'}
                       </p>
                     </div>
                     <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
@@ -403,7 +403,7 @@ const SystemAdmin: React.FC = () => {
                     </div>
                   </div>
                   <p className="text-sm text-gray-500 mt-1">
-                    Uptime: {formatUptime(systemHealth.system.uptime)}
+                    Uptime: {formatUptime(systemHealth?.system?.uptime || 0)}
                   </p>
                 </div>
 
@@ -412,7 +412,7 @@ const SystemAdmin: React.FC = () => {
                     <div>
                       <p className="text-sm font-medium text-gray-600">Storage</p>
                       <p className="text-2xl font-bold text-gray-900">
-                        {systemHealth.elasticsearch.store_size}
+                        {systemHealth?.elasticsearch?.store_size || '0 B'}
                       </p>
                     </div>
                     <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
@@ -420,7 +420,7 @@ const SystemAdmin: React.FC = () => {
                     </div>
                   </div>
                   <p className="text-sm text-gray-500 mt-1">
-                    {systemHealth.system.disk_usage.toFixed(1)}% disk usage
+                    {systemHealth?.system?.disk_usage?.toFixed(1) || 0}% disk usage
                   </p>
                 </div>
               </div>
@@ -538,11 +538,11 @@ const SystemAdmin: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {systemHealth.indices.map((index, i) => (
-                    <tr key={index.name} className="hover:bg-gray-50">
+                  {Array.isArray(systemHealth?.indices) && systemHealth.indices.map((index, i) => (
+                    <tr key={index.name || `index-${i}`} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <code className="text-sm font-medium text-blue-600">
-                          {index.name}
+                          {index.name || 'unknown'}
                         </code>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -551,22 +551,22 @@ const SystemAdmin: React.FC = () => {
                           index.health === 'yellow' ? 'bg-yellow-100 text-yellow-800' :
                           'bg-red-100 text-red-800'
                         }`}>
-                          {index.health}
+                          {index.health || 'unknown'}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {index.docs_count.toLocaleString()}
+                        {(index.docs_count || 0).toLocaleString()}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {index.store_size}
+                        {index.store_size || 'N/A'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {new Date(index.created_at).toLocaleDateString()}
+                        {index.created_at ? new Date(index.created_at).toLocaleDateString() : 'N/A'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <button
                           onClick={() => {
-                            if (confirm(`Are you sure you want to delete index "${index.name}"?`)) {
+                            if (index.name && confirm(`Are you sure you want to delete index "${index.name}"?`)) {
                               deleteIndexMutation.mutate(index.name);
                             }
                           }}

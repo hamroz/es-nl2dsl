@@ -408,8 +408,12 @@ const EvaluationDashboard: React.FC = () => {
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 disabled={runEvaluationMutation.isPending}
               >
-                <option value="">Select scenario...</option>
-                {scenarios.map((scenario) => (
+                <option value="">
+                  {scenariosLoading ? "Loading scenarios..." : 
+                   scenariosError ? "Failed to load scenarios" : 
+                   "Select scenario..."}
+                </option>
+                {Array.isArray(scenarios) && scenarios.map((scenario) => (
                   <option key={scenario.scenario_id} value={scenario.scenario_id}>
                     {scenario.scenario_id} - {scenario.description.substring(0, 50)}...
                   </option>
