@@ -202,14 +202,15 @@ class UserSessionModelTest(TestCase):
         session = UserSession.objects.create(**session_data)
         self.assertFalse(session.is_active)
     
-    @freeze_time(\"2024-01-01 12:00:00\")
+    @freeze_time("2024-01-01 12:00:00")
     def test_session_duration_property(self):
-        \"\"\"Test session_duration property\"\"\"
-        created_time = timezone.now()\n        session_data = self.session_data.copy()
+        """Test session_duration property"""
+        created_time = timezone.now()
+        session_data = self.session_data.copy()
         session = UserSession.objects.create(**session_data)
         
         # Test with active session (no termination)
-        with freeze_time(\"2024-01-01 14:00:00\"):
+        with freeze_time("2024-01-01 14:00:00"):
             duration = session.session_duration
             self.assertEqual(duration, timedelta(hours=2))
         
@@ -283,11 +284,11 @@ class AuditLogModelTest(TestCase):
     def test_audit_log_string_representation(self):
         """Test AuditLog string representation"""
         audit_log = AuditLog.objects.create(**self.audit_data)
-        expected_start = f\"{self.user.username} - login ({audit_log.timestamp})\"
+        expected_start = f"{self.user.username} - login ({audit_log.timestamp})"
         self.assertEqual(str(audit_log), expected_start)
     
     def test_audit_log_without_user(self):
-        \"\"\"Test AuditLog creation without user (system events)\"\"\"
+        """Test AuditLog creation without user (system events)"""
         audit_data = self.audit_data.copy()
         del audit_data['user']
         audit_data['description'] = 'System maintenance event'
@@ -295,11 +296,11 @@ class AuditLogModelTest(TestCase):
         audit_log = AuditLog.objects.create(**audit_data)
         
         self.assertIsNone(audit_log.user)
-        expected_str = f\"System - login ({audit_log.timestamp})\"
+        expected_str = f"System - login ({audit_log.timestamp})"
         self.assertEqual(str(audit_log), expected_str)
     
     def test_audit_log_event_types(self):
-        \"\"\"Test various event types\"\"\"
+        """Test various event types"""
         event_types = [
             'login', 'login_failed', 'logout', 'session_created',
             'query_generate', 'query_execute', 'data_export',
@@ -315,7 +316,7 @@ class AuditLogModelTest(TestCase):
             self.assertEqual(audit_log.event_type, event_type)
     
     def test_audit_log_severity_levels(self):
-        \"\"\"Test severity level choices\"\"\"
+        """Test severity level choices"""
         severity_levels = ['info', 'warning', 'error', 'critical']
         
         for severity in severity_levels:
@@ -326,7 +327,7 @@ class AuditLogModelTest(TestCase):
             self.assertEqual(audit_log.severity, severity)
     
     def test_audit_log_metadata_json_field(self):
-        \"\"\"Test metadata JSON field functionality\"\"\"
+        """Test metadata JSON field functionality"""
         metadata = {
             'session_id': str(uuid.uuid4()),
             'query_method': 'constrained',
@@ -347,17 +348,17 @@ class AuditLogModelTest(TestCase):
         self.assertEqual(audit_log.metadata['additional_data']['count'], 42)
     
     def test_audit_log_ordering(self):
-        \"\"\"Test AuditLog ordering by timestamp descending\"\"\"
+        """Test AuditLog ordering by timestamp descending"""
         # Create logs with specific timestamps
-        with freeze_time(\"2024-01-01 10:00:00\"):
+        with freeze_time("2024-01-01 10:00:00"):
             log1 = AuditLog.objects.create(**self.audit_data)
         
-        with freeze_time(\"2024-01-01 11:00:00\"):
+        with freeze_time("2024-01-01 11:00:00"):
             audit_data2 = self.audit_data.copy()
             audit_data2['event_type'] = 'logout'
             log2 = AuditLog.objects.create(**audit_data2)
         
-        with freeze_time(\"2024-01-01 12:00:00\"):
+        with freeze_time("2024-01-01 12:00:00"):
             audit_data3 = self.audit_data.copy()
             audit_data3['event_type'] = 'query_generate'
             log3 = AuditLog.objects.create(**audit_data3)
@@ -366,7 +367,7 @@ class AuditLogModelTest(TestCase):
         self.assertEqual(logs, [log3, log2, log1])  # Most recent first
     
     def test_audit_log_user_set_null_on_delete(self):
-        \"\"\"Test that audit logs are preserved when user is deleted\"\"\"
+        """Test that audit logs are preserved when user is deleted"""
         audit_log = AuditLog.objects.create(**self.audit_data)
         
         self.assertEqual(audit_log.user, self.user)
@@ -379,10 +380,10 @@ class AuditLogModelTest(TestCase):
 
 @pytest.mark.django_db
 class SecurityPolicyModelTest(TestCase):
-    \"\"\"Test SecurityPolicy model functionality\"\"\"
+    """Test SecurityPolicy model functionality"""
     
     def setUp(self):
-        \"\"\"Set up test data\"\"\"
+        """Set up test data"""
         self.admin_user = AdminUserFactory()
         self.policy_data = {
             'name': 'Test Login Policy',
@@ -399,7 +400,7 @@ class SecurityPolicyModelTest(TestCase):
         }
     
     def test_security_policy_creation(self):
-        \"\"\"Test SecurityPolicy creation with all fields\"\"\"
+        """Test SecurityPolicy creation with all fields"""
         policy = SecurityPolicy.objects.create(**self.policy_data)
         
         self.assertIsInstance(policy.id, uuid.UUID)
@@ -412,13 +413,13 @@ class SecurityPolicyModelTest(TestCase):
         self.assertIsNotNone(policy.updated_at)
     
     def test_security_policy_string_representation(self):
-        \"\"\"Test SecurityPolicy string representation\"\"\"
+        """Test SecurityPolicy string representation"""
         policy = SecurityPolicy.objects.create(**self.policy_data)
         expected_str = 'Test Login Policy (login)'
         self.assertEqual(str(policy), expected_str)
     
     def test_security_policy_types(self):
-        \"\"\"Test policy type choices\"\"\"
+        """Test policy type choices"""
         policy_types = [
             'login', 'password', 'session', 'access',
             'rate_limit', 'mfa', 'ip_restriction', 'time_restriction'
@@ -433,7 +434,7 @@ class SecurityPolicyModelTest(TestCase):
             self.assertEqual(policy.policy_type, policy_type)
     
     def test_security_policy_user_roles(self):
-        \"\"\"Test user role choices\"\"\"
+        """Test user role choices"""
         user_roles = ['all', 'admin', 'analyst', 'viewer']
         
         for user_role in user_roles:
@@ -445,7 +446,7 @@ class SecurityPolicyModelTest(TestCase):
             self.assertEqual(policy.user_role, user_role)
     
     def test_security_policy_config_json_field(self):
-        \"\"\"Test policy_config JSON field functionality\"\"\"
+        """Test policy_config JSON field functionality"""
         complex_config = {
             'login': {
                 'max_failed_attempts': 3,
@@ -479,7 +480,7 @@ class SecurityPolicyModelTest(TestCase):
         self.assertEqual(policy.policy_config['session']['max_duration_hours'], 8)
     
     def test_security_policy_unique_name(self):
-        \"\"\"Test that policy names must be unique\"\"\"
+        """Test that policy names must be unique"""
         SecurityPolicy.objects.create(**self.policy_data)
         
         with self.assertRaises(IntegrityError):
@@ -487,7 +488,7 @@ class SecurityPolicyModelTest(TestCase):
             SecurityPolicy.objects.create(**duplicate_policy_data)
     
     def test_security_policy_ordering(self):
-        \"\"\"Test SecurityPolicy ordering by priority then name\"\"\"
+        """Test SecurityPolicy ordering by priority then name"""
         policy1 = SecurityPolicy.objects.create(
             **{**self.policy_data, 'name': 'Policy A', 'priority': 200}
         )
@@ -503,7 +504,7 @@ class SecurityPolicyModelTest(TestCase):
         self.assertEqual(policies, [policy2, policy3, policy1])
     
     def test_security_policy_created_by_set_null_on_delete(self):
-        \"\"\"Test that policies are preserved when creator is deleted\"\"\"
+        """Test that policies are preserved when creator is deleted"""
         policy = SecurityPolicy.objects.create(**self.policy_data)
         
         self.assertEqual(policy.created_by, self.admin_user)
@@ -516,10 +517,10 @@ class SecurityPolicyModelTest(TestCase):
 
 @pytest.mark.django_db
 class ModelRelationshipsTest(TestCase):
-    \"\"\"Test relationships between authentication models\"\"\"
+    """Test relationships between authentication models"""
     
     def test_user_sessions_relationship(self):
-        \"\"\"Test User to UserSession relationship\"\"\"
+        """Test User to UserSession relationship"""
         user = UserFactory()
         
         # Create multiple sessions for user
@@ -549,7 +550,7 @@ class ModelRelationshipsTest(TestCase):
         self.assertIn(session2, user.sessions.all())
     
     def test_user_audit_logs_relationship(self):
-        \"\"\"Test User to AuditLog relationship\"\"\"
+        """Test User to AuditLog relationship"""
         user = UserFactory()
         
         # Create audit logs for user
@@ -571,7 +572,7 @@ class ModelRelationshipsTest(TestCase):
         self.assertIn(log2, user.auditlog_set.all())
     
     def test_user_created_policies_relationship(self):
-        \"\"\"Test User to SecurityPolicy relationship\"\"\"
+        """Test User to SecurityPolicy relationship"""
         admin_user = AdminUserFactory()
         
         # Create policies created by user

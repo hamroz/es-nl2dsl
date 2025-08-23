@@ -131,17 +131,24 @@ check_dependencies() {
         exit 1
     fi
     
-    # Check virtual environment
-    cd backend
-    if [ ! -d "venv" ] && [ ! -d "env" ]; then
-        print_warning "No virtual environment found. Creating one..."
-        python3 -m venv venv
+    # Check virtual environment in backend directory
+    if [ ! -d "backend/venv" ] && [ ! -d "backend/env" ] && [ ! -d "env" ]; then
+        print_warning "No virtual environment found. Checking project root for env..."
+        if [ ! -d "env" ]; then
+            print_warning "Creating virtual environment in backend directory..."
+            cd backend
+            python3 -m venv venv
+            cd ..
+        fi
     fi
     
     # Activate virtual environment
-    if [ -d "venv" ]; then
-        source venv/bin/activate
-        print_status "Activated virtual environment: venv"
+    if [ -d "backend/venv" ]; then
+        source backend/venv/bin/activate
+        print_status "Activated virtual environment: backend/venv"
+    elif [ -d "backend/env" ]; then
+        source backend/env/bin/activate  
+        print_status "Activated virtual environment: backend/env"
     elif [ -d "env" ]; then
         source env/bin/activate
         print_status "Activated virtual environment: env"
@@ -150,7 +157,7 @@ check_dependencies() {
     # Check Django
     if ! python -c "import django" 2>/dev/null; then
         print_error "Django is not installed. Installing dependencies..."
-        pip install -r requirements.txt
+        pip install -r backend/requirements.txt
     fi
     
     # Check test dependencies
@@ -196,17 +203,16 @@ check_dependencies() {
 setup_test_environment() {
     print_status "Setting up test environment..."
     
-    # Create necessary directories
-    mkdir -p artifacts/exports
-    mkdir -p artifacts/generated
-    mkdir -p artifacts/results
+    # Create necessary directories (in project root)
+    mkdir -p ../artifacts/exports
+    mkdir -p ../artifacts/generated
+    mkdir -p ../artifacts/results
     
     # Set Django settings
     export DJANGO_SETTINGS_MODULE=es_nl2dsl_api.test_settings
     
-    # Create test database if needed
-    print_status "Preparing test database..."
-    python manage.py migrate --settings=es_nl2dsl_api.test_settings --run-syncdb >/dev/null 2>&1 || true
+    # Let pytest-django handle database setup automatically
+    print_status "Test database will be managed by pytest-django"
     
     print_success "Test environment ready"
 }
@@ -255,14 +261,12 @@ run_tests() {
         pytest_args="$pytest_args -k $TEST_FILTER"
     fi
     
-    # Fast mode markers
-    if [ "$FAST_MODE" = true ]; then
-        pytest_args="$pytest_args -m 'not slow'"
-    fi
+    # Skip slow tests in fast mode is disabled for now to avoid shell quoting issues
     
     # Add common options
     pytest_args="$pytest_args --tb=short"
     pytest_args="$pytest_args --disable-warnings"
+    pytest_args="$pytest_args --create-db"
     
     # Run the tests
     print_status "Executing: $pytest_cmd $pytest_args"
@@ -312,11 +316,12 @@ main() {
     echo "======================================"
     echo ""
     
-    # Change to backend directory
-    cd backend
-    
     # Check dependencies and setup
     check_dependencies
+    
+    # Change to backend directory for the rest of the operations
+    cd backend
+    
     setup_test_environment
     
     # Run tests

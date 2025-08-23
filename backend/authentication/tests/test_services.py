@@ -218,9 +218,9 @@ class RateLimitingTest(TestCase):
         allowed, info = strategy.is_allowed('user2')
         self.assertTrue(allowed)
     
-    @freeze_time(\"2024-01-01 12:00:00\")
+    @freeze_time("2024-01-01 12:00:00")
     def test_token_bucket_strategy_refill_over_time(self):
-        \"\"\"Test that token bucket refills over time\"\"\"
+        """Test that token bucket refills over time"""
         strategy = TokenBucketStrategy(limit=3, window=60, name='test')
         
         # Use up all tokens
@@ -233,13 +233,13 @@ class RateLimitingTest(TestCase):
         self.assertFalse(allowed)
         
         # Move forward in time (past window)
-        with freeze_time(\"2024-01-01 12:02:00\"):
+        with freeze_time("2024-01-01 12:02:00"):
             # Should have tokens available again
             allowed, info = strategy.is_allowed('test_user')
             self.assertTrue(allowed)
     
     def test_hierarchical_rate_limiter(self):
-        \"\"\"Test hierarchical rate limiter\"\"\"
+        """Test hierarchical rate limiter"""
         limiter = HierarchicalRateLimiter()
         
         # Mock request
@@ -254,7 +254,7 @@ class RateLimitingTest(TestCase):
         # First few requests should be allowed
         for i in range(5):
             allowed, info = limiter.check_rate_limit(request, 'auth_login')
-            self.assertTrue(allowed, f\"Request {i+1} should be allowed\")
+            self.assertTrue(allowed, f"Request {i+1} should be allowed")
         
         # Eventually should hit rate limit
         denied_count = 0
@@ -263,15 +263,15 @@ class RateLimitingTest(TestCase):
             if not allowed:
                 denied_count += 1
         
-        self.assertGreater(denied_count, 0, \"Should have some denied requests\")
+        self.assertGreater(denied_count, 0, "Should have some denied requests")
 
 
 @pytest.mark.django_db
 class ThreatDetectionTest(TestCase):
-    \"\"\"Test threat detection middleware\"\"\"
+    """Test threat detection middleware"""
     
     def setUp(self):
-        \"\"\"Set up test data\"\"\"
+        """Set up test data"""
         def mock_get_response(request):
             from django.http import HttpResponse
             return HttpResponse('OK')
@@ -281,9 +281,9 @@ class ThreatDetectionTest(TestCase):
         self.request.META = {'HTTP_USER_AGENT': 'Mozilla/5.0'}
     
     def test_sql_injection_detection(self):
-        \"\"\"Test SQL injection pattern detection\"\"\"
-        self.request.path = \"/api/test?id=1' OR '1'='1\"
-        self.request.GET = {'id': \"1' OR '1'='1\"}
+        """Test SQL injection pattern detection"""
+        self.request.path = "/api/test?id=1' OR '1'='1"
+        self.request.GET = {'id': "1' OR '1'='1"}
         
         threat_score, threats = self.middleware._analyze_request_threats(self.request)
         
@@ -291,9 +291,9 @@ class ThreatDetectionTest(TestCase):
         self.assertIn('url_sql_injection', threats)
     
     def test_xss_detection(self):
-        \"\"\"Test XSS pattern detection\"\"\"
-        self.request.path = \"/api/test?search=<script>alert('xss')</script>\"
-        self.request.GET = {'search': \"<script>alert('xss')</script>\"}
+        """Test XSS pattern detection"""
+        self.request.path = "/api/test?search=<script>alert('xss')</script>"
+        self.request.GET = {'search': "<script>alert('xss')</script>"}
         
         threat_score, threats = self.middleware._analyze_request_threats(self.request)
         
@@ -301,8 +301,8 @@ class ThreatDetectionTest(TestCase):
         self.assertIn('url_xss', threats)
     
     def test_path_traversal_detection(self):
-        \"\"\"Test path traversal detection\"\"\"
-        self.request.path = \"/api/test?file=../../../etc/passwd\"
+        """Test path traversal detection"""
+        self.request.path = "/api/test?file=../../../etc/passwd"
         self.request.GET = {'file': '../../../etc/passwd'}
         
         threat_score, threats = self.middleware._analyze_request_threats(self.request)
@@ -311,7 +311,7 @@ class ThreatDetectionTest(TestCase):
         self.assertIn('path_traversal', threats)
     
     def test_honeypot_detection(self):
-        \"\"\"Test honeypot endpoint detection\"\"\"
+        """Test honeypot endpoint detection"""
         honeypot_paths = [
             '/wp-admin/admin.php',
             '/phpmyadmin/',
@@ -324,11 +324,11 @@ class ThreatDetectionTest(TestCase):
             self.request.path = path
             threat_score, threats = self.middleware._analyze_request_threats(self.request)
             
-            self.assertEqual(threat_score, 100, f\"Honeypot path {path} should have max threat score\")
+            self.assertEqual(threat_score, 100, f"Honeypot path {path} should have max threat score")
             self.assertIn('honeypot_access', threats)
     
     def test_scanner_user_agent_detection(self):
-        \"\"\"Test detection of scanner user agents\"\"\"
+        """Test detection of scanner user agents"""
         scanner_agents = [
             'sqlmap/1.0',
             'Nmap Scripting Engine',
@@ -343,11 +343,11 @@ class ThreatDetectionTest(TestCase):
             
             threat_score, threats = self.middleware._analyze_request_threats(self.request)
             
-            self.assertGreater(threat_score, 0, f\"Scanner agent {agent} should be detected\")
+            self.assertGreater(threat_score, 0, f"Scanner agent {agent} should be detected")
             self.assertIn('scanner_user_agent', threats)
     
     def test_legitimate_request(self):
-        \"\"\"Test that legitimate requests have low threat scores\"\"\"
+        """Test that legitimate requests have low threat scores"""
         self.request.path = '/api/v1/queries/'
         self.request.GET = {'page': '1', 'size': '10'}
         self.request.META['HTTP_USER_AGENT'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
@@ -360,15 +360,15 @@ class ThreatDetectionTest(TestCase):
 
 @pytest.mark.django_db
 class SessionManagerTest(TestCase):
-    \"\"\"Test session manager functionality\"\"\"
+    """Test session manager functionality"""
     
     def setUp(self):
-        \"\"\"Set up test data\"\"\"
+        """Set up test data"""
         self.user = UserFactory()
         self.session_manager = SessionManager()
     
     def test_create_session(self):
-        \"\"\"Test session creation\"\"\"
+        """Test session creation"""
         session_data = {
             'ip_address': '192.168.1.100',
             'user_agent': 'Mozilla/5.0 Test Browser',
@@ -386,7 +386,7 @@ class SessionManagerTest(TestCase):
         self.assertTrue(session.is_active)
     
     def test_get_active_sessions(self):
-        \"\"\"Test getting active sessions for user\"\"\"
+        """Test getting active sessions for user"""
         # Create multiple sessions
         session1 = self.session_manager.create_session(
             self.user,
@@ -419,7 +419,7 @@ class SessionManagerTest(TestCase):
         self.assertNotIn(expired_session, active_sessions)
     
     def test_terminate_session(self):
-        \"\"\"Test session termination\"\"\"
+        """Test session termination"""
         session = self.session_manager.create_session(
             self.user,
             ip_address='192.168.1.100',
@@ -437,7 +437,7 @@ class SessionManagerTest(TestCase):
         self.assertIsNotNone(session.terminated_at)
     
     def test_cleanup_expired_sessions(self):
-        \"\"\"Test cleanup of expired sessions\"\"\"
+        """Test cleanup of expired sessions"""
         # Create active session
         active_session = self.session_manager.create_session(
             self.user,
@@ -470,7 +470,7 @@ class SessionManagerTest(TestCase):
         self.assertFalse(active_session.is_terminated)
     
     def test_analyze_session_risk(self):
-        \"\"\"Test session risk analysis\"\"\"
+        """Test session risk analysis"""
         # Low risk session (normal parameters)
         low_risk_session = self.session_manager.create_session(
             self.user,
@@ -496,7 +496,7 @@ class SessionManagerTest(TestCase):
         self.assertGreater(risk_score, 0.5)  # Should be higher risk
     
     def test_concurrent_session_limit(self):
-        \"\"\"Test concurrent session limiting\"\"\"
+        """Test concurrent session limiting"""
         # Create maximum allowed concurrent sessions
         sessions = []
         max_concurrent = 3

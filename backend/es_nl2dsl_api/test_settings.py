@@ -18,15 +18,9 @@ DATABASES = {
     }
 }
 
-# Disable migrations during testing for speed
-class DisableMigrations:
-    def __contains__(self, item):
-        return True
-    
-    def __getitem__(self, item):
-        return None
-
-MIGRATION_MODULES = DisableMigrations()
+# Enable migrations during testing to create tables
+# For speed, we could disable this later but for now we need the tables
+# MIGRATION_MODULES = DisableMigrations()
 
 # Test-specific settings
 SECRET_KEY = 'test-secret-key-for-testing-only'

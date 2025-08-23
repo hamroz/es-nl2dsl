@@ -14,7 +14,7 @@ from queries.models import QueryTask, GeneratedQuery, QueryExecution
 from evaluation.models import EvaluationScenario, EvaluationRun, EvaluationBatch
 from security.models import SecurityTest, SecurityTestResult
 from data_management.models import DataIngestionTask
-from analytics.models import SystemMetric
+from analytics.models import CustomMetric, AnalyticsSnapshot
 
 User = get_user_model()
 
@@ -298,20 +298,21 @@ class DataIngestionTaskFactory(DjangoModelFactory):
     error_message = None
 
 
-class SystemMetricFactory(DjangoModelFactory):
-    """Factory for creating system metrics"""
+class AnalyticsSnapshotFactory(DjangoModelFactory):
+    """Factory for creating analytics snapshots"""
     
     class Meta:
-        model = SystemMetric
+        model = AnalyticsSnapshot
     
-    metric_name = factory.Iterator(['cpu_usage', 'memory_usage', 'disk_usage'])
-    metric_value = factory.Faker('pyfloat', min_value=0.0, max_value=100.0)
-    metric_unit = factory.Iterator(['%', 'MB', 'GB'])
-    component = factory.Iterator(['system', 'elasticsearch', 'redis', 'postgresql'])
+    total_users = factory.Faker('pyint', min_value=0, max_value=1000)
+    active_users_24h = factory.Faker('pyint', min_value=0, max_value=100)
+    queries_24h = factory.Faker('pyint', min_value=0, max_value=500)
+    success_rate = factory.Faker('pyfloat', min_value=80.0, max_value=100.0)
+    uptime_percentage = factory.Faker('pyfloat', min_value=95.0, max_value=100.0)
     timestamp = factory.LazyFunction(timezone.now)
     metadata = factory.LazyFunction(lambda: {
-        "host": "localhost",
-        "service": "backend"
+        "system": "es-nl2dsl",
+        "version": "1.0.0"
     })
 
 

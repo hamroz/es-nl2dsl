@@ -13,14 +13,36 @@ from unittest.mock import patch
 
 
 @pytest.fixture(scope='session')
-def django_db_setup():
-    """Set up test database for the session"""
-    pass
+def db_with_migrations(django_db_setup, django_db_blocker):
+    """Set up test database for the session with proper migrations"""
+    from django.core.management import call_command
+    from django.db import connection
+    
+    with django_db_blocker.unblock():
+        # Force Django to create the database with migrations
+        print("\n🔧 Setting up test database with migrations...")
+        call_command('migrate', verbosity=0, interactive=False)
+        
+        # Verify critical tables exist
+        cursor = connection.cursor()
+        tables = connection.introspection.table_names(cursor)
+        
+        # Check for essential tables
+        required_tables = ['auth_users', 'django_content_type', 'auth_permission']
+        missing_tables = [table for table in required_tables if table not in tables]
+        
+        if missing_tables:
+            raise RuntimeError(f"❌ Critical tables missing after migration: {missing_tables}")
+        
+        print(f"✅ Test database setup complete. Tables created: {len(tables)}")
+        print(f"📋 Key tables: {[t for t in tables if 'auth' in t or 'django' in t][:5]}...")
+    
+    yield
 
 
 @pytest.fixture(autouse=True)
-def enable_db_access_for_all_tests(db):
-    """Enable database access for all tests"""
+def enable_db_access_for_all_tests(db, db_with_migrations):
+    """Enable database access for all tests with proper migrations"""
     pass
 
 
