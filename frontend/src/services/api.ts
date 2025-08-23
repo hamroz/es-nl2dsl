@@ -156,7 +156,7 @@ export const apiService = {
   },
 
   runEvaluation: async (scenarioId: string, method: string) => {
-    const response = await api.post(`/evaluation/scenarios/${scenarioId}/run/`, {
+    const response = await api.post(`/evaluation/runs/scenario/${scenarioId}/`, {
       method,
     });
     return response.data;

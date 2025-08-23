@@ -308,6 +308,9 @@ def generate_query_for_evaluation(prompt, method, model=''):
         f.write(prompt)
         prompt_file = f.name
     
+    # Generate unique output filename
+    output_file = str(project_root / "artifacts" / "generated" / f"eval_{uuid.uuid4().hex[:8]}.json")
+    
     try:
         start_time = time.time()
         
@@ -316,7 +319,7 @@ def generate_query_for_evaluation(prompt, method, model=''):
                 sys.executable,
                 str(project_root / "src" / "generate_constrained.py"),
                 "--prompt", prompt_file,
-                "--out", "/tmp/generated_query.json"
+                "--out", output_file
             ]
             if model:
                 cmd.extend(["--model", model])
@@ -326,7 +329,7 @@ def generate_query_for_evaluation(prompt, method, model=''):
                 sys.executable,
                 str(project_root / "src" / "baseline_rules.py"),
                 "--prompt", prompt_file,
-                "--out", "/tmp/generated_query.json"
+                "--out", output_file
             ]
             
         elif method == 'zeroshot':
@@ -334,7 +337,7 @@ def generate_query_for_evaluation(prompt, method, model=''):
                 sys.executable,
                 str(project_root / "src" / "baseline_zeroshot.py"),
                 "--prompt", prompt_file,
-                "--out", "/tmp/generated_query.json"
+                "--out", output_file
             ]
             if model:
                 cmd.extend(["--model", model])
@@ -354,13 +357,30 @@ def generate_query_for_evaluation(prompt, method, model=''):
         if result.returncode != 0:
             raise RuntimeError(f"Query generation failed: {result.stderr}")
         
-        # Load generated query
-        with open("/tmp/generated_query.json", 'r') as f:
-            generated_query = json.load(f)
+        # Load generated query (handle different script behaviors)
+        if Path(output_file).is_file():
+            # Direct file output
+            with open(output_file, 'r') as f:
+                generated_query = json.load(f)
+        elif Path(output_file).is_dir():
+            # Some scripts create a directory with the result inside
+            result_files = list(Path(output_file).glob('*_generated.json'))
+            if result_files:
+                with open(result_files[0], 'r') as f:
+                    generated_query = json.load(f)
+            else:
+                raise RuntimeError("No generated query file found in output directory")
+        else:
+            raise RuntimeError(f"Output file not found: {output_file}")
         
         return generated_query, generation_time
         
     finally:
         # Clean up temp files
         Path(prompt_file).unlink(missing_ok=True)
-        Path("/tmp/generated_query.json").unlink(missing_ok=True)
+        output_path = Path(output_file)
+        if output_path.is_dir():
+            import shutil
+            shutil.rmtree(output_path, ignore_errors=True)
+        else:
+            output_path.unlink(missing_ok=True)

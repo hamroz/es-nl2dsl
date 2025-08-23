@@ -78,23 +78,68 @@ echo "Running migrations..."
 python manage.py makemigrations
 python manage.py migrate
 
-echo "Creating superuser (if needed)..."
+echo "Creating users..."
 python manage.py shell << EOF
 from django.contrib.auth import get_user_model
 
 User = get_user_model()
-if not User.objects.filter(email='admin@es-nl2dsl.local').exists():
-    user = User.objects.create_superuser(
+
+# Admin user
+if not User.objects.filter(email='admin@gmail.com').exists():
+    User.objects.create_superuser(
         username='admin',
-        email='admin@es-nl2dsl.local',
-        password='admin123',
+        email='admin@gmail.com',
+        password='admin@es2dsl',
         first_name='Admin',
         last_name='User',
         role='admin'
     )
-    print("✅ Superuser created: admin@es-nl2dsl.local / admin123")
+    print("✅ Admin user created: admin@gmail.com")
 else:
-    print("✅ Superuser already exists")
+    # Update password if user exists
+    admin_user = User.objects.get(email='admin@gmail.com')
+    admin_user.set_password('admin@es2dsl')
+    admin_user.role = 'admin'
+    admin_user.save()
+    print("✅ Admin user updated: admin@gmail.com")
+
+# Analyst user
+if not User.objects.filter(email='analyst@gmail.com').exists():
+    User.objects.create_user(
+        username='analyst',
+        email='analyst@gmail.com',
+        password='analyst@es2dsl',
+        first_name='Analyst',
+        last_name='User',
+        role='analyst'
+    )
+    print("✅ Analyst user created: analyst@gmail.com")
+else:
+    # Update password if user exists
+    analyst_user = User.objects.get(email='analyst@gmail.com')
+    analyst_user.set_password('analyst@es2dsl')
+    analyst_user.role = 'analyst'
+    analyst_user.save()
+    print("✅ Analyst user updated: analyst@gmail.com")
+
+# Viewer user
+if not User.objects.filter(email='viewer@gmail.com').exists():
+    User.objects.create_user(
+        username='viewer',
+        email='viewer@gmail.com',
+        password='viewer@es2dsl',
+        first_name='Viewer',
+        last_name='User',
+        role='viewer'
+    )
+    print("✅ Viewer user created: viewer@gmail.com")
+else:
+    # Update password if user exists
+    viewer_user = User.objects.get(email='viewer@gmail.com')
+    viewer_user.set_password('viewer@es2dsl')
+    viewer_user.role = 'viewer'
+    viewer_user.save()
+    print("✅ Viewer user updated: viewer@gmail.com")
 EOF
 
 # Step 5: Install frontend dependencies
@@ -150,9 +195,10 @@ echo "  • Frontend:  http://localhost:3000"
 echo "  • Backend:   http://localhost:8000"
 echo "  • API Docs:  http://localhost:8000/api/v1/"
 echo ""
-echo "🔧 Admin Access:"
-echo "  • Email:     admin@es-nl2dsl.local"
-echo "  • Password:  admin123"
+echo "🔧 User Access:"
+echo "  • Admin:     admin@gmail.com / admin@es2dsl"
+echo "  • Analyst:   analyst@gmail.com / analyst@es2dsl"
+echo "  • Viewer:    viewer@gmail.com / viewer@es2dsl"
 echo ""
 echo "📊 Infrastructure:"
 echo "  • Elasticsearch: http://localhost:9200"
@@ -170,7 +216,7 @@ echo "  docker-compose down"
 echo ""
 echo "📋 Ready to test:"
 echo "  1. Open http://localhost:3000"
-echo "  2. Login with admin credentials"
+echo "  2. Login with any user credentials above"
 echo "  3. Navigate to Query Generator"
 echo "  4. Test: 'Find malicious events from 2017-07-04'"
 echo ""
