@@ -97,7 +97,7 @@ def index_to_elasticsearch(df, index_name, es_host='localhost', es_port=9200,
 
 def main():
     parser = argparse.ArgumentParser(description="Generate DP-synthetic network log data")
-    parser.add_argument("--input", default="data_raw/sample.csv", help="Input CSV file")
+    parser.add_argument("--input", default="data/sample.csv", help="Input CSV file")
     parser.add_argument("--index", default=ES_DEFAULT_INDEX + "_dp", help="Target ES index name")
     parser.add_argument("--epsilon", type=float, default=1.0, help="Privacy parameter (lower = more privacy)")
     parser.add_argument("--timestamp-jitter", type=int, default=30, help="Timestamp jitter window in minutes")

@@ -5,8 +5,13 @@
 
 set -e
 
+# Get the project root directory
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+PROJECT_ROOT="$( cd "$SCRIPT_DIR/../.." && pwd )"
+
 echo "=== ES-NL2DSL Setup Script ==="
 echo "Setting up complete evaluation environment..."
+echo "📍 Project root: $PROJECT_ROOT"
 echo
 
 # Check if Elasticsearch is running
@@ -24,44 +29,44 @@ echo "✅ Elasticsearch is running"
 # Setup reader user and roles
 echo
 echo "2. Setting up Elasticsearch users and roles..."
-./setup_reader.sh
+"$SCRIPT_DIR/setup_reader.sh"
 echo "✅ Reader user configured"
 
 # Create main index
 echo
 echo "3. Creating main index with mappings..."
 curl -X DELETE "localhost:9200/logs_net" -u elastic:ChangeMe_123 2>/dev/null || true
-curl -X PUT "localhost:9200/logs_net" -H 'Content-Type: application/json' -u elastic:ChangeMe_123 -d @artifacts/mappings.json
+curl -X PUT "localhost:9200/logs_net" -H 'Content-Type: application/json' -u elastic:ChangeMe_123 -d @"$PROJECT_ROOT/artifacts/mappings.json"
 echo "✅ Main index created"
 
 # Ingest sample data
 echo
 echo "4. Ingesting sample data..."
-python src/ingest.py --file data_raw/sample_extended.csv --index logs_net
+cd "$PROJECT_ROOT" && python src/ingest.py --file data/sample_extended.csv --index logs_net
 echo "✅ Sample data ingested"
 
 # Generate ground truth
 echo
 echo "5. Generating ground truth for all scenarios..."
-python src/generate_ground_truth.py
+cd "$PROJECT_ROOT" && python src/generate_ground_truth.py
 echo "✅ Ground truth generated"
 
 # Create schema drift index
 echo
 echo "6. Creating schema drift index..."
-python src/create_drift_index.py
+cd "$PROJECT_ROOT" && python src/create_drift_index.py
 echo "✅ Schema drift index created"
 
 # Create DP indices
 echo
 echo "7. Creating differential privacy indices..."
-python src/create_dp_grid.py
+cd "$PROJECT_ROOT" && python src/create_dp_grid.py
 echo "✅ DP indices created"
 
 # Verify setup
 echo
 echo "8. Verifying setup..."
-python src/smoke_es.py
+cd "$PROJECT_ROOT" && python src/smoke_es.py
 echo "✅ Setup verification complete"
 
 # Check Ollama

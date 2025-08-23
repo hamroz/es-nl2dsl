@@ -15,7 +15,7 @@ services:
     ulimits:
       memlock: { soft: -1, hard: -1 }
     volumes:
-      - ./data_es:/usr/share/elasticsearch/data
+      - ../data_es:/usr/share/elasticsearch/data
     networks:
       - es_nl2dsl_network
 
@@ -46,7 +46,7 @@ services:
   # Django API Backend
   api:
     build:
-      context: ./backend
+      context: ../backend
       dockerfile: Dockerfile
     container_name: es_nl2dsl_api
     environment:
@@ -58,9 +58,9 @@ services:
       - ELASTICSEARCH_PASSWORD=ChangeMe_123
     ports: ["8000:8000"]
     volumes:
-      - ./artifacts:/app/artifacts
-      - ./data_raw:/app/data_raw
-      - ./src:/app/src
+      - ../artifacts:/app/artifacts
+      - ../data:/app/data
+      - ../src:/app/src
     depends_on:
       - db
       - redis
@@ -72,7 +72,7 @@ services:
   # Celery Worker
   worker:
     build:
-      context: ./backend
+      context: ../backend
       dockerfile: Dockerfile
     container_name: es_nl2dsl_worker
     environment:
@@ -83,9 +83,9 @@ services:
       - ELASTICSEARCH_USER=elastic
       - ELASTICSEARCH_PASSWORD=ChangeMe_123
     volumes:
-      - ./artifacts:/app/artifacts
-      - ./data_raw:/app/data_raw
-      - ./src:/app/src
+      - ../artifacts:/app/artifacts
+      - ../data:/app/data
+      - ../src:/app/src
     depends_on:
       - db
       - redis
@@ -97,7 +97,7 @@ services:
   # Celery Beat (for scheduled tasks)
   beat:
     build:
-      context: ./backend
+      context: ../backend
       dockerfile: Dockerfile
     container_name: es_nl2dsl_beat
     environment:
@@ -105,7 +105,7 @@ services:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/es_nl2dsl
       - REDIS_URL=redis://redis:6379/0
     volumes:
-      - ./artifacts:/app/artifacts
+      - ../artifacts:/app/artifacts
     depends_on:
       - db
       - redis
@@ -116,7 +116,7 @@ services:
   # React Frontend
   frontend:
     build:
-      context: ./frontend
+      context: ../frontend
       dockerfile: Dockerfile
     container_name: es_nl2dsl_frontend
     ports: ["3000:3000"]
@@ -124,7 +124,7 @@ services:
       - REACT_APP_API_URL=http://localhost:8000/api/v1
       - REACT_APP_WS_URL=ws://localhost:8000/ws
     volumes:
-      - ./frontend/src:/app/src
+      - ../frontend/src:/app/src
     depends_on:
       - api
     networks:

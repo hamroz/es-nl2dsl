@@ -14,7 +14,7 @@ from pathlib import Path
 def run_frontend_tests(component_filter=None, test_type=None):
     """Run frontend tests with full output for analysis"""
     
-    frontend_dir = Path(__file__).parent / "frontend"
+    frontend_dir = Path(__file__).parent.parent.parent / "frontend"
     if frontend_dir.exists():
         os.chdir(frontend_dir)
     

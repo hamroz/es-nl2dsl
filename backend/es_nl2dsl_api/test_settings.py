@@ -54,11 +54,11 @@ MEDIA_ROOT = TEST_MEDIA_ROOT
 
 # Test file paths
 TEST_ARTIFACTS_PATH = Path(tempfile.mkdtemp()) / "test_artifacts"
-TEST_DATA_RAW_PATH = Path(tempfile.mkdtemp()) / "test_data_raw"
+TEST_DATA_PATH = Path(tempfile.mkdtemp()) / "test_data"
 
 # Override for testing
 ARTIFACTS_PATH = TEST_ARTIFACTS_PATH
-DATA_RAW_PATH = TEST_DATA_RAW_PATH
+DATA_PATH = TEST_DATA_PATH
 
 # Disable rate limiting during tests
 RATE_LIMITING = {

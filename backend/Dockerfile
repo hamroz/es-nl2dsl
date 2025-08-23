@@ -26,7 +26,7 @@ RUN pip install --no-cache-dir django djangorestframework celery redis psycopg2-
 COPY . .
 
 # Create directories for artifacts and data
-RUN mkdir -p /app/artifacts /app/data_raw
+RUN mkdir -p /app/artifacts /app/data
 
 # Expose port
 EXPOSE 8000

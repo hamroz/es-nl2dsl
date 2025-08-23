@@ -124,40 +124,38 @@ check_dependencies() {
         exit 1
     fi
     
-    # Check if we're in the right directory
-    if [ ! -f "backend/manage.py" ]; then
-        print_error "Please run this script from the project root directory (es-nl2dsl/)"
+    # Check if we're in the right directory (should be run from scripts/testing/)
+    if [ ! -f "../../backend/manage.py" ]; then
+        print_error "Please run this script from scripts/testing/ directory"
+        print_error "Expected path: ../../backend/manage.py"
         print_error "Current directory: $(pwd)"
         exit 1
     fi
     
     # Check virtual environment in backend directory
-    if [ ! -d "backend/venv" ] && [ ! -d "backend/env" ] && [ ! -d "env" ]; then
-        print_warning "No virtual environment found. Checking project root for env..."
-        if [ ! -d "env" ]; then
-            print_warning "Creating virtual environment in backend directory..."
-            cd backend
-            python3 -m venv venv
-            cd ..
-        fi
+    if [ ! -d "../../backend/venv" ] && [ ! -d "../../backend/env" ] && [ ! -d "../../env" ]; then
+        print_warning "No virtual environment found. Creating in backend directory..."
+        cd ../../backend
+        python3 -m venv venv
+        cd -
     fi
     
     # Activate virtual environment
-    if [ -d "backend/venv" ]; then
-        source backend/venv/bin/activate
-        print_status "Activated virtual environment: backend/venv"
-    elif [ -d "backend/env" ]; then
-        source backend/env/bin/activate  
-        print_status "Activated virtual environment: backend/env"
-    elif [ -d "env" ]; then
-        source env/bin/activate
-        print_status "Activated virtual environment: env"
+    if [ -d "../../backend/venv" ]; then
+        source ../../backend/venv/bin/activate
+        print_status "Activated virtual environment: ../../backend/venv"
+    elif [ -d "../../backend/env" ]; then
+        source ../../backend/env/bin/activate  
+        print_status "Activated virtual environment: ../../backend/env"
+    elif [ -d "../../env" ]; then
+        source ../../env/bin/activate
+        print_status "Activated virtual environment: ../../env"
     fi
     
     # Check Django
     if ! python -c "import django" 2>/dev/null; then
         print_error "Django is not installed. Installing dependencies..."
-        pip install -r backend/requirements.txt
+        pip install -r ../../backend/requirements.txt
     fi
     
     # Check test dependencies

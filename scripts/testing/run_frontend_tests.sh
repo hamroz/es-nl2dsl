@@ -39,15 +39,15 @@ main() {
     print_status "Starting ES-NL2DSL Frontend Test Suite"
     echo "======================================================"
     
-    # Check if we're in the right directory
-    if [ ! -f "frontend/package.json" ]; then
-        print_error "This script should be run from the project root directory (es-nl2dsl/)"
-        print_error "Make sure you're in the correct directory and frontend/package.json exists"
+    # Check if we're in the right directory and change to project root
+    if [ ! -f "../../frontend/package.json" ]; then
+        print_error "Frontend package.json not found. Make sure you're running from scripts/testing/"
+        print_error "Expected path: ../../frontend/package.json"
         exit 1
     fi
     
-    # Change to frontend directory
-    cd frontend
+    # Change to frontend directory from scripts/testing/
+    cd ../../frontend
     
     # Check if Node.js is installed
     if ! command_exists node; then

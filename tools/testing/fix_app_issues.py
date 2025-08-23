@@ -15,7 +15,7 @@ import json
 def run_all_tests(app_filter=None):
     """Run all tests and capture failures"""
     
-    backend_dir = Path(__file__).parent / "backend"
+    backend_dir = Path(__file__).parent.parent.parent / "backend"
     if backend_dir.exists():
         os.chdir(backend_dir)
     

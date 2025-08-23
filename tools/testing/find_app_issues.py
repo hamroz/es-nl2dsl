@@ -14,7 +14,7 @@ def run_tests(app_filter=None):
     """Run tests and capture output"""
     
     # Change to backend directory
-    backend_dir = Path(__file__).parent / "backend"
+    backend_dir = Path(__file__).parent.parent.parent / "backend"
     if backend_dir.exists():
         os.chdir(backend_dir)
     

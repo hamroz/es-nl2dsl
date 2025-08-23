@@ -293,7 +293,7 @@ AUDIT_LOGGING = {
 
 # File storage paths (preserve existing structure)
 ARTIFACTS_PATH = BASE_DIR.parent / "artifacts"
-DATA_RAW_PATH = BASE_DIR.parent / "data_raw"
+DATA_PATH = BASE_DIR.parent / "data"
 
 # API Documentation Settings (drf-spectacular)
 SPECTACULAR_SETTINGS = {

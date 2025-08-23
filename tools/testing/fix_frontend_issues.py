@@ -16,7 +16,7 @@ from pathlib import Path
 def run_all_frontend_tests(component_filter=None, test_type=None):
     """Run all frontend tests and capture failures"""
     
-    frontend_dir = Path(__file__).parent / "frontend"
+    frontend_dir = Path(__file__).parent.parent.parent / "frontend"
     if frontend_dir.exists():
         os.chdir(frontend_dir)
     

@@ -12,7 +12,7 @@ from pathlib import Path
 def run_tests_with_full_output(app_filter=None):
     """Run tests with full traceback to analyze"""
     
-    backend_dir = Path(__file__).parent / "backend"
+    backend_dir = Path(__file__).parent.parent.parent / "backend"
     if backend_dir.exists():
         os.chdir(backend_dir)
     

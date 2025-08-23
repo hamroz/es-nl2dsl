@@ -349,8 +349,8 @@ wget https://www.unb.ca/cic/datasets/ids-2017.html
 
 # Process CSV files
 python src/process_cic_ids2017.py \
-  --input data_raw/Monday-WorkingHours.pcap_ISCX.csv \
-  --output data_raw/processed_monday.jsonl
+  --input data/Monday-WorkingHours.pcap_ISCX.csv \
+  --output data/processed_monday.jsonl
 
 # Create index
 curl -X PUT "localhost:9200/logs_cic_ids2017" \
@@ -360,7 +360,7 @@ curl -X PUT "localhost:9200/logs_cic_ids2017" \
 
 # Ingest data
 python src/ingest_large.py \
-  --file data_raw/processed_monday.jsonl \
+  --file data/processed_monday.jsonl \
   --index logs_cic_ids2017
 ```
 
