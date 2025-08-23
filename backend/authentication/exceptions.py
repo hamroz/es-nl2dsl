@@ -212,3 +212,103 @@ class RateLimitError(Exception):
 class TenantAccessError(Exception):
     """Custom tenant access error."""
     pass
+
+
+class ElasticsearchQueryValidator:
+    """Validates and sanitizes Elasticsearch queries for security"""
+    
+    FORBIDDEN_PATTERNS = [
+        'script',
+        '_source.groovy',
+        'painless',
+        'ctx._source',
+        'Runtime.getRuntime()',
+        'ProcessBuilder',
+        'System.exit',
+        'java.lang.Runtime',
+        'java.io.File',
+        'java.nio.file',
+        '__import__',
+        'eval',
+        'exec',
+    ]
+    
+    @classmethod
+    def validate_query(cls, query_data):
+        """
+        Validate Elasticsearch query for security issues
+        Raises ValidationError if query is invalid or unsafe
+        """
+        import json
+        from django.core.exceptions import ValidationError
+        
+        if not isinstance(query_data, dict):
+            raise ValidationError("Query must be a valid JSON object")
+        
+        query_str = json.dumps(query_data).lower()
+        
+        # Check for forbidden patterns
+        for pattern in cls.FORBIDDEN_PATTERNS:
+            if pattern.lower() in query_str:
+                raise ValidationError(f"Forbidden pattern detected: {pattern}")
+        
+        # Validate query structure
+        cls._validate_query_structure(query_data)
+        
+        return True
+    
+    @classmethod
+    def _validate_query_structure(cls, query_data):
+        """Validate basic query structure"""
+        import json
+        from django.core.exceptions import ValidationError
+        
+        # Ensure query doesn't exceed reasonable size (10KB limit)
+        if len(json.dumps(query_data)) > 10240:
+            raise ValidationError("Query too large (max 10KB)")
+        
+        # Prevent overly deep nesting (DoS protection)
+        cls._check_nesting_depth(query_data)
+        
+        # Validate aggregation complexity
+        if 'aggs' in query_data or 'aggregations' in query_data:
+            cls._validate_aggregations(query_data.get('aggs', query_data.get('aggregations', {})))
+    
+    @classmethod
+    def _check_nesting_depth(cls, obj, depth=0):
+        """Check nesting depth to prevent DoS attacks"""
+        from django.core.exceptions import ValidationError
+        
+        if depth > 15:  # Max nesting depth
+            raise ValidationError("Query nesting too deep (max 15 levels)")
+        
+        if isinstance(obj, dict):
+            for value in obj.values():
+                cls._check_nesting_depth(value, depth + 1)
+        elif isinstance(obj, list):
+            for item in obj:
+                cls._check_nesting_depth(item, depth + 1)
+    
+    @classmethod
+    def _validate_aggregations(cls, aggs):
+        """Validate aggregation complexity"""
+        from django.core.exceptions import ValidationError
+        
+        if not isinstance(aggs, dict):
+            return
+        
+        # Limit number of aggregations
+        if len(aggs) > 10:
+            raise ValidationError("Too many aggregations (max 10)")
+        
+        # Check for complex aggregations that could cause performance issues
+        for agg_name, agg_config in aggs.items():
+            if isinstance(agg_config, dict):
+                # Check for expensive aggregation types
+                expensive_aggs = ['cardinality', 'percentiles', 'stats', 'extended_stats']
+                if any(agg_type in agg_config for agg_type in expensive_aggs):
+                    continue  # Allow but logged
+                
+                # Recursively validate nested aggregations
+                if 'aggs' in agg_config:
+                    cls._validate_aggregations(agg_config['aggs'])

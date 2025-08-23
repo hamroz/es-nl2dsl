@@ -46,6 +46,8 @@ const QueryGenerator: React.FC = () => {
   const [maxSize, setMaxSize] = useState(1000);
   const [activeTab, setActiveTab] = useState<'natural' | 'visual'>('natural');
   const [visualQuery, setVisualQuery] = useState<any>(null);
+  const [wsConnection, setWsConnection] = useState<WebSocket | null>(null);
+  const [taskProgress, setTaskProgress] = useState<number>(0);
 
   // Get available indices
   const { data: availableIndices } = useQuery({
@@ -59,19 +61,79 @@ const QueryGenerator: React.FC = () => {
     mutationFn: (params: { prompt: string; method: string; index?: string; model?: string }) =>
       apiService.generateQuery(params),
     onSuccess: (data) => {
-      setCurrentTask({ ...data, prompt, method, index: selectedIndex } as QueryTask);
+      const newTask = { ...data, prompt, method, index: selectedIndex } as QueryTask;
+      setCurrentTask(newTask);
       setQueryResult(null);
+      setTaskProgress(0);
+      // Set up WebSocket connection for real-time updates
+      setupWebSocket(newTask.task_id);
     }
   });
 
-  // Poll for task completion
+  // Poll for task completion (fallback if WebSocket fails)
   const { data: taskDetails, refetch: refetchTask } = useQuery({
     queryKey: ['query-task', currentTask?.task_id],
     queryFn: () => apiService.getQueryTask(currentTask!.task_id),
-    enabled: !!currentTask?.task_id && currentTask?.status !== 'completed' && currentTask?.status !== 'failed',
-    refetchInterval: 2000,
+    enabled: !!currentTask?.task_id && currentTask?.status !== 'completed' && currentTask?.status !== 'failed' && !wsConnection,
+    refetchInterval: 3000, // Slower polling as fallback
     refetchIntervalInBackground: false
   });
+
+  // WebSocket setup for real-time progress updates
+  const setupWebSocket = (taskId: string) => {
+    // Close existing connection
+    if (wsConnection) {
+      wsConnection.close();
+    }
+
+    const ws = new WebSocket(`ws://localhost:8000/ws/queries/${taskId}/`);
+    
+    ws.onopen = () => {
+      console.log('WebSocket connected for query generation:', taskId);
+      setWsConnection(ws);
+    };
+
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      
+      if (data.type === 'progress_update') {
+        setTaskProgress(data.progress || 0);
+      } else if (data.type === 'status_update') {
+        // Update task status in real-time
+        setCurrentTask(prev => prev ? { ...prev, status: data.status } : null);
+        
+        if (data.status === 'completed' || data.status === 'failed') {
+          setTaskProgress(100);
+          // Fetch final task details
+          refetchTask();
+          // Close WebSocket connection
+          ws.close();
+        }
+      } else if (data.type === 'task_update') {
+        // Full task data update
+        setCurrentTask(prev => prev ? { ...prev, ...data.task } : data.task);
+      }
+    };
+
+    ws.onerror = (error) => {
+      console.warn('WebSocket error, falling back to polling:', error);
+      setWsConnection(null);
+    };
+
+    ws.onclose = () => {
+      console.log('WebSocket disconnected for query generation');
+      setWsConnection(null);
+    };
+  };
+
+  // Cleanup WebSocket on unmount
+  useEffect(() => {
+    return () => {
+      if (wsConnection) {
+        wsConnection.close();
+      }
+    };
+  }, [wsConnection]);
 
   // Execute query mutation
   const executeMutation = useMutation({
@@ -318,6 +380,26 @@ const QueryGenerator: React.FC = () => {
             <p className="text-sm text-gray-600">{currentTask.prompt}</p>
           </div>
 
+          {/* WebSocket Progress Bar */}
+          {currentTask.status === 'running' && wsConnection && (
+            <div className="mb-4">
+              <div className="flex justify-between text-sm text-gray-600 mb-1">
+                <span>Generation Progress</span>
+                <span>{taskProgress}%</span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div
+                  className="bg-blue-600 h-2 rounded-full transition-all duration-500"
+                  style={{ width: `${taskProgress}%` }}
+                ></div>
+              </div>
+              <div className="flex justify-between text-xs text-gray-500 mt-1">
+                <span>{wsConnection ? '🔗 Real-time updates' : '🔄 Polling for updates'}</span>
+                <span>Task: {currentTask.task_id.slice(-8)}</span>
+              </div>
+            </div>
+          )}
+
           {currentTask.status === 'completed' && currentTask.query && (
             <div className="space-y-4">
               <div>
@@ -393,14 +475,14 @@ const QueryGenerator: React.FC = () => {
             {queryResult.export_urls && (
               <div className="flex gap-2">
                 <a
-                  href={`http://localhost:8001${queryResult.export_urls.csv}`}
+                  href={`http://localhost:8000${queryResult.export_urls.csv}`}
                   className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700 flex items-center gap-1"
                 >
                   <ArrowDownTrayIcon className="w-4 h-4" />
                   📊 Export CSV
                 </a>
                 <a
-                  href={`http://localhost:8001${queryResult.export_urls.json}`}
+                  href={`http://localhost:8000${queryResult.export_urls.json}`}
                   className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700 flex items-center gap-1"
                 >
                   <ArrowDownTrayIcon className="w-4 h-4" />

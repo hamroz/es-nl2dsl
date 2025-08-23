@@ -104,7 +104,7 @@ const SecurityTesting: React.FC = () => {
   const { data: prompts = [], isLoading: promptsLoading, refetch: refetchPrompts } = useQuery<AdversarialPrompt[]>({
     queryKey: ['adversarial-prompts'],
     queryFn: async () => {
-      const response = await fetch('/api/security/prompts/');
+      const response = await fetch('/api/v1/security/prompts/');
       if (!response.ok) throw new Error('Failed to fetch prompts');
       return response.json();
     },
@@ -114,7 +114,7 @@ const SecurityTesting: React.FC = () => {
   const { data: tests = [], isLoading: testsLoading, refetch: refetchTests } = useQuery<SecurityTest[]>({
     queryKey: ['security-tests'],
     queryFn: async () => {
-      const response = await fetch('/api/security/tests/');
+      const response = await fetch('/api/v1/security/tests/');
       if (!response.ok) throw new Error('Failed to fetch security tests');
       return response.json();
     },
@@ -124,7 +124,7 @@ const SecurityTesting: React.FC = () => {
   const { data: results = [], isLoading: resultsLoading, refetch: refetchResults } = useQuery<SecurityTestResult[]>({
     queryKey: ['security-test-results'],
     queryFn: async () => {
-      const response = await fetch('/api/security/results/');
+      const response = await fetch('/api/v1/security/results/');
       if (!response.ok) throw new Error('Failed to fetch test results');
       return response.json();
     },
@@ -134,7 +134,7 @@ const SecurityTesting: React.FC = () => {
   const { data: metrics, isLoading: metricsLoading } = useQuery<SecurityMetrics>({
     queryKey: ['security-metrics'],
     queryFn: async () => {
-      const response = await fetch('/api/security/metrics/');
+      const response = await fetch('/api/v1/security/metrics/');
       if (!response.ok) throw new Error('Failed to fetch security metrics');
       return response.json();
     },
@@ -149,7 +149,7 @@ const SecurityTesting: React.FC = () => {
       model: string;
       categories: string[];
     }) => {
-      const response = await fetch('/api/security/tests/run/', {
+      const response = await fetch('/api/v1/security/tests/run/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(testData),
@@ -175,7 +175,7 @@ const SecurityTesting: React.FC = () => {
       description: string;
       expected_behavior: string;
     }) => {
-      const response = await fetch('/api/security/prompts/', {
+      const response = await fetch('/api/v1/security/prompts/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(promptData),
@@ -195,7 +195,7 @@ const SecurityTesting: React.FC = () => {
       wsConnection.close();
     }
 
-    const ws = new WebSocket(`ws://localhost:8001/ws/security/${testId}/`);
+    const ws = new WebSocket(`ws://localhost:8000/ws/security/${testId}/`);
     
     ws.onopen = () => {
       console.log('WebSocket connected for security test:', testId);

@@ -284,4 +284,8 @@ class AuditLogSerializer(serializers.ModelSerializer):
             'description', 'ip_address', 'endpoint', 'resource_type',
             'resource_id', 'metadata', 'timestamp'
         ]
-        read_only_fields = '__all__'
+        read_only_fields = (
+            'id', 'user_email', 'user_username', 'action', 'severity',
+            'description', 'ip_address', 'endpoint', 'resource_type', 
+            'resource_id', 'metadata', 'timestamp'
+        )

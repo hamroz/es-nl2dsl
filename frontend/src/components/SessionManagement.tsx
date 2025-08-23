@@ -142,8 +142,8 @@ const SessionManagement: React.FC = () => {
             if (filters.is_suspicious) params.append('suspicious_only', 'true');
             if (filters.show_terminated) params.append('include_terminated', 'true');
 
-            const response = await fetch(`/api/auth/sessions/?${params}`, {
-                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+            const response = await fetch(`/api/v1/auth/sessions/?${params}`, {
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('es_nl2dsl_access_token')}` }
             });
             
             if (response.ok) {
@@ -161,8 +161,8 @@ const SessionManagement: React.FC = () => {
 
     const loadAnalytics = async () => {
         try {
-            const response = await fetch('/api/auth/session-analytics/', {
-                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+            const response = await fetch('/api/v1/auth/session-analytics/', {
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('es_nl2dsl_access_token')}` }
             });
             
             if (response.ok) {
@@ -176,8 +176,8 @@ const SessionManagement: React.FC = () => {
 
     const loadPolicies = async () => {
         try {
-            const response = await fetch('/api/auth/security-policies/', {
-                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+            const response = await fetch('/api/v1/auth/security-policies/', {
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('es_nl2dsl_access_token')}` }
             });
             
             if (response.ok) {
@@ -191,10 +191,10 @@ const SessionManagement: React.FC = () => {
 
     const terminateSession = async (sessionId: string, reason: string) => {
         try {
-            const response = await fetch(`/api/auth/sessions/${sessionId}/terminate/`, {
+            const response = await fetch(`/api/v1/auth/sessions/${sessionId}/terminate/`, {
                 method: 'POST',
                 headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                    'Authorization': `Bearer ${localStorage.getItem('es_nl2dsl_access_token')}`,
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({ reason }),
@@ -214,10 +214,10 @@ const SessionManagement: React.FC = () => {
 
     const terminateAllUserSessions = async (userId: string) => {
         try {
-            const response = await fetch(`/api/auth/users/${userId}/terminate-sessions/`, {
+            const response = await fetch(`/api/v1/auth/users/${userId}/terminate-sessions/`, {
                 method: 'POST',
                 headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                    'Authorization': `Bearer ${localStorage.getItem('es_nl2dsl_access_token')}`,
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({ reason: 'admin_action' }),
@@ -235,10 +235,10 @@ const SessionManagement: React.FC = () => {
 
     const togglePolicyStatus = async (policyId: string, isActive: boolean) => {
         try {
-            const response = await fetch(`/api/auth/security-policies/${policyId}/`, {
+            const response = await fetch(`/api/v1/auth/security-policies/${policyId}/`, {
                 method: 'PATCH',
                 headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                    'Authorization': `Bearer ${localStorage.getItem('es_nl2dsl_access_token')}`,
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({ is_active: isActive }),

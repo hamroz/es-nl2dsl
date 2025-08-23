@@ -342,6 +342,104 @@ class UserSessionsView(APIView):
             return Response({'error': 'Session not found'}, status=status.HTTP_404_NOT_FOUND)
 
 
+class AuditLogExportView(APIView):
+    """Export audit logs in various formats."""
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get(self, request):
+        # Check if user can view audit logs
+        if not request.user.can_view_audit_logs:
+            return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
+        
+        # Mock export functionality - replace with actual implementation
+        export_format = request.query_params.get('format', 'csv')
+        date_from = request.query_params.get('date_from', '')
+        date_to = request.query_params.get('date_to', '')
+        
+        # Return mock export data
+        from django.http import HttpResponse
+        import csv
+        import io
+        
+        if export_format == 'csv':
+            output = io.StringIO()
+            writer = csv.writer(output)
+            writer.writerow(['ID', 'User', 'Action', 'Timestamp', 'IP Address'])
+            writer.writerow(['1', 'admin', 'login', '2025-01-01T00:00:00Z', '192.168.1.1'])
+            
+            response = HttpResponse(output.getvalue(), content_type='text/csv')
+            response['Content-Disposition'] = 'attachment; filename="audit_logs.csv"'
+            return response
+        
+        return Response({'error': 'Unsupported format'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class TenantListView(APIView):
+    """Manage tenants."""
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get(self, request):
+        # Check if user can admin users (tenant management permission)
+        if not request.user.can_admin_users:
+            return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
+        
+        # Mock tenant data - replace with actual implementation
+        return Response([
+            {
+                'id': '1',
+                'name': 'Default Tenant',
+                'description': 'Default tenant for ES-NL2DSL',
+                'created_at': '2025-01-01T00:00:00Z',
+                'is_active': True
+            }
+        ])
+    
+    def post(self, request):
+        # Check if user can admin users
+        if not request.user.can_admin_users:
+            return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
+        
+        # Mock tenant creation - replace with actual implementation
+        tenant_data = request.data
+        return Response({
+            'id': '2',
+            'name': tenant_data.get('name', 'New Tenant'),
+            'description': tenant_data.get('description', ''),
+            'created_at': timezone.now().isoformat(),
+            'is_active': True
+        }, status=status.HTTP_201_CREATED)
+
+
+class WorkspaceListView(APIView):
+    """Manage workspaces."""
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get(self, request):
+        # Return user's workspaces
+        return Response([
+            {
+                'id': '1',
+                'name': 'Default Workspace',
+                'description': 'Default workspace for query generation',
+                'tenant_id': '1',
+                'created_at': '2025-01-01T00:00:00Z',
+                'is_active': True
+            }
+        ])
+    
+    def post(self, request):
+        # Create new workspace
+        workspace_data = request.data
+        return Response({
+            'id': '2',
+            'name': workspace_data.get('name', 'New Workspace'),
+            'description': workspace_data.get('description', ''),
+            'tenant_id': workspace_data.get('tenant_id', '1'),
+            'created_at': timezone.now().isoformat(),
+            'is_active': True
+        }, status=status.HTTP_201_CREATED)
+
+
 @api_view(['GET'])
 @permission_classes([permissions.IsAuthenticated])
 def health_check(request):

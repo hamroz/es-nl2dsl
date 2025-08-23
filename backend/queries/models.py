@@ -31,6 +31,13 @@ class QueryTask(models.Model):
     
     class Meta:
         ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['status', '-created_at']),
+            models.Index(fields=['method', '-created_at']),
+            models.Index(fields=['index', '-created_at']),
+            models.Index(fields=['-created_at']),
+            models.Index(fields=['task_id']),  # For fast UUID lookups
+        ]
     
     def __str__(self):
         return f"QueryTask {self.task_id} - {self.status}"
@@ -52,6 +59,12 @@ class GeneratedQuery(models.Model):
     retry_count = models.IntegerField(default=0)
     file_path = models.CharField(max_length=500, blank=True, null=True)  # Path to generated file
     
+    class Meta:
+        indexes = [
+            models.Index(fields=['validation_status']),
+            models.Index(fields=['task']),  # Foreign key optimization
+        ]
+    
     def __str__(self):
         return f"GeneratedQuery for {self.task.task_id}"
 
@@ -69,6 +82,15 @@ class QueryExecution(models.Model):
     aggregations = models.JSONField(default=dict)
     export_csv_path = models.CharField(max_length=500, blank=True, null=True)
     export_json_path = models.CharField(max_length=500, blank=True, null=True)
+    
+    class Meta:
+        ordering = ['-executed_at']
+        indexes = [
+            models.Index(fields=['task', '-executed_at']),
+            models.Index(fields=['-executed_at']),
+            models.Index(fields=['total_hits']),
+            models.Index(fields=['execution_time_ms']),
+        ]
     
     def __str__(self):
         return f"Execution for {self.task.task_id} - {self.total_hits} hits"

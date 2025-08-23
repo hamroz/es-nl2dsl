@@ -138,11 +138,11 @@ const AdminDashboard: React.FC = () => {
         setLoading(true);
         try {
             const [healthResponse, statsResponse] = await Promise.all([
-                fetch('/api/admin/system-health/', {
-                    headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                fetch('/api/v1/auth/admin/system-health/', {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('es_nl2dsl_access_token')}` }
                 }),
-                fetch('/api/admin/system-stats/', {
-                    headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                fetch('/api/v1/auth/admin/system-stats/', {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('es_nl2dsl_access_token')}` }
                 })
             ]);
 
@@ -207,10 +207,10 @@ const AdminDashboard: React.FC = () => {
 
     const performMaintenanceAction = async (action: string) => {
         try {
-            const response = await fetch(`/api/admin/maintenance/${action}/`, {
+            const response = await fetch(`/api/v1/auth/admin/maintenance/${action}/`, {
                 method: 'POST',
                 headers: { 
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                    'Authorization': `Bearer ${localStorage.getItem('es_nl2dsl_access_token')}`,
                     'Content-Type': 'application/json'
                 }
             });

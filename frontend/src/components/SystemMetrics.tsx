@@ -125,8 +125,8 @@ const SystemMetrics: React.FC<SystemMetricsProps> = ({
 
     const loadMetricsHistory = async () => {
         try {
-            const response = await fetch('/api/admin/metrics-history/?hours=24', {
-                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+            const response = await fetch('/api/v1/auth/admin/metrics-history/?hours=24', {
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('es_nl2dsl_access_token')}` }
             });
             
             if (response.ok) {
@@ -140,8 +140,8 @@ const SystemMetrics: React.FC<SystemMetricsProps> = ({
 
     const loadPerformanceMetrics = async () => {
         try {
-            const response = await fetch('/api/admin/performance-metrics/', {
-                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+            const response = await fetch('/api/v1/auth/admin/performance-metrics/', {
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('es_nl2dsl_access_token')}` }
             });
             
             if (response.ok) {

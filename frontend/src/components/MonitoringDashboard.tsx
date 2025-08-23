@@ -200,20 +200,20 @@ const MonitoringDashboard: React.FC = () => {
                 healthResponse,
                 channelsResponse
             ] = await Promise.all([
-                fetch('/api/monitoring/metrics/recent/', {
-                    headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                fetch('/api/v1/analytics/', {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('es_nl2dsl_access_token')}` }
                 }),
-                fetch('/api/monitoring/alerts/', {
-                    headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                fetch('/api/v1/analytics/alerts/', {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('es_nl2dsl_access_token')}` }
                 }),
-                fetch('/api/monitoring/alert-rules/', {
-                    headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                fetch('/api/v1/analytics/alert-rules/', {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('es_nl2dsl_access_token')}` }
                 }),
-                fetch('/api/monitoring/health-checks/', {
-                    headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                fetch('/api/v1/system/health/', {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('es_nl2dsl_access_token')}` }
                 }),
-                fetch('/api/monitoring/notification-channels/', {
-                    headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                fetch('/api/v1/analytics/alerts/', {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('es_nl2dsl_access_token')}` }
                 })
             ]);
 
@@ -245,10 +245,10 @@ const MonitoringDashboard: React.FC = () => {
 
     const acknowledgeAlert = async (alertId: string) => {
         try {
-            const response = await fetch(`/api/monitoring/alerts/${alertId}/acknowledge/`, {
+            const response = await fetch(`/api/v1/analytics/alerts/${alertId}/acknowledge/`, {
                 method: 'POST',
                 headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                    'Authorization': `Bearer ${localStorage.getItem('es_nl2dsl_access_token')}`,
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({ comment: 'Acknowledged from dashboard' }),
@@ -264,10 +264,10 @@ const MonitoringDashboard: React.FC = () => {
 
     const resolveAlert = async (alertId: string) => {
         try {
-            const response = await fetch(`/api/monitoring/alerts/${alertId}/resolve/`, {
+            const response = await fetch(`/api/v1/analytics/alerts/${alertId}/resolve/`, {
                 method: 'POST',
                 headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                    'Authorization': `Bearer ${localStorage.getItem('es_nl2dsl_access_token')}`,
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({ comment: 'Resolved from dashboard' }),
@@ -283,10 +283,10 @@ const MonitoringDashboard: React.FC = () => {
 
     const toggleAlertRule = async (ruleId: string, isActive: boolean) => {
         try {
-            const response = await fetch(`/api/monitoring/alert-rules/${ruleId}/`, {
+            const response = await fetch(`/api/v1/analytics/alert-rules/${ruleId}/`, {
                 method: 'PATCH',
                 headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                    'Authorization': `Bearer ${localStorage.getItem('es_nl2dsl_access_token')}`,
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({ is_active: isActive }),
@@ -302,9 +302,9 @@ const MonitoringDashboard: React.FC = () => {
 
     const runHealthCheck = async (checkId: string) => {
         try {
-            const response = await fetch(`/api/monitoring/health-checks/${checkId}/run/`, {
+            const response = await fetch(`/api/v1/system/health/`, {
                 method: 'POST',
-                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('es_nl2dsl_access_token')}` }
             });
 
             if (response.ok) {

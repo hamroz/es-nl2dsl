@@ -164,7 +164,7 @@ export const apiService = {
 
   // Security testing
   runSecurityTest: async (prompts: string[], testName = 'security_test') => {
-    const response = await api.post('/security/test/', {
+    const response = await api.post('/security/tests/run/', {
       prompts,
       test_name: testName,
     });
@@ -173,6 +173,126 @@ export const apiService = {
 
   getSecurityTestResults: async (testId: string) => {
     const response = await api.get(`/security/test/${testId}/`);
+    return response.data;
+  },
+
+  // Authentication & User Management
+  login: async (credentials: { email: string; password: string }) => {
+    const response = await api.post('/auth/login/', credentials);
+    return response.data;
+  },
+
+  logout: async () => {
+    const response = await api.post('/auth/logout/', {});
+    return response.data;
+  },
+
+  refreshToken: async (refresh: string) => {
+    const response = await api.post('/auth/refresh/', { refresh });
+    return response.data;
+  },
+
+  register: async (userData: any) => {
+    const response = await api.post('/auth/register/', userData);
+    return response.data;
+  },
+
+  getUserProfile: async () => {
+    const response = await api.get('/auth/profile/');
+    return response.data;
+  },
+
+  getUserPermissions: async () => {
+    const response = await api.get('/auth/permissions/');
+    return response.data;
+  },
+
+  getUsers: async (params?: string) => {
+    const url = params ? `/auth/users/?${params}` : '/auth/users/';
+    const response = await api.get(url);
+    return response.data;
+  },
+
+  updateUser: async (userId: string, userData: any) => {
+    const response = await api.put(`/auth/users/${userId}/`, userData);
+    return response.data;
+  },
+
+  patchUser: async (userId: string, userData: any) => {
+    const response = await api.patch(`/auth/users/${userId}/`, userData);
+    return response.data;
+  },
+
+  // Session Management
+  getUserSessions: async (userId?: string) => {
+    const url = userId ? `/auth/sessions/?user_id=${userId}` : '/auth/sessions/';
+    const response = await api.get(url);
+    return response.data;
+  },
+
+  deleteSession: async (sessionId: string) => {
+    const response = await api.delete('/auth/sessions/', { 
+      data: { session_id: sessionId } 
+    });
+    return response.data;
+  },
+
+  // Audit Logs
+  getAuditLogs: async (params?: string) => {
+    const url = params ? `/auth/audit-logs/?${params}` : '/auth/audit-logs/';
+    const response = await api.get(url);
+    return response.data;
+  },
+
+  exportAuditLogs: async (params?: string) => {
+    const url = params ? `/auth/audit-logs/export/?${params}` : '/auth/audit-logs/export/';
+    const response = await api.get(url, {
+      responseType: 'blob'
+    });
+    return response.data;
+  },
+
+  // Tenant & Workspace Management
+  getTenants: async () => {
+    const response = await api.get('/auth/tenants/');
+    return response.data;
+  },
+
+  createTenant: async (tenantData: any) => {
+    const response = await api.post('/auth/tenants/', tenantData);
+    return response.data;
+  },
+
+  getWorkspaces: async () => {
+    const response = await api.get('/auth/workspaces/');
+    return response.data;
+  },
+
+  createWorkspace: async (workspaceData: any) => {
+    const response = await api.post('/auth/workspaces/', workspaceData);
+    return response.data;
+  },
+
+  // System Analytics
+  getSystemAnalytics: async (timeRange?: string) => {
+    const url = timeRange ? `/system/analytics/?range=${timeRange}` : '/system/analytics/';
+    const response = await api.get(url);
+    return response.data;
+  },
+
+  exportSystemAnalytics: async (format?: string, timeRange?: string) => {
+    const params = new URLSearchParams();
+    if (format) params.append('format', format);
+    if (timeRange) params.append('range', timeRange);
+    
+    const response = await api.get(`/system/analytics/export?${params.toString()}`, {
+      responseType: 'blob'
+    });
+    return response.data;
+  },
+
+  getCustomMetrics: async () => {
+    const response = await api.get('/system/custom-metrics/');
     return response.data;
   },
 };

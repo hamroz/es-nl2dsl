@@ -1,6 +1,7 @@
 from rest_framework import generics, status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
+from rest_framework.views import APIView
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 import json
@@ -36,6 +37,20 @@ class SecurityTestListView(generics.ListAPIView):
     """List security tests"""
     queryset = SecurityTest.objects.all()
     serializer_class = SecurityTestSerializer
+
+
+class SecurityTestDetailView(APIView):
+    """Get details for a specific security test"""
+    def get(self, request, test_id):
+        try:
+            test = get_object_or_404(SecurityTest, test_id=test_id)
+            serializer = SecurityTestSerializer(test)
+            return Response(serializer.data)
+        except Exception as e:
+            return Response(
+                {'error': f'Failed to get security test: {str(e)}'}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 
 class SecurityTestResultListView(generics.ListAPIView):

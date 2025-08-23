@@ -1,16 +1,23 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.generics import get_object_or_404
+from rest_framework.generics import get_object_or_404, ListAPIView
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.throttling import UserRateThrottle
 from django.http import HttpResponse, Http404
 from django.utils import timezone
 from django.conf import settings
+from django.core.exceptions import ValidationError
+from django.core.cache import cache
+from django.views.decorators.cache import cache_page
+from django.utils.decorators import method_decorator
 import uuid
 import os
 import requests
 import time
 import json
 import csv
+from authentication.exceptions import ElasticsearchQueryValidator
 
 from .models import QueryTask, GeneratedQuery, QueryExecution
 from .serializers import (
@@ -20,11 +27,35 @@ from .serializers import (
     QueryExecutionSerializer
 )
 from .tasks import generate_query_task, execute_query_task
+from .pagination import QueryTaskPagination
+from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse
+from drf_spectacular.types import OpenApiTypes
+
+class QueryGenerationThrottle(UserRateThrottle):
+    scope = 'query_generation'
+
+class QueryExecutionThrottle(UserRateThrottle):
+    scope = 'query_execution'
 
 class QueryListCreateView(APIView):
     """
-    Generate new queries from natural language prompts
+    Generate new queries from natural language prompts and list existing queries
     """
+    permission_classes = [IsAuthenticated]
+    throttle_classes = [QueryGenerationThrottle]
+    
+    @extend_schema(
+        request=QueryGenerationRequestSerializer,
+        responses={
+            202: OpenApiResponse(description="Query generation started successfully"),
+            400: OpenApiResponse(description="Invalid request data"),
+            401: OpenApiResponse(description="Authentication required"),
+            429: OpenApiResponse(description="Rate limit exceeded"),
+        },
+        description="Generate Elasticsearch DSL query from natural language prompt",
+        tags=['Queries'],
+        summary="Generate Query from Natural Language"
+    )
     def post(self, request):
         serializer = QueryGenerationRequestSerializer(data=request.data)
         if not serializer.is_valid():
@@ -52,18 +83,87 @@ class QueryListCreateView(APIView):
             'estimated_completion': estimated_completion.isoformat()
         }, status=status.HTTP_202_ACCEPTED)
     
+    @extend_schema(
+        parameters=[
+            OpenApiParameter('status', OpenApiTypes.STR, description="Filter by task status"),
+            OpenApiParameter('method', OpenApiTypes.STR, description="Filter by generation method"),
+            OpenApiParameter('page', OpenApiTypes.INT, description="Page number"),
+            OpenApiParameter('page_size', OpenApiTypes.INT, description="Number of items per page"),
+        ],
+        responses={200: QueryTaskDetailSerializer(many=True)},
+        description="List query generation tasks with pagination and filtering",
+        tags=['Queries'],
+        summary="List Query Tasks"
+    )
     def get(self, request):
-        """List recent query tasks"""
-        tasks = QueryTask.objects.all()[:20]
-        serializer = QueryTaskDetailSerializer(tasks, many=True)
-        return Response(serializer.data)
+        """List recent query tasks with pagination, caching, and optimized queries"""
+        # Generate cache key based on user and query parameters
+        cache_params = {
+            'user_id': request.user.id,
+            'status': request.query_params.get('status', ''),
+            'method': request.query_params.get('method', ''),
+            'page': request.query_params.get('page', '1'),
+            'page_size': request.query_params.get('page_size', '20'),
+        }
+        cache_key = f"query_list_{hash(frozenset(cache_params.items()))}"
+        
+        # Try to get from cache first
+        cached_result = cache.get(cache_key)
+        if cached_result:
+            return Response(cached_result)
+        
+        queryset = QueryTask.objects.select_related('generated_query').prefetch_related('executions')
+        
+        # Apply filters if provided
+        if cache_params['status']:
+            queryset = queryset.filter(status=cache_params['status'])
+        
+        if cache_params['method']:
+            queryset = queryset.filter(method=cache_params['method'])
+        
+        # Paginate results
+        paginator = QueryTaskPagination()
+        page = paginator.paginate_queryset(queryset, request)
+        if page is not None:
+            serializer = QueryTaskDetailSerializer(page, many=True)
+            response_data = paginator.get_paginated_response(serializer.data).data
+            
+            # Cache the results for 2 minutes
+            cache.set(cache_key, response_data, timeout=120)
+            return Response(response_data)
+        
+        # Fallback for non-paginated response
+        serializer = QueryTaskDetailSerializer(queryset, many=True)
+        response_data = serializer.data
+        cache.set(cache_key, response_data, timeout=120)
+        return Response(response_data)
 
 class QueryDetailView(APIView):
     """
     Get details of a specific query generation task
     """
+    permission_classes = [IsAuthenticated]
+    
+    @extend_schema(
+        responses={
+            200: QueryTaskDetailSerializer,
+            404: OpenApiResponse(description="Task not found"),
+        },
+        description="Retrieve details of a specific query generation task",
+        tags=['Queries'],
+        summary="Get Query Task Details"
+    )
     def get(self, request, task_id):
-        task = get_object_or_404(QueryTask, task_id=task_id)
+        # Try cache first for completed tasks
+        cache_key = f"query_task_{task_id}"
+        cached_result = cache.get(cache_key)
+        if cached_result:
+            return Response(cached_result)
+        
+        task = get_object_or_404(
+            QueryTask.objects.select_related('generated_query').prefetch_related('executions'), 
+            task_id=task_id
+        )
         serializer = QueryTaskDetailSerializer(task)
         
         # Format response to match expected API contract
@@ -91,14 +191,38 @@ class QueryDetailView(APIView):
                 'metrics': gq['generation_metrics']
             })
         
+        # Cache completed tasks for longer (10 minutes)
+        if task.status in ['completed', 'failed']:
+            cache.set(cache_key, response_data, timeout=600)
+        else:
+            # Cache pending/running tasks for shorter time (30 seconds)
+            cache.set(cache_key, response_data, timeout=30)
+        
         return Response(response_data)
 
 class QueryExecuteView(APIView):
     """
     Execute a generated query against Elasticsearch
     """
+    permission_classes = [IsAuthenticated]
+    throttle_classes = [QueryExecutionThrottle]
+    
+    @extend_schema(
+        request=QueryExecutionRequestSerializer,
+        responses={
+            200: OpenApiResponse(description="Query executed successfully"),
+            400: OpenApiResponse(description="Invalid request or query validation failed"),
+            500: OpenApiResponse(description="Query execution failed"),
+        },
+        description="Execute a generated Elasticsearch query and return results with export URLs",
+        tags=['Queries'],
+        summary="Execute Generated Query"
+    )
     def post(self, request, task_id):
-        task = get_object_or_404(QueryTask, task_id=task_id)
+        task = get_object_or_404(
+            QueryTask.objects.select_related('generated_query'), 
+            task_id=task_id
+        )
         
         # Validate request
         serializer = QueryExecutionRequestSerializer(data=request.data)
@@ -119,20 +243,21 @@ class QueryExecuteView(APIView):
         
         max_size = serializer.validated_data['max_size']
         
-        # Execute query asynchronously with Celery
+        # Execute query directly and return results with export URLs
         try:
-            execute_query_task.delay(
+            result = self._execute_query_direct(
                 task_id=task_id,
                 query_data=task.generated_query.elasticsearch_dsl,
                 index=task.index,
                 max_size=max_size
             )
             
-            return Response({
-                'task_id': task_id,
-                'status': 'executing',
-                'message': 'Query execution started. Check status for results.'
-            }, status=status.HTTP_202_ACCEPTED)
+            if result.get('status') == 'failed':
+                return Response({
+                    'error': result.get('error', 'Query execution failed')
+                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            
+            return Response(result, status=status.HTTP_200_OK)
             
         except Exception as e:
             return Response({
@@ -146,9 +271,19 @@ class QueryExecuteView(APIView):
         try:
             task = QueryTask.objects.get(task_id=task_id)
             
+            # Validate query for security before execution
+            try:
+                ElasticsearchQueryValidator.validate_query(query_data)
+            except ValidationError as e:
+                return {
+                    'task_id': task_id,
+                    'status': 'failed',
+                    'error': f'Query validation failed: {str(e)}'
+                }
+            
             # Prepare Elasticsearch query
             es_query = {
-                "size": max_size,
+                "size": min(max_size, 10000),  # Cap at 10k results for safety
                 **query_data
             }
             
@@ -257,8 +392,12 @@ class QueryExportView(APIView):
     """
     Export query results as CSV or JSON
     """
+    permission_classes = [IsAuthenticated]
     def get(self, request, task_id, format):
-        task = get_object_or_404(QueryTask, task_id=task_id)
+        task = get_object_or_404(
+            QueryTask.objects.prefetch_related('executions'), 
+            task_id=task_id
+        )
         
         # Get the latest execution
         execution = task.executions.first()

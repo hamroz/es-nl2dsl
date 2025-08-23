@@ -46,6 +46,11 @@ urlpatterns = [
     
     # Audit logs
     path('audit-logs/', views.AuditLogListView.as_view(), name='audit_logs'),
+    path('audit-logs/export/', views.AuditLogExportView.as_view(), name='audit_logs_export'),
+    
+    # Tenant and Workspace management
+    path('tenants/', views.TenantListView.as_view(), name='tenant_list'),
+    path('workspaces/', views.WorkspaceListView.as_view(), name='workspace_list'),
     
     # Health check
     path('health/', views.health_check, name='health_check'),

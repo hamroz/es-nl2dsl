@@ -22,12 +22,13 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-he#*re@*z+0zl1#nr2_%zqs!v3v%+=vcgk0#*8r%(cpm%!ow(k"
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', "django-insecure-he#*re@*z+0zl1#nr2_%zqs!v3v%+=vcgk0#*8r%(cpm%!ow(k")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get('DJANGO_DEBUG', 'False').lower() in ('true', '1', 'yes', 'on')
 
-ALLOWED_HOSTS = ['*']  # For development only
+# Security: Restrict allowed hosts in production
+ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
 
 # Application definition
@@ -44,6 +45,7 @@ INSTALLED_APPS = [
     "rest_framework_simplejwt",
     "corsheaders",
     "channels",
+    "drf_spectacular",  # API documentation
     # Local apps
     "authentication",
     "analytics",
@@ -159,7 +161,18 @@ REST_FRAMEWORK = {
     'DEFAULT_RENDERER_CLASSES': [
         'rest_framework.renderers.JSONRenderer',
     ],
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
     'EXCEPTION_HANDLER': 'authentication.exceptions.custom_exception_handler',
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle',
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '30/min',
+        'user': '100/min',
+        'query_generation': '10/min',
+        'query_execution': '50/min',
+    }
 }
 
 # CORS settings (for React frontend)
@@ -204,10 +217,10 @@ CHANNEL_LAYERS = {
     },
 }
 
-# ES-NL2DSL specific settings
-ELASTICSEARCH_HOST = "localhost:9200"
-ELASTICSEARCH_USER = "elastic"
-ELASTICSEARCH_PASSWORD = "ChangeMe_123"
+# ES-NL2DSL specific settings - Use environment variables for security
+ELASTICSEARCH_HOST = os.environ.get('ELASTICSEARCH_HOST', "localhost:9200")
+ELASTICSEARCH_USER = os.environ.get('ELASTICSEARCH_USER', "elastic")
+ELASTICSEARCH_PASSWORD = os.environ.get('ELASTICSEARCH_PASSWORD', "ChangeMe_123")
 
 # Custom user model
 AUTH_USER_MODEL = 'authentication.CustomUser'
@@ -281,3 +294,47 @@ AUDIT_LOGGING = {
 # File storage paths (preserve existing structure)
 ARTIFACTS_PATH = BASE_DIR.parent / "artifacts"
 DATA_RAW_PATH = BASE_DIR.parent / "data_raw"
+
+# API Documentation Settings (drf-spectacular)
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'ES-NL2DSL API',
+    'DESCRIPTION': 'Natural Language to Elasticsearch DSL Translation API for Cybersecurity Log Analysis',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    'COMPONENT_SPLIT_REQUEST': True,
+    'SCHEMA_PATH_PREFIX': '/api/v1/',
+    'POSTPROCESSING_HOOKS': [],
+    'SERVERS': [
+        {'url': 'http://localhost:8000', 'description': 'Development server'},
+    ],
+    'TAGS': [
+        {'name': 'Authentication', 'description': 'User authentication and authorization'},
+        {'name': 'Queries', 'description': 'Natural language to DSL query generation and execution'},
+        {'name': 'Evaluation', 'description': 'Query evaluation and metrics'},
+        {'name': 'Security', 'description': 'Security testing and validation'},
+        {'name': 'Analytics', 'description': 'System analytics and monitoring'},
+        {'name': 'Data Management', 'description': 'Data ingestion and index management'},
+        {'name': 'System Admin', 'description': 'System administration and health monitoring'},
+    ]
+}
+
+# Caching Configuration
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'es_nl2dsl_cache',
+    }
+}
+
+# Redis caching (commented out for now - requires django-redis package)
+# CACHES = {
+#     'default': {
+#         'BACKEND': 'django_redis.cache.RedisCache', 
+#         'LOCATION': os.environ.get('REDIS_URL', 'redis://localhost:6379/1'),
+#         'OPTIONS': {
+#             'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+#         },
+#         'KEY_PREFIX': 'es_nl2dsl',
+#         'TIMEOUT': 300,  # 5 minutes default
+#     }
+# }

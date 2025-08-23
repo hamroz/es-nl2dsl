@@ -8,4 +8,7 @@ urlpatterns = [
     path('status/', views.SystemStatusView.as_view(), name='system-status'),
     # CRITICAL: Add missing endpoints that frontend expects
     path('metrics/', views.SystemMetricsView.as_view(), name='system-metrics'),
+    path('analytics/', views.SystemAnalyticsView.as_view(), name='system-analytics'),
+    path('custom-metrics/', views.CustomMetricsView.as_view(), name='custom-metrics'),
+    path('analytics/export/', views.AnalyticsExportView.as_view(), name='analytics-export'),
 ]

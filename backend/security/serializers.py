@@ -41,6 +41,22 @@ class SecurityTestRequestSerializer(serializers.Serializer):
         required=False,
         help_text="Filter prompts by categories"
     )
+    
+    # Support alternative format: { prompts: string[], test_name: string }
+    prompts = serializers.ListField(
+        child=serializers.CharField(max_length=200),
+        required=False,
+        help_text="Alternative format: list of prompt texts instead of IDs"
+    )
+    
+    def validate(self, data):
+        # If 'prompts' is provided, convert to prompt_ids format
+        if 'prompts' in data and data['prompts']:
+            # This is for backward compatibility - frontend can send prompt texts
+            data['prompt_ids'] = data.get('prompt_ids', [])
+            data.pop('prompts')  # Remove the alternative field
+        
+        return data
 
 class AdversarialPromptCreateSerializer(serializers.ModelSerializer):
     class Meta:

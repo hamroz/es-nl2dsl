@@ -143,14 +143,14 @@ const SecurityOverview: React.FC<SecurityOverviewProps> = ({
         setLoading(true);
         try {
             const [eventsResponse, analysisResponse, configResponse] = await Promise.all([
-                fetch('/api/admin/security-events/?limit=50', {
-                    headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                fetch('/api/v1/auth/admin/security-events/?limit=50', {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('es_nl2dsl_access_token')}` }
                 }),
-                fetch('/api/admin/threat-analysis/', {
-                    headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                fetch('/api/v1/auth/admin/threat-analysis/', {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('es_nl2dsl_access_token')}` }
                 }),
-                fetch('/api/admin/security-configuration/', {
-                    headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                fetch('/api/v1/auth/admin/security-configuration/', {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('es_nl2dsl_access_token')}` }
                 })
             ]);
 
@@ -202,10 +202,10 @@ const SecurityOverview: React.FC<SecurityOverviewProps> = ({
 
     const blockIP = async (ipAddress: string) => {
         try {
-            const response = await fetch(`/api/admin/security/block-ip/`, {
+            const response = await fetch(`/api/v1/auth/admin/security/block-ip/`, {
                 method: 'POST',
                 headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                    'Authorization': `Bearer ${localStorage.getItem('es_nl2dsl_access_token')}`,
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({ ip_address: ipAddress }),
@@ -221,10 +221,10 @@ const SecurityOverview: React.FC<SecurityOverviewProps> = ({
 
     const unblockIP = async (ipAddress: string) => {
         try {
-            const response = await fetch(`/api/admin/security/unblock-ip/`, {
+            const response = await fetch(`/api/v1/auth/admin/security/unblock-ip/`, {
                 method: 'POST',
                 headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                    'Authorization': `Bearer ${localStorage.getItem('es_nl2dsl_access_token')}`,
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({ ip_address: ipAddress }),

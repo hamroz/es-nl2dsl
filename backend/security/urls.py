@@ -8,6 +8,7 @@ urlpatterns = [
     # Security tests
     path('tests/', views.SecurityTestListView.as_view(), name='security-tests'),
     path('tests/run/', views.run_security_test, name='run-security-test'),
+    path('test/<str:test_id>/', views.SecurityTestDetailView.as_view(), name='security-test-detail'),
     
     # Test results
     path('results/', views.SecurityTestResultListView.as_view(), name='security-test-results'),

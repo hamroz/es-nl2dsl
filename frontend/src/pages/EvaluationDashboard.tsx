@@ -96,7 +96,7 @@ const EvaluationDashboard: React.FC = () => {
   const { data: metrics, isLoading: metricsLoading } = useQuery<EvaluationMetrics>({
     queryKey: ['evaluation-metrics'],
     queryFn: async () => {
-      const response = await fetch('/api/evaluation/metrics/');
+      const response = await fetch('/api/v1/evaluation/metrics/');
       if (!response.ok) throw new Error('Failed to fetch evaluation metrics');
       return response.json();
     },
@@ -105,7 +105,7 @@ const EvaluationDashboard: React.FC = () => {
   // Run single scenario evaluation
   const runEvaluationMutation = useMutation({
     mutationFn: async ({ scenarioId, method, model }: { scenarioId: string; method: string; model: string }) => {
-      const response = await fetch(`/api/evaluation/runs/scenario/${scenarioId}/`, {
+      const response = await fetch(`/api/v1/evaluation/runs/scenario/${scenarioId}/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ method, model }),
@@ -127,7 +127,7 @@ const EvaluationDashboard: React.FC = () => {
       wsConnection.close();
     }
 
-    const ws = new WebSocket(`ws://localhost:8001/ws/evaluation/${runId}/`);
+    const ws = new WebSocket(`ws://localhost:8000/ws/evaluation/${runId}/`);
     
     ws.onopen = () => {
       console.log('WebSocket connected for evaluation:', runId);
