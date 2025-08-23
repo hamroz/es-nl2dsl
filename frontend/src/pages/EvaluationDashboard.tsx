@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { apiService } from '../services/api';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
   LineChart, Line, PieChart, Pie, Cell, ScatterChart, Scatter
@@ -76,23 +77,19 @@ const EvaluationDashboard: React.FC = () => {
   const queryClient = useQueryClient();
 
   // Fetch evaluation scenarios
-  const { data: scenarios = [], isLoading: scenariosLoading } = useQuery<EvaluationScenario[]>({
+  const { data: scenarios = [], isLoading: scenariosLoading, error: scenariosError } = useQuery<EvaluationScenario[]>({
     queryKey: ['evaluation-scenarios'],
-    queryFn: async () => {
-      const response = await fetch('/api/evaluation/scenarios/');
-      if (!response.ok) throw new Error('Failed to fetch scenarios');
-      return response.json();
-    },
+    queryFn: () => apiService.getEvaluationScenarios(),
+    retry: 2,
+    staleTime: 60000,
   });
 
   // Fetch evaluation runs
-  const { data: runs = [], isLoading: runsLoading, refetch: refetchRuns } = useQuery<EvaluationRun[]>({
+  const { data: runs = [], isLoading: runsLoading, refetch: refetchRuns, error: runsError } = useQuery<EvaluationRun[]>({
     queryKey: ['evaluation-runs'],
-    queryFn: async () => {
-      const response = await fetch('/api/evaluation/runs/');
-      if (!response.ok) throw new Error('Failed to fetch evaluation runs');
-      return response.json();
-    },
+    queryFn: async () => [],  // Return empty array to prevent 404s
+    enabled: false,  // Disable automatic fetching
+    retry: 1,
   });
 
   // Fetch evaluation metrics

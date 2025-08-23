@@ -347,6 +347,91 @@ Ongoing testing and evaluation across multiple datasets (synthetic and CIC-IDS20
 ### Cost-Conscious Performance Optimization
 The architecture balances accuracy, privacy, latency, and cost considerations, enabling organizations to optimize their AI deployment strategy based on specific operational requirements and budget constraints.
 
+## 🏢 Production Architecture
+
+### Migration to Enterprise Web Application
+
+ES-NL2DSL has been successfully migrated from a research prototype (Streamlit) to a production-grade web application with:
+
+#### **Backend: Django REST Framework**
+- **API-First Design**: RESTful endpoints at `/api/v1/` for all operations
+- **JWT Authentication**: Secure token-based authentication with refresh tokens
+- **Role-Based Access Control**: Admin, Analyst, and Viewer roles with granular permissions
+- **Async Processing**: Celery workers handle query generation asynchronously
+- **WebSocket Support**: Django Channels for real-time status updates
+- **Database**: PostgreSQL for application data, Redis for caching and queuing
+
+#### **Frontend: React TypeScript**
+- **Modern UI**: Material-UI components with responsive design
+- **Type Safety**: Full TypeScript implementation for reliability
+- **Real-time Updates**: WebSocket integration for live status monitoring
+- **Build Optimization**: Vite for fast development and optimized production builds
+
+#### **Infrastructure**
+```yaml
+Services:
+  - Elasticsearch: 8.11.3 (Data storage and search)
+  - PostgreSQL: 15 (Application database)
+  - Redis: 7 (Cache and message broker)
+  - Celery: Background task processing
+  - Docker: Containerized deployment
+```
+
+#### **Enterprise Features**
+- **Multi-tenant Architecture**: Workspace isolation for different teams
+- **Audit Logging**: Comprehensive activity tracking for compliance
+- **Performance Monitoring**: Real-time metrics and alerting
+- **Session Management**: Advanced session security with geographic tracking
+- **Rate Limiting**: API protection against abuse
+- **Security Middleware**: CORS, CSRF, XSS protection
+
+### Deployment Architecture
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                   Load Balancer (nginx)                 │
+└────────────┬────────────────────┬───────────────────────┘
+             │                    │
+    ┌────────▼────────┐  ┌───────▼────────┐
+    │  React Static   │  │  Django WSGI    │
+    │   (Port 3000)   │  │   (Port 8000)   │
+    └─────────────────┘  └────────┬────────┘
+                                  │
+                         ┌────────▼────────┐
+                         │  Celery Workers │
+                         └────────┬────────┘
+                                  │
+              ┌───────────────────┼───────────────────┐
+              │                   │                   │
+     ┌────────▼────────┐ ┌───────▼────────┐ ┌───────▼────────┐
+     │   PostgreSQL    │ │     Redis      │ │ Elasticsearch │
+     └─────────────────┘ └────────────────┘ └────────────────┘
+```
+
+### API Endpoints
+
+#### Authentication
+- `POST /api/v1/auth/login/` - User login
+- `POST /api/v1/auth/refresh/` - Refresh JWT token
+- `POST /api/v1/auth/logout/` - User logout
+
+#### Query Operations
+- `POST /api/v1/queries/` - Generate new query (async)
+- `GET /api/v1/queries/{task_id}/` - Get query status
+- `POST /api/v1/queries/{task_id}/execute/` - Execute query
+- `GET /api/v1/queries/{task_id}/export/{format}/` - Export results
+
+#### Evaluation
+- `GET /api/v1/evaluation/scenarios/` - List scenarios
+- `POST /api/v1/evaluation/run/` - Run evaluation
+- `GET /api/v1/evaluation/metrics/` - Get metrics
+
+#### Administration
+- `GET /api/v1/users/` - List users (admin only)
+- `POST /api/v1/users/` - Create user (admin only)
+- `GET /api/v1/system/health/` - System health check
+- `GET /api/v1/audit/logs/` - Audit logs (admin only)
+
 ---
 
-This enhanced framework represents a significant advancement in bridging the gap between human security expertise and machine-executable queries through intelligent multi-model AI integration, enabling more effective, accessible, and cost-optimized cybersecurity operations while maintaining the highest standards of security, privacy protection, and operational flexibility across diverse threat landscapes and organizational requirements.
+This production architecture transformation elevates ES-NL2DSL from a research prototype to an enterprise-ready platform, combining the proven query generation capabilities with modern web technologies, scalable infrastructure, and comprehensive security features suitable for deployment in production SOC environments.

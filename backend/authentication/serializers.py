@@ -60,8 +60,8 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
                 user.failed_login_attempts = 0
                 user.save()
         
-        # Authenticate user
-        user = authenticate(username=user.username, password=password)
+        # Authenticate user (using email as USERNAME_FIELD)
+        user = authenticate(username=email, password=password)
         if not user:
             # Update failed login attempts
             failed_user = CustomUser.objects.get(email=email)

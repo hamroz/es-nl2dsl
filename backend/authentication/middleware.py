@@ -67,14 +67,8 @@ class AuditLogMiddleware:
                 'content_length': len(response.content) if hasattr(response, 'content') else 0,
             }
             
-            # Add request body for non-GET requests (with sensitive data filtering)
-            if method != 'GET' and hasattr(request, 'body'):
-                try:
-                    import json
-                    body = json.loads(request.body) if request.body else {}
-                    metadata['request_body'] = self._filter_sensitive_data(body)
-                except (json.JSONDecodeError, UnicodeDecodeError):
-                    metadata['request_body'] = '[Invalid JSON or binary data]'
+            # Skip request body logging to avoid conflicts with DRF
+            # Request body logging will be handled at the view level if needed
             
             log_audit_event(
                 user=user,

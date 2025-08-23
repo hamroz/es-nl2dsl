@@ -1,26 +1,33 @@
 # Authentication and Security Dependencies for ES-NL2DSL Backend
 
 # Django JWT Authentication
-djangorestframework-simplejwt==5.3.0
+djangorestframework-simplejwt
 
 # Redis for caching and rate limiting
-redis==5.0.1
-django-redis==5.4.0
+redis
+django-redis
 
 # Enhanced security
-django-cors-headers==4.3.1
-django-ratelimit==4.1.0
+django-cors-headers
+django-ratelimit
 
 # Background task processing
-celery==5.3.4
-django-celery-beat==2.5.0
+celery
+django-celery-beat
 
 # Additional security utilities
-cryptography==41.0.8
-bcrypt==4.1.2
+cryptography
+bcrypt
 
 # Database drivers
-psycopg2-binary==2.9.9
+psycopg2-binary
+
+# Session management
+user-agents
+geoip2
+
+# System monitoring
+psutil
 
 # Environment management
-python-decouple==3.8
+python-decouple

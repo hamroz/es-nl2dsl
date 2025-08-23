@@ -61,7 +61,7 @@ echo "==================================="
 cd backend
 if [ ! -d "venv" ]; then
     echo "Creating Python virtual environment..."
-    python3 -m venv venv
+    python3.11 -m venv venv
 fi
 
 echo "Activating virtual environment..."
@@ -81,11 +81,11 @@ python manage.py migrate
 echo "Creating superuser (if needed)..."
 python manage.py shell << EOF
 from django.contrib.auth import get_user_model
-from authentication.models import CustomUser
 
 User = get_user_model()
 if not User.objects.filter(email='admin@es-nl2dsl.local').exists():
     user = User.objects.create_superuser(
+        username='admin',
         email='admin@es-nl2dsl.local',
         password='admin123',
         first_name='Admin',
@@ -127,7 +127,7 @@ echo "✅ Django backend started (PID: $DJANGO_PID)"
 # Start React frontend
 echo "Starting React frontend..."
 cd ../frontend
-nohup npm start > logs/react.log 2>&1 &
+nohup npm run dev > logs/react.log 2>&1 &
 REACT_PID=$!
 echo "✅ React frontend started (PID: $REACT_PID)"
 

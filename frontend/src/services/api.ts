@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:8001/api/v1';
+const API_BASE_URL = 'http://localhost:8000/api/v1';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -17,12 +17,6 @@ api.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-    
-    const sessionToken = localStorage.getItem('es_nl2dsl_session_token');
-    if (sessionToken) {
-      config.headers['X-Session-Token'] = sessionToken;
-    }
-    
     return config;
   },
   (error) => Promise.reject(error)
@@ -53,7 +47,6 @@ api.interceptors.response.use(
           // Refresh failed, redirect to login
           localStorage.removeItem('es_nl2dsl_access_token');
           localStorage.removeItem('es_nl2dsl_refresh_token');
-          localStorage.removeItem('es_nl2dsl_session_token');
           window.location.href = '/login';
         }
       } else {
@@ -138,6 +131,21 @@ export const apiService = {
 
   getAvailableIndices: async (): Promise<string[]> => {
     const response = await api.get('/system/indices/');
+    return response.data;
+  },
+
+  getSystemMetrics: async () => {
+    const response = await api.get('/system/metrics/');
+    return response.data;
+  },
+
+  getDataIngestionTasks: async () => {
+    const response = await api.get('/data/tasks/');
+    return response.data;
+  },
+
+  deleteIndex: async (indexName: string) => {
+    const response = await api.delete(`/data/indices/${indexName}/`);
     return response.data;
   },
 

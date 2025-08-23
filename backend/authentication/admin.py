@@ -31,7 +31,7 @@ class UserSessionAdmin(admin.ModelAdmin):
     """User session admin."""
     
     list_display = ['user', 'ip_address', 'is_active', 'created_at', 'expires_at']
-    list_filter = ['is_active', 'created_at', 'expires_at']
+    list_filter = ['created_at', 'expires_at']
     search_fields = ['user__username', 'user__email', 'ip_address']
     readonly_fields = ['session_token', 'created_at', 'last_activity']
     
@@ -46,7 +46,7 @@ class AuditLogAdmin(admin.ModelAdmin):
     list_display = ['timestamp', 'user', 'action', 'severity', 'description', 'ip_address']
     list_filter = ['action', 'severity', 'timestamp']
     search_fields = ['user__username', 'user__email', 'description', 'ip_address']
-    readonly_fields = '__all__'
+    readonly_fields = ['timestamp', 'user', 'action', 'severity', 'description', 'ip_address', 'user_agent', 'endpoint', 'resource_type', 'resource_id', 'metadata']
     
     def has_add_permission(self, request):
         return False

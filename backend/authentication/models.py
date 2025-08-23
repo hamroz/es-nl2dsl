@@ -76,7 +76,7 @@ class UserSession(models.Model):
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='sessions')
     
     # Session identification
-    session_id = models.CharField(max_length=255, unique=True, help_text="JWT token ID")
+    session_id = models.CharField(max_length=255, unique=True, default=uuid.uuid4, help_text="JWT token ID")
     session_token = models.CharField(max_length=255, unique=True, null=True, blank=True)
     
     # Network and device information
@@ -171,8 +171,8 @@ class AuditLog(models.Model):
     user = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, blank=True)
     
     # Event details
-    event_type = models.CharField(max_length=50, choices=ACTION_TYPES)
-    action = models.CharField(max_length=50, choices=ACTION_TYPES, null=True, blank=True)  # Backward compatibility
+    event_type = models.CharField(max_length=50, choices=ACTION_TYPES, default='login')
+    action = models.CharField(max_length=50, choices=ACTION_TYPES, null=True, blank=True, default='login')  # Backward compatibility
     severity = models.CharField(max_length=20, choices=SEVERITY_LEVELS, default='info')
     description = models.TextField(blank=True)
     

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { apiService } from '../services/api';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell
@@ -78,52 +79,41 @@ const COLORS = ['#0088fe', '#00c49f', '#ffbb28', '#ff8042', '#8884d8'];
 const SystemAdmin: React.FC = () => {
   const [activeSection, setActiveSection] = useState<'dashboard' | 'indices' | 'ingestion' | 'logs'>('dashboard');
   const [showUploadModal, setShowUploadModal] = useState(false);
-  const [refreshInterval, setRefreshInterval] = useState(30); // seconds
-  const [autoRefresh, setAutoRefresh] = useState(true);
+  const [refreshInterval, setRefreshInterval] = useState(60); // seconds (reduced from 30)
+  const [autoRefresh, setAutoRefresh] = useState(false); // disabled by default
 
   const queryClient = useQueryClient();
 
   // System health data
-  const { data: systemHealth, isLoading: healthLoading, refetch: refetchHealth } = useQuery<SystemHealth>({
+  const { data: systemHealth, isLoading: healthLoading, refetch: refetchHealth, error: healthError } = useQuery<SystemHealth>({
     queryKey: ['system-health'],
-    queryFn: async () => {
-      const response = await fetch('/api/system/health/');
-      if (!response.ok) throw new Error('Failed to fetch system health');
-      return response.json();
-    },
+    queryFn: () => apiService.getSystemHealth(),
     refetchInterval: autoRefresh ? refreshInterval * 1000 : false,
+    retry: 2,
+    staleTime: 30000, // Consider data fresh for 30 seconds
   });
 
   // System metrics
-  const { data: metrics, isLoading: metricsLoading } = useQuery<SystemMetrics>({
+  const { data: metrics, isLoading: metricsLoading, error: metricsError } = useQuery<SystemMetrics>({
     queryKey: ['system-metrics'],
-    queryFn: async () => {
-      const response = await fetch('/api/system/metrics/');
-      if (!response.ok) throw new Error('Failed to fetch system metrics');
-      return response.json();
-    },
+    queryFn: () => apiService.getSystemMetrics(),
     refetchInterval: autoRefresh ? refreshInterval * 1000 : false,
+    retry: 2,
+    staleTime: 60000, // Consider data fresh for 1 minute
   });
 
   // Data ingestion tasks
-  const { data: ingestionTasks = [], isLoading: tasksLoading, refetch: refetchTasks } = useQuery<DataIngestionTask[]>({
+  const { data: ingestionTasks = [], isLoading: tasksLoading, refetch: refetchTasks, error: tasksError } = useQuery<DataIngestionTask[]>({
     queryKey: ['ingestion-tasks'],
-    queryFn: async () => {
-      const response = await fetch('/api/data/tasks/');
-      if (!response.ok) throw new Error('Failed to fetch ingestion tasks');
-      return response.json();
-    },
+    queryFn: () => apiService.getDataIngestionTasks(),
+    retry: 2,
+    staleTime: 30000,
+    enabled: activeSection === 'ingestion', // Only fetch when needed
   });
 
   // Delete index mutation
   const deleteIndexMutation = useMutation({
-    mutationFn: async (indexName: string) => {
-      const response = await fetch(`/api/data/indices/${indexName}/`, {
-        method: 'DELETE',
-      });
-      if (!response.ok) throw new Error('Failed to delete index');
-      return response.json();
-    },
+    mutationFn: (indexName: string) => apiService.deleteIndex(indexName),
     onSuccess: () => {
       refetchHealth();
       queryClient.invalidateQueries({ queryKey: ['system-health'] });
@@ -333,8 +323,28 @@ const SystemAdmin: React.FC = () => {
           </div>
         </div>
 
+        {/* Error Display */}
+        {(healthError || metricsError || tasksError) && (
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
+            <strong className="font-bold">Error loading data: </strong>
+            {healthError && <div>Health: {healthError.message}</div>}
+            {metricsError && <div>Metrics: {metricsError.message}</div>}
+            {tasksError && <div>Tasks: {tasksError.message}</div>}
+          </div>
+        )}
+
         {activeSection === 'dashboard' && (
           <>
+            {/* Loading State */}
+            {healthLoading && (
+              <div className="bg-white rounded-lg shadow p-6 mb-6">
+                <div className="animate-pulse">
+                  <div className="h-4 bg-gray-300 rounded mb-2"></div>
+                  <div className="h-4 bg-gray-300 rounded"></div>
+                </div>
+              </div>
+            )}
+
             {/* System Health Overview */}
             {systemHealth && (
               <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
@@ -634,13 +644,9 @@ const SystemAdmin: React.FC = () => {
             <h3 className="text-lg font-semibold text-gray-900 mb-4">System Logs</h3>
             <div className="bg-gray-900 text-green-400 p-4 rounded font-mono text-sm h-96 overflow-y-auto">
               <div className="space-y-1">
-                <div>[2024-08-22 17:15:23] INFO: Elasticsearch cluster healthy</div>
-                <div>[2024-08-22 17:15:23] INFO: Ollama service running</div>
-                <div>[2024-08-22 17:15:24] INFO: Query generation completed successfully</div>
-                <div>[2024-08-22 17:15:25] INFO: Evaluation run started for scenario scan-001</div>
-                <div>[2024-08-22 17:15:26] INFO: Security test completed with 95% abstain rate</div>
-                <div>[2024-08-22 17:15:27] INFO: Data ingestion task completed: 10,000 records</div>
-                <div>[2024-08-22 17:15:28] INFO: System health check passed</div>
+                <div>[{new Date().toISOString().slice(0, 19).replace('T', ' ')}] INFO: System logs loading...</div>
+                <div>[{new Date().toISOString().slice(0, 19).replace('T', ' ')}] INFO: Log streaming not yet implemented</div>
+                <div>[{new Date().toISOString().slice(0, 19).replace('T', ' ')}] INFO: This section will be enhanced with real-time log streaming</div>
               </div>
             </div>
           </div>

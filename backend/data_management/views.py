@@ -13,3 +13,12 @@ class IndicesView(APIView):
 class CICProcessView(APIView):
     def post(self, request):
         return Response({'task_id': 'cic_process_001', 'status': 'started'})
+
+class DataTasksView(APIView):
+    """
+    CRITICAL: Data ingestion tasks endpoint that frontend expects
+    """
+    def get(self, request):
+        # Mock data structure matching frontend expectations
+        # TODO: Replace with actual task tracking
+        return Response([])

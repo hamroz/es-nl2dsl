@@ -98,7 +98,7 @@ DATABASES = {
         "NAME": os.environ.get('DB_NAME', 'es_nl2dsl'),
         "USER": os.environ.get('DB_USER', 'postgres'),
         "PASSWORD": os.environ.get('DB_PASSWORD', 'postgres_pwd'),
-        "HOST": os.environ.get('DB_HOST', 'localhost'),
+        "HOST": os.environ.get('DB_HOST', '127.0.0.1'),  # Use IPv4 explicitly
         "PORT": os.environ.get('DB_PORT', '5432'),
     }
 }
@@ -169,6 +169,20 @@ CORS_ALLOWED_ORIGINS = [
 ]
 
 CORS_ALLOW_CREDENTIALS = True
+
+# Allow custom headers for authentication
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+    'x-session-token',  # Custom session token header
+]
 
 # Celery Configuration
 CELERY_BROKER_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
