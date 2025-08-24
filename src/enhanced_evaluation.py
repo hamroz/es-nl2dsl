@@ -335,5 +335,373 @@ def main():
     else:
         print(json.dumps(result, indent=2))
 
+class EnhancedEvaluator:
+    """Enhanced evaluator for comprehensive query assessment with multiple methods and models"""
+    
+    def __init__(self):
+        self.results = []
+        self.scenarios_cache = {}
+    
+    def load_scenarios(self, dataset: str) -> List[Dict[str, Any]]:
+        """Load evaluation scenarios for a given dataset"""
+        if dataset in self.scenarios_cache:
+            return self.scenarios_cache[dataset]
+        
+        scenarios = []
+        
+        if dataset == "cic_ids2017":
+            # Load CIC-IDS2017 scenarios
+            scenario_file = Path("artifacts/cic_ids2017_scenarios.yaml")
+            if scenario_file.exists():
+                import yaml
+                with open(scenario_file) as f:
+                    data = yaml.safe_load(f)
+                    scenarios = data.get('scenarios', [])
+        else:
+            # Load standard scenarios
+            scenario_file = Path("tasks/prompts.yaml")
+            if scenario_file.exists():
+                import yaml
+                with open(scenario_file) as f:
+                    scenarios = yaml.safe_load(f)
+        
+        self.scenarios_cache[dataset] = scenarios
+        return scenarios
+    
+    def run_evaluation(self, dataset: str, scenarios: List[str], methods: List[str], 
+                      models: List[str], save_results: bool = True) -> Dict[str, Any]:
+        """Run comprehensive evaluation across scenarios, methods, and models"""
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+        import threading
+        
+        # Clear previous results
+        self.results = []
+        
+        # Load scenario definitions
+        scenario_definitions = self.load_scenarios(dataset)
+        scenario_dict = {s['id']: s for s in scenario_definitions}
+        
+        # Prepare evaluation tasks
+        tasks = []
+        for scenario_id in scenarios:
+            if scenario_id not in scenario_dict:
+                continue
+            for method in methods:
+                for model in models:
+                    tasks.append((scenario_id, method, model, dataset))
+        
+        # Execute evaluations
+        results_lock = threading.Lock()
+        
+        def evaluate_task(task):
+            scenario_id, method, model, dataset_type = task
+            result = self.evaluate_scenario(scenario_id, method, model, dataset_type)
+            with results_lock:
+                self.results.append(result)
+            return result
+        
+        # Run evaluations in parallel
+        with ThreadPoolExecutor(max_workers=4) as executor:
+            futures = [executor.submit(evaluate_task, task) for task in tasks]
+            for future in as_completed(futures):
+                try:
+                    future.result()
+                except Exception as e:
+                    print(f"Evaluation task failed: {e}")
+        
+        # Generate summary
+        summary = self._generate_summary()
+        
+        # Save results if requested
+        if save_results:
+            timestamp = time.strftime('%Y%m%d_%H%M%S')
+            results_file = Path(f"artifacts/evaluation_results/eval_{dataset}_{timestamp}.json")
+            results_file.parent.mkdir(exist_ok=True)
+            
+            with open(results_file, 'w') as f:
+                json.dump(self.results, f, indent=2, default=str)
+            
+            summary_file = Path(f"artifacts/evaluation_results/summary_{dataset}_{timestamp}.json")
+            with open(summary_file, 'w') as f:
+                json.dump(summary, f, indent=2, default=str)
+        
+        return summary
+    
+    def evaluate_scenario(self, scenario_id: str, method: str, model: str, 
+                         dataset_type: str = "standard") -> Dict[str, Any]:
+        """Evaluate a single scenario with a specific method and model"""
+        import subprocess
+        import tempfile
+        from pathlib import Path
+        
+        try:
+            # Load scenario definition
+            scenarios = self.load_scenarios(dataset_type)
+            scenario_dict = {s['id']: s for s in scenarios}
+            
+            if scenario_id not in scenario_dict:
+                return {
+                    'scenario_id': scenario_id,
+                    'method': method,
+                    'model': model,
+                    'error': f"Scenario {scenario_id} not found",
+                    'success': False,
+                    'timestamp': time.time()
+                }
+            
+            scenario = scenario_dict[scenario_id]
+            prompt = scenario['prompt']
+            
+            # Generate query based on method
+            start_time = time.time()
+            generated_query = None
+            error = None
+            
+            if method == "constrained":
+                # Use constrained generation
+                result = subprocess.run([
+                    "python", "src/generate_constrained.py",
+                    "--prompt", prompt,
+                    "--model", model,
+                    "--output", "/tmp/generated_query.json"
+                ], capture_output=True, text=True, cwd=Path.cwd())
+                
+                if result.returncode == 0 and Path("/tmp/generated_query.json").exists():
+                    with open("/tmp/generated_query.json") as f:
+                        generated_query = json.load(f)
+                else:
+                    error = f"Constrained generation failed: {result.stderr}"
+            
+            elif method == "rules":
+                # Use rules baseline
+                result = subprocess.run([
+                    "python", "src/baseline_rules.py",
+                    "--prompt", prompt,
+                    "--task-id", scenario_id,
+                    "--output", "/tmp/rules_query.json"
+                ], capture_output=True, text=True, cwd=Path.cwd())
+                
+                if result.returncode == 0 and Path("/tmp/rules_query.json").exists():
+                    with open("/tmp/rules_query.json") as f:
+                        generated_query = json.load(f)
+                else:
+                    error = f"Rules generation failed: {result.stderr}"
+            
+            elif method == "zeroshot":
+                # Use zero-shot baseline
+                result = subprocess.run([
+                    "python", "src/baseline_zeroshot.py",
+                    "--prompt", prompt,
+                    "--task-id", scenario_id,
+                    "--model", model,
+                    "--output", "/tmp/zeroshot_query.json"
+                ], capture_output=True, text=True, cwd=Path.cwd())
+                
+                if result.returncode == 0 and Path("/tmp/zeroshot_query.json").exists():
+                    with open("/tmp/zeroshot_query.json") as f:
+                        generated_query = json.load(f)
+                else:
+                    error = f"Zero-shot generation failed: {result.stderr}"
+            
+            generation_time = time.time() - start_time
+            
+            # If generation failed, return error result
+            if error or not generated_query:
+                return {
+                    'scenario_id': scenario_id,
+                    'method': method,
+                    'model': model,
+                    'prompt': prompt,
+                    'error': error or "No query generated",
+                    'success': False,
+                    'generation_time': generation_time,
+                    'timestamp': time.time()
+                }
+            
+            # Load ground truth
+            ground_truth_query = None
+            if 'expert_dsl' in scenario:
+                ground_truth_query = json.loads(scenario['expert_dsl'])
+            elif 'expected_query' in scenario:
+                ground_truth_query = json.loads(scenario['expected_query'])
+            
+            # Execute queries to get results (simplified - in real implementation would use Elasticsearch)
+            generated_results = []
+            ground_truth_results = []
+            
+            # Calculate enhanced metrics
+            if ground_truth_query:
+                metrics = enhanced_evaluate_query(
+                    generated_query, ground_truth_query,
+                    generated_results, ground_truth_results,
+                    generation_time * 1000  # Convert to milliseconds
+                )
+                
+                execution_metrics = metrics.to_dict()
+            else:
+                execution_metrics = None
+            
+            # Calculate AST similarity (simplified)
+            ast_similarity = self._calculate_ast_similarity(generated_query, ground_truth_query) if ground_truth_query else 0.0
+            
+            return {
+                'scenario_id': scenario_id,
+                'method': method,
+                'model': model,
+                'prompt': prompt,
+                'generated_query': generated_query,
+                'ground_truth_query': ground_truth_query,
+                'execution_metrics': execution_metrics,
+                'ast_similarity': ast_similarity,
+                'generation_time': generation_time,
+                'success': True,
+                'error': None,
+                'timestamp': time.time()
+            }
+            
+        except Exception as e:
+            return {
+                'scenario_id': scenario_id,
+                'method': method,
+                'model': model,
+                'error': str(e),
+                'success': False,
+                'timestamp': time.time()
+            }
+    
+    def _calculate_ast_similarity(self, query1: Dict, query2: Dict) -> float:
+        """Calculate AST similarity between two queries"""
+        try:
+            from src.ast_normalize import normalize_query
+            norm1 = normalize_query(query1)
+            norm2 = normalize_query(query2)
+            # Simple similarity based on normalized query structure
+            return 1.0 if norm1 == norm2 else 0.5  # Simplified calculation
+        except:
+            return 0.0
+    
+    def _generate_summary(self) -> Dict[str, Any]:
+        """Generate evaluation summary statistics"""
+        if not self.results:
+            return {}
+        
+        successful_results = [r for r in self.results if r.get('success', False)]
+        total_results = len(self.results)
+        
+        # Overall statistics
+        overall = {
+            'total_evaluations': total_results,
+            'successful_evaluations': len(successful_results),
+            'success_rate': len(successful_results) / total_results if total_results > 0 else 0.0,
+            'avg_generation_time': sum(r.get('generation_time', 0) for r in successful_results) / len(successful_results) if successful_results else 0.0
+        }
+        
+        # Add metric averages if available
+        f1_scores = []
+        precisions = []
+        recalls = []
+        ast_similarities = []
+        
+        for r in successful_results:
+            if r.get('execution_metrics'):
+                metrics = r['execution_metrics']
+                if isinstance(metrics, dict) and 'traditional' in metrics:
+                    f1_scores.append(metrics['traditional'].get('f1_score', 0))
+                    precisions.append(metrics['traditional'].get('precision', 0))
+                    recalls.append(metrics['traditional'].get('recall', 0))
+            
+            ast_similarities.append(r.get('ast_similarity', 0))
+        
+        if f1_scores:
+            overall['avg_f1_score'] = sum(f1_scores) / len(f1_scores)
+            overall['avg_precision'] = sum(precisions) / len(precisions)
+            overall['avg_recall'] = sum(recalls) / len(recalls)
+        
+        if ast_similarities:
+            overall['avg_ast_similarity'] = sum(ast_similarities) / len(ast_similarities)
+        
+        # By method statistics
+        by_method = {}
+        for method in set(r.get('method') for r in self.results):
+            method_results = [r for r in self.results if r.get('method') == method]
+            method_successful = [r for r in method_results if r.get('success', False)]
+            
+            method_stats = {
+                'count': len(method_results),
+                'success_rate': len(method_successful) / len(method_results) if method_results else 0.0,
+                'avg_generation_time': sum(r.get('generation_time', 0) for r in method_successful) / len(method_successful) if method_successful else 0.0
+            }
+            
+            # Add method-specific metrics
+            method_f1s = []
+            method_precisions = []
+            method_recalls = []
+            method_ast_sims = []
+            
+            for r in method_successful:
+                if r.get('execution_metrics'):
+                    metrics = r['execution_metrics']
+                    if isinstance(metrics, dict) and 'traditional' in metrics:
+                        method_f1s.append(metrics['traditional'].get('f1_score', 0))
+                        method_precisions.append(metrics['traditional'].get('precision', 0))
+                        method_recalls.append(metrics['traditional'].get('recall', 0))
+                
+                method_ast_sims.append(r.get('ast_similarity', 0))
+            
+            if method_f1s:
+                method_stats['avg_f1_score'] = sum(method_f1s) / len(method_f1s)
+                method_stats['avg_precision'] = sum(method_precisions) / len(method_precisions)
+                method_stats['avg_recall'] = sum(method_recalls) / len(method_recalls)
+            
+            if method_ast_sims:
+                method_stats['avg_ast_similarity'] = sum(method_ast_sims) / len(method_ast_sims)
+            
+            by_method[method] = method_stats
+        
+        # By model statistics
+        by_model = {}
+        for model in set(r.get('model') for r in self.results):
+            model_results = [r for r in self.results if r.get('model') == model]
+            model_successful = [r for r in model_results if r.get('success', False)]
+            
+            model_stats = {
+                'count': len(model_results),
+                'success_rate': len(model_successful) / len(model_results) if model_results else 0.0,
+                'avg_generation_time': sum(r.get('generation_time', 0) for r in model_successful) / len(model_successful) if model_successful else 0.0
+            }
+            
+            # Add model-specific metrics
+            model_f1s = []
+            model_precisions = []
+            model_recalls = []
+            model_ast_sims = []
+            
+            for r in model_successful:
+                if r.get('execution_metrics'):
+                    metrics = r['execution_metrics']
+                    if isinstance(metrics, dict) and 'traditional' in metrics:
+                        model_f1s.append(metrics['traditional'].get('f1_score', 0))
+                        model_precisions.append(metrics['traditional'].get('precision', 0))
+                        model_recalls.append(metrics['traditional'].get('recall', 0))
+                
+                model_ast_sims.append(r.get('ast_similarity', 0))
+            
+            if model_f1s:
+                model_stats['avg_f1_score'] = sum(model_f1s) / len(model_f1s)
+                model_stats['avg_precision'] = sum(model_precisions) / len(model_precisions)
+                model_stats['avg_recall'] = sum(model_recalls) / len(model_recalls)
+            
+            if model_ast_sims:
+                model_stats['avg_ast_similarity'] = sum(model_ast_sims) / len(model_ast_sims)
+            
+            by_model[model] = model_stats
+        
+        return {
+            'overall': overall,
+            'by_method': by_method,
+            'by_model': by_model,
+            'timestamp': time.time()
+        }
+
 if __name__ == "__main__":
     main()
