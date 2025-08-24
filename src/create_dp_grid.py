@@ -14,7 +14,7 @@ def create_dp_index(epsilon):
     
     result = subprocess.run([
         sys.executable, "src/dp_synth.py",
-        "--input", "data/sample_extended.csv",
+        "--input", "data_raw/sample_extended.csv",
         "--index", index_name,
         "--epsilon", str(epsilon),
         "--timestamp-jitter", "30"

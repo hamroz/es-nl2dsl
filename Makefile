@@ -30,18 +30,18 @@ help:
 # Setup and infrastructure
 setup:
 	@echo "Setting up ES-NL2DSL system..."
-	./scripts/system/setup.sh
+	./setup.sh
 
 start:
 	@echo "Starting Elasticsearch..."
-	cd docker && docker-compose up -d
+	docker-compose up -d
 	@echo "Waiting for Elasticsearch to be ready..."
 	@sleep 30
 	@curl -s -u elastic:ChangeMe_123 http://localhost:9200/_cluster/health | grep -q "green\|yellow" && echo "✅ Elasticsearch ready" || echo "❌ Elasticsearch not ready"
 
 stop:
 	@echo "Stopping Elasticsearch..."
-	cd docker && docker-compose down
+	docker-compose down
 
 clean:
 	@echo "Cleaning generated artifacts..."

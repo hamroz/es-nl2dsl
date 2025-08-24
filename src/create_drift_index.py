@@ -57,8 +57,8 @@ def main():
     print("Created logs_net_drift index with modified schema")
     
     # Transform and save CSV with renamed columns
-    original_csv = Path("data/sample_extended.csv")
-    drift_csv = Path("data/sample_drift.csv")
+    original_csv = Path("data_raw/sample_extended.csv")
+    drift_csv = Path("data_raw/sample_drift.csv")
     
     df = transform_data_for_drift(original_csv)
     df.to_csv(drift_csv, index=False)
