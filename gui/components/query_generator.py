@@ -17,7 +17,7 @@ import sys
 project_root = Path(__file__).parent.parent.parent
 sys.path.append(str(project_root))
 
-from src.external_llm_manager import get_external_llm_manager
+from src.external.llm_manager import get_external_llm_manager
 from gui.utils.backend_interface import (
     run_query_generation, validate_query, get_available_models,
     get_available_indices, execute_elasticsearch_query, 

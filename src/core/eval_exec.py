@@ -35,10 +35,12 @@ class QueryExecutionError:
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 try:
-    from config import get_es_client_config, ES_READER_CREDS, ES_DEFAULT_INDEX
+    from ..utils.config import get_es_client_config, ES_READER_CREDS, ES_DEFAULT_INDEX
 except ImportError:
-    # If direct import fails, try relative import
-    from .config import get_es_client_config, ES_READER_CREDS, ES_DEFAULT_INDEX
+    # Fallback for CLI usage
+    from pathlib import Path
+    sys.path.append(str(Path(__file__).parent.parent.parent))
+    from src.utils.config import get_es_client_config, ES_READER_CREDS, ES_DEFAULT_INDEX
 
 def run_query(es, index, dsl: dict, size=10000):
     """Execute a query with proper error handling and error classification."""

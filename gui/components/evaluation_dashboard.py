@@ -14,8 +14,8 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 project_root = Path(__file__).parent.parent.parent
 sys.path.append(str(project_root))
 
-from src.enhanced_evaluation import EnhancedEvaluator
-from src.external_llm_manager import get_external_llm_manager
+from src.core.enhanced_evaluation import EnhancedEvaluator
+from src.external.llm_manager import get_external_llm_manager
 from gui.utils.backend_interface import get_available_indices
 
 def render_evaluation_dashboard():

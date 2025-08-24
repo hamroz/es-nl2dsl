@@ -1,27 +1,29 @@
 #!/usr/bin/env python3
-import argparse, pathlib, hashlib, orjson, pandas as pd
+import argparse, pathlib, pandas as pd
 from elasticsearch import Elasticsearch, helpers
-from config import get_es_client_config, ES_ADMIN_CREDS, ES_DEFAULT_INDEX
-
-def make_id(row: dict) -> str:
-    # Deterministic ID from a stable subset of fields
-    key = orjson.dumps({
-        "@timestamp": row.get("@timestamp"),
-        "src_ip": row.get("src_ip"),
-        "dst_ip": row.get("dst_ip"),
-        "src_port": row.get("src_port"),
-        "dst_port": row.get("dst_port"),
-        "protocol": row.get("protocol"),
-        "bytes_in": row.get("bytes_in"),
-        "bytes_out": row.get("bytes_out"),
-        "label": row.get("label"),
-    }, option=orjson.OPT_SORT_KEYS)
-    return hashlib.sha1(key).hexdigest()
+from ..utils.config import get_es_client_config, ES_ADMIN_CREDS, ES_DEFAULT_INDEX
+from .utils.document_id import make_deterministic_id as make_id
 
 def gen_actions(df: pd.DataFrame, index: str):
     for rec in df.to_dict(orient="records"):
         rec["@timestamp"] = pd.to_datetime(rec["@timestamp"], utc=True).strftime("%Y-%m-%dT%H:%M:%SZ")
         yield {"_op_type":"index", "_index": index, "_id": make_id(rec), "_source": rec}
+
+def ingest_csv(file_path, index=None, user=None, password=None):
+    """Main ingestion function for CSV files"""
+    df = pd.read_csv(file_path)
+    if index is None:
+        index = ES_DEFAULT_INDEX
+    if user is None:
+        user = ES_ADMIN_CREDS['user']
+    if password is None:
+        password = ES_ADMIN_CREDS['password']
+    
+    client = Elasticsearch(**get_es_client_config(user, password))
+    
+    # Perform bulk ingestion
+    success, failed = helpers.bulk(client, gen_actions(df, index), stats_only=True)
+    return success, failed
 
 def main():
     ap = argparse.ArgumentParser()

@@ -54,7 +54,7 @@ clean:
 # Testing commands
 test:
 	@echo "Running single test scenario (scan-001)..."
-	python src/run_one.py --id scan-001 --gen
+	python src/cli/run_one.py --id scan-001 --gen
 
 all:
 	@echo "Running complete evaluation suite..."
@@ -62,37 +62,37 @@ all:
 
 experiment:
 	@echo "Running baseline comparison experiments..."
-	python src/run_experiment.py
+	python src/analysis/experiments.py
 
 # Advanced testing
 security:
 	@echo "Running red team security tests..."
-	python src/redteam_runner.py
+	python src/analysis/security.py
 
 privacy:
 	@echo "Running privacy-utility analysis..."
 	@for eps in 05 10 20; do \
 		echo "Testing ε=0.$${eps#0}..."; \
-		python src/run_one.py --id scan-001 --index logs_net_dp_eps$$eps --gen; \
+		python src/cli/run_one.py --id scan-001 --index logs_net_dp_eps$$eps --gen; \
 	done
 
 drift:
 	@echo "Testing schema drift robustness..."
-	python src/run_one.py --id scan-001 --index logs_net_drift --gen
+	python src/cli/run_one.py --id scan-001 --index logs_net_drift --gen
 
 baseline:
 	@echo "Comparing baseline methods..."
 	@echo "1. Rules baseline..."
-	python src/baseline_rules.py --prompt "Find malicious events on 2017-07-04" --task-id baseline-test
+	python src/generators/rules_based.py --prompt "Find malicious events on 2017-07-04" --task-id baseline-test
 	@echo "2. Zero-shot baseline..."
-	python src/baseline_zeroshot.py --prompt "Find malicious events on 2017-07-04" --task-id baseline-test
+	python src/generators/zero_shot.py --prompt "Find malicious events on 2017-07-04" --task-id baseline-test
 	@echo "3. Constrained method..."
-	python src/run_one.py --id scan-001 --gen
+	python src/cli/run_one.py --id scan-001 --gen
 
 # Analysis
 results:
 	@echo "Generating results tables..."
-	python src/render_tables.py
+	python src/analysis/tables.py
 	@echo "View results:"
 	@echo "  cat artifacts/results/results_table_*.md"
 

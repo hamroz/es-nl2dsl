@@ -11,7 +11,7 @@ from datetime import datetime
 project_root = Path(__file__).parent.parent.parent
 sys.path.append(str(project_root))
 
-from src.external_llm_manager import ExternalLLM, get_external_llm_manager
+from src.external.llm_manager import ExternalLLM, get_external_llm_manager
 import os
 
 

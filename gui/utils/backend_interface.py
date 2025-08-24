@@ -14,13 +14,14 @@ from elasticsearch import Elasticsearch
 project_root = Path(__file__).parent.parent.parent
 sys.path.append(str(project_root))
 
-def get_elasticsearch_client():
+# Import from new structure
+from src.utils.config import get_es_client_config, ES_ADMIN_CREDS, ES_READER_CREDS
+
+def get_elasticsearch_client(read_only=False):
     """Get Elasticsearch client instance"""
-    return Elasticsearch(
-        ['http://localhost:9200'],
-        basic_auth=('elastic', 'ChangeMe_123'),
-        verify_certs=False
-    )
+    # Use admin credentials by default, reader for read_only operations
+    use_admin = not read_only
+    return Elasticsearch(**get_es_client_config(use_admin=use_admin))
 
 def check_system_status() -> Dict[str, any]:
     """Check the status of all system components"""
@@ -333,7 +334,7 @@ def execute_elasticsearch_query(query: Dict[str, Any], index: str, max_size: int
     """Execute an Elasticsearch query and return results with metadata"""
     try:
         # Import config here to avoid circular imports
-        from src.config import get_es_client_config
+        from src.utils.config import get_es_client_config
         
         # Create Elasticsearch client with read-only credentials
         es = Elasticsearch(**get_es_client_config(use_admin=False), request_timeout=60)

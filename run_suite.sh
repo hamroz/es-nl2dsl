@@ -22,7 +22,7 @@ if [ "$ES_STATUS" != "200" ]; then
     exit 1
 fi
 
-python src/smoke_es.py
+python src/utils/health_check.py
 if [ $? -ne 0 ]; then
     echo "Error: Elasticsearch connectivity check failed"
     exit 1
@@ -38,7 +38,7 @@ FAILED=0
 if [ ! -f "artifacts/ground_truth/scan-001.json" ]; then
     echo
     echo "Generating ground truth for all scenarios..."
-    python src/generate_ground_truth.py
+    python src/cli/generate_ground_truth.py
 fi
 
 # Run all standard scenarios
@@ -50,7 +50,7 @@ for scenario in $ALL_SCENARIOS; do
     echo
     echo "----------------------------------------"
     echo "Running scenario: $scenario"
-    python src/run_one.py --id $scenario --gen
+    python src/cli/run_one.py --id $scenario --gen
     if [ $? -eq 0 ]; then
         echo "✓ $scenario: PASS"
         RESULTS+=("$scenario: PASS")
@@ -68,7 +68,7 @@ echo "=== Testing Schema Drift Robustness ==="
 DRIFT_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -u elastic:ChangeMe_123 "localhost:9200/logs_net_drift")
 if [ "$DRIFT_STATUS" == "200" ]; then
     echo "Running scan-001 against drift index..."
-    python src/run_one.py --id scan-001 --index logs_net_drift --gen
+    python src/cli/run_one.py --id scan-001 --index logs_net_drift --gen
     if [ $? -eq 0 ]; then
         echo "✓ Drift test completed (unexpected success - schema adapted?)"
     else
@@ -76,7 +76,7 @@ if [ "$DRIFT_STATUS" == "200" ]; then
     fi
 else
     echo "Skipping drift test (logs_net_drift index not found - HTTP $DRIFT_STATUS)"
-    echo "To create drift index, run: python src/create_drift_index.py"
+    echo "To create drift index, run: python src/analysis/privacy/drift.py"
 fi
 
 # DP synthetic test with epsilon grid
@@ -88,7 +88,7 @@ for epsilon in 0.5 1.0 2.0; do
     
     if [ "$DP_STATUS" == "200" ]; then
         echo "Running scan-001 against DP index (ε=$epsilon)..."
-        python src/run_one.py --id scan-001 --index $INDEX_NAME --gen
+        python src/cli/run_one.py --id scan-001 --index $INDEX_NAME --gen
         if [ $? -eq 0 ]; then
             echo "✓ DP test (ε=$epsilon) completed"
         else
@@ -102,7 +102,7 @@ done
 # Generate results table
 echo
 echo "=== Generating Results Summary ==="
-python src/render_tables.py
+python src/analysis/tables.py
 if [ $? -eq 0 ]; then
     echo "✓ Results table generated"
 else
