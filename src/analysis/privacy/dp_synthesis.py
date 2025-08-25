@@ -7,7 +7,19 @@ from datetime import datetime, timedelta
 from elasticsearch import Elasticsearch
 from elasticsearch.helpers import bulk
 import json
-from config import get_es_client_config, ES_ADMIN_CREDS, ES_DEFAULT_INDEX
+import sys
+from pathlib import Path
+
+# Add project root to path
+project_root = Path(__file__).parent.parent.parent
+sys.path.append(str(project_root))
+
+try:
+    from src.utils.config import get_es_client_config, ES_ADMIN_CREDS, ES_DEFAULT_INDEX
+except ImportError:
+    # Fallback for direct execution
+    sys.path.append(str(project_root / "src"))
+    from utils.config import get_es_client_config, ES_ADMIN_CREDS, ES_DEFAULT_INDEX
 
 def add_laplace_noise(value, scale):
     """Add Laplace noise to a numeric value"""

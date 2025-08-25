@@ -32,6 +32,83 @@ from gui.utils.backend_interface import (
     load_scenarios, run_scenario_evaluation, check_system_status
 )
 
+def generate_privacy_summary(privacy_results, selected_scenarios, epsilon_options, method):
+    """Generate summary statistics from privacy analysis results"""
+    if not privacy_results:
+        return {}
+    
+    # Overall statistics
+    total_runs = len(privacy_results)
+    successful_runs = sum(1 for r in privacy_results.values() if r.get('success', False))
+    
+    overall = {
+        'total_runs': total_runs,
+        'successful_runs': successful_runs,
+        'success_rate': successful_runs / total_runs if total_runs > 0 else 0.0,
+        'scenario_count': len(selected_scenarios),
+        'epsilon_count': len(epsilon_options),
+        'method': method,
+        'timestamp': time.time()
+    }
+    
+    # Aggregate results by epsilon
+    by_epsilon = {}
+    for key, result in privacy_results.items():
+        epsilon = result.get('epsilon', 'unknown')
+        if epsilon not in by_epsilon:
+            by_epsilon[epsilon] = {
+                'runs': 0,
+                'successful': 0,
+                'f1_scores': [],
+                'precision_scores': [],
+                'recall_scores': [],
+                'jaccard_scores': []
+            }
+        
+        by_epsilon[epsilon]['runs'] += 1
+        if result.get('success', False):
+            by_epsilon[epsilon]['successful'] += 1
+            metrics = result.get('metrics', {})
+            if 'f1' in metrics:
+                by_epsilon[epsilon]['f1_scores'].append(metrics['f1'])
+            if 'precision' in metrics:
+                by_epsilon[epsilon]['precision_scores'].append(metrics['precision'])
+            if 'recall' in metrics:
+                by_epsilon[epsilon]['recall_scores'].append(metrics['recall'])
+            if 'jaccard' in metrics:
+                by_epsilon[epsilon]['jaccard_scores'].append(metrics['jaccard'])
+    
+    # Calculate averages for each epsilon
+    for epsilon, data in by_epsilon.items():
+        data['success_rate'] = data['successful'] / data['runs'] if data['runs'] > 0 else 0.0
+        data['avg_f1'] = sum(data['f1_scores']) / len(data['f1_scores']) if data['f1_scores'] else 0.0
+        data['avg_precision'] = sum(data['precision_scores']) / len(data['precision_scores']) if data['precision_scores'] else 0.0
+        data['avg_recall'] = sum(data['recall_scores']) / len(data['recall_scores']) if data['recall_scores'] else 0.0
+        data['avg_jaccard'] = sum(data['jaccard_scores']) / len(data['jaccard_scores']) if data['jaccard_scores'] else 0.0
+    
+    # Calculate privacy costs (utility degradation from original)
+    if "∞ (Original)" in by_epsilon:
+        baseline_f1 = by_epsilon["∞ (Original)"]["avg_f1"]
+        privacy_costs = {}
+        for epsilon, data in by_epsilon.items():
+            if epsilon != "∞ (Original)":
+                privacy_costs[epsilon] = max(0, baseline_f1 - data["avg_f1"])
+        overall['privacy_costs'] = privacy_costs
+    
+    return {
+        'overall': overall,
+        'by_epsilon': by_epsilon,
+        'scenarios': [s['id'] for s in selected_scenarios],
+        'epsilon_options': epsilon_options,
+        'metadata': {
+            'created_at': time.strftime('%Y-%m-%d %H:%M:%S'),
+            'scenarios_tested': [s['id'] for s in selected_scenarios],
+            'epsilon_values': epsilon_options,
+            'generation_method': method,
+            'analysis_type': 'privacy_utility'
+        }
+    }
+
 def render_privacy_analysis():
     """Render the privacy analysis interface"""
     privacy_logger.log_page_load("Privacy Analysis component loaded")
@@ -197,6 +274,10 @@ def render_privacy_analysis():
             parallel = st.checkbox("🚀 Parallel Execution", value=True)
             max_workers = st.slider("Max Workers:", 1, 6, 3) if parallel else 1
             
+            # Save results option
+            save_results = st.checkbox("💾 Save Results", value=True,
+                                      help="Save privacy analysis results to file")
+            
             # Run analysis button
             run_analysis = st.button("🔬 Run Privacy Analysis", type="primary", use_container_width=True)
         
@@ -352,11 +433,93 @@ def render_privacy_analysis():
             # Store results in session state
             st.session_state.privacy_results = privacy_results
             st.session_state.privacy_analysis_running = False
+            
+            # Save results if requested
+            if save_results:
+                try:
+                    timestamp = time.strftime('%Y%m%d_%H%M%S')
+                    
+                    # Create results directory if it doesn't exist
+                    results_dir = Path("artifacts/privacy_results")
+                    results_dir.mkdir(exist_ok=True)
+                    
+                    # Save detailed results
+                    results_file = results_dir / f"privacy_{timestamp}.json"
+                    with open(results_file, 'w') as f:
+                        json.dump(privacy_results, f, indent=2, default=str)
+                    
+                    # Generate and save summary
+                    summary = generate_privacy_summary(privacy_results, selected_scenarios, epsilon_options, method)
+                    summary_file = results_dir / f"privacy_summary_{timestamp}.json"
+                    with open(summary_file, 'w') as f:
+                        json.dump(summary, f, indent=2, default=str)
+                    
+                    st.success(f"✅ Results saved to {results_file.name}")
+                    privacy_logger.log_success("Privacy analysis results saved",
+                        results_file=str(results_file),
+                        scenario_count=len(selected_scenarios),
+                        epsilon_count=len(epsilon_options)
+                    )
+                    
+                except Exception as e:
+                    st.error(f"❌ Failed to save results: {e}")
+                    privacy_logger.log_error("Privacy analysis save failed", str(e))
     
     with tab3:
         st.subheader("⚖️ Epsilon Comparison")
         st.write("Compare performance across different privacy levels")
         
+        # Check for results in session state or load recent results
+        if "privacy_results" not in st.session_state or not st.session_state.privacy_results:
+            st.info("👈 Run privacy analysis in the previous tab to see results")
+            
+            # Show recent results if available
+            recent_files = list(Path("artifacts/privacy_results").glob("privacy_*.json"))
+            if recent_files:
+                st.markdown("### 📁 Recent Privacy Analysis")
+                recent_files.sort(key=lambda x: x.stat().st_mtime, reverse=True)
+                
+                for file in recent_files[:5]:
+                    file_info = file.stem.replace("privacy_", "").replace("_", " ")
+                    if st.button(f"📄 Load: {file_info}", key=f"load_privacy_{file.name}"):
+                        try:
+                            with open(file, 'r') as f:
+                                results_data = json.load(f)
+                                st.session_state['privacy_results'] = results_data
+                                
+                            # Also load the corresponding summary file
+                            summary_file = file.parent / file.name.replace("privacy_", "privacy_summary_")
+                            if summary_file.exists():
+                                with open(summary_file, 'r') as f:
+                                    summary_data = json.load(f)
+                                    st.session_state['privacy_summary'] = summary_data
+                                    
+                            # Show information about loaded data
+                            if 'privacy_summary' in st.session_state:
+                                metadata = st.session_state['privacy_summary'].get('metadata', {})
+                                created_at = metadata.get('created_at', 'Unknown')
+                                scenarios = metadata.get('scenarios_tested', [])
+                                epsilon_values = metadata.get('epsilon_values', [])
+                                method = metadata.get('generation_method', 'Unknown')
+                                
+                                st.toast(f"✅ Loaded privacy analysis from {created_at}", icon="📊")
+                                st.info(f"""
+                                **Loaded Privacy Analysis:**
+                                - **Created**: {created_at}
+                                - **Scenarios**: {len(scenarios)} tested ({', '.join(scenarios)})
+                                - **Privacy Levels**: {len(epsilon_values)} tested ({', '.join(epsilon_values)})
+                                - **Method**: {method}
+                                - **Results**: {len(results_data)} evaluations
+                                """)
+                            else:
+                                st.toast(f"Loaded {len(results_data)} privacy results", icon="✅")
+                                
+                            privacy_logger.log_user_action("Loaded recent privacy analysis", filename=file.name)
+                            st.rerun()  # Rerun to show the loaded results
+                        except Exception as e:
+                            st.error(f"Failed to load {file.name}: {e}")
+            return
+            
         # Load existing results if available
         if "privacy_results" in st.session_state:
             results = st.session_state.privacy_results
@@ -464,6 +627,57 @@ def render_privacy_analysis():
         st.subheader("📈 Results Visualization")
         st.write("Advanced visualization of privacy-utility relationships")
         
+        # Check for results in session state or load recent results
+        if "privacy_results" not in st.session_state or not st.session_state.privacy_results:
+            st.info("👈 Run privacy analysis or load previous results to see visualizations")
+            
+            # Show recent results if available
+            recent_files = list(Path("artifacts/privacy_results").glob("privacy_*.json"))
+            if recent_files:
+                st.markdown("### 📁 Recent Privacy Analysis")
+                recent_files.sort(key=lambda x: x.stat().st_mtime, reverse=True)
+                
+                for file in recent_files[:5]:
+                    file_info = file.stem.replace("privacy_", "").replace("_", " ")
+                    if st.button(f"📄 Load: {file_info}", key=f"load_viz_{file.name}"):
+                        try:
+                            with open(file, 'r') as f:
+                                results_data = json.load(f)
+                                st.session_state['privacy_results'] = results_data
+                                
+                            # Also load the corresponding summary file
+                            summary_file = file.parent / file.name.replace("privacy_", "privacy_summary_")
+                            if summary_file.exists():
+                                with open(summary_file, 'r') as f:
+                                    summary_data = json.load(f)
+                                    st.session_state['privacy_summary'] = summary_data
+                                    
+                            # Show information about loaded data
+                            if 'privacy_summary' in st.session_state:
+                                metadata = st.session_state['privacy_summary'].get('metadata', {})
+                                created_at = metadata.get('created_at', 'Unknown')
+                                scenarios = metadata.get('scenarios_tested', [])
+                                epsilon_values = metadata.get('epsilon_values', [])
+                                method = metadata.get('generation_method', 'Unknown')
+                                
+                                st.toast(f"✅ Loaded privacy analysis from {created_at}", icon="📊")
+                                st.info(f"""
+                                **Loaded Privacy Analysis:**
+                                - **Created**: {created_at}
+                                - **Scenarios**: {len(scenarios)} tested ({', '.join(scenarios)})
+                                - **Privacy Levels**: {len(epsilon_values)} tested ({', '.join(epsilon_values)})
+                                - **Method**: {method}
+                                - **Results**: {len(results_data)} evaluations
+                                """)
+                            else:
+                                st.toast(f"Loaded {len(results_data)} privacy results", icon="✅")
+                                
+                            privacy_logger.log_user_action("Loaded recent privacy analysis for visualization", filename=file.name)
+                            st.rerun()  # Rerun to show the loaded results
+                        except Exception as e:
+                            st.error(f"Failed to load {file.name}: {e}")
+            return
+            
         if "privacy_results" in st.session_state:
             results = st.session_state.privacy_results
             
@@ -539,15 +753,58 @@ def render_privacy_analysis():
                 parallel_df = viz_df.copy()
                 parallel_df["Epsilon_Scaled"] = parallel_df["Epsilon_Numeric"] / 100.0  # Scale for visualization
                 
-                fig_parallel = px.parallel_coordinates(
-                    parallel_df,
-                    dimensions=["Epsilon_Scaled", "F1", "Jaccard", "Precision", "Recall"],
-                    color="F1",
-                    title="Multi-Dimensional Privacy-Utility Analysis",
-                    color_continuous_scale="RdYlGn"
-                )
-                
-                st.plotly_chart(fig_parallel, use_container_width=True)
+                # Work around pandas/plotly version compatibility issue with iteritems()
+                try:
+                    fig_parallel = px.parallel_coordinates(
+                        parallel_df,
+                        dimensions=["Epsilon_Scaled", "F1", "Jaccard", "Precision", "Recall"],
+                        color="F1",
+                        title="Multi-Dimensional Privacy-Utility Analysis",
+                        color_continuous_scale="RdYlGn"
+                    )
+                    st.plotly_chart(fig_parallel, use_container_width=True)
+                except AttributeError as e:
+                    if "iteritems" in str(e):
+                        # Fallback: Create a manual parallel coordinates-style visualization
+                        st.warning("⚠️ Parallel coordinates plot temporarily unavailable due to pandas/plotly compatibility")
+                        
+                        # Alternative: Show a line plot with multiple metrics across epsilon values
+                        fig_alt = go.Figure()
+                        
+                        # Filter out infinite values for plotting
+                        plot_df = parallel_df[parallel_df["Epsilon_Numeric"] != float('inf')]
+                        
+                        if len(plot_df) > 0:
+                            metrics = ["F1", "Precision", "Recall", "Jaccard"]
+                            colors = px.colors.qualitative.Set1[:len(metrics)]
+                            
+                            for i, metric in enumerate(metrics):
+                                if metric in plot_df.columns:
+                                    metric_data = plot_df.groupby('Epsilon_Numeric')[metric].mean().sort_index()
+                                    fig_alt.add_trace(go.Scatter(
+                                        x=metric_data.index,
+                                        y=metric_data.values,
+                                        mode='lines+markers',
+                                        name=metric,
+                                        line=dict(color=colors[i], width=3),
+                                        marker=dict(size=8)
+                                    ))
+                            
+                            fig_alt.update_layout(
+                                title="Privacy-Utility Metrics by Epsilon",
+                                xaxis_title="Privacy Budget (ε)",
+                                yaxis_title="Metric Score",
+                                xaxis_type="log",
+                                hovermode='x unified',
+                                height=500,
+                                showlegend=True
+                            )
+                            
+                            st.plotly_chart(fig_alt, use_container_width=True)
+                        else:
+                            st.info("No data available for multi-dimensional analysis")
+                    else:
+                        raise e
                 
                 # Export privacy analysis results
                 st.markdown("---")

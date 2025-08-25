@@ -13,7 +13,7 @@ def create_dp_index(epsilon):
     print(f"\nCreating DP index with ε={epsilon} -> {index_name}")
     
     result = subprocess.run([
-        sys.executable, "src/dp_synth.py",
+        sys.executable, "src/analysis/privacy/dp_synthesis.py",
         "--input", "data_raw/sample_extended.csv",
         "--index", index_name,
         "--epsilon", str(epsilon),
