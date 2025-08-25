@@ -506,7 +506,7 @@ def render_privacy_analysis():
                         title="Privacy-Utility Scatter Plot",
                         labels={"Epsilon_Numeric": "Privacy Budget (ε)", "F1": "F1 Score"}
                     )
-                    fig_scatter.update_xaxis(type="log")
+                    fig_scatter.update_layout(xaxis_type="log")
                     st.plotly_chart(fig_scatter, use_container_width=True)
                 
                 with col2:

@@ -8,8 +8,10 @@
           }
         },
         {
-          "term": {
-            "label": "malicious"
+          "terms": {
+            "label": [
+              "malicious"
+            ]
           }
         }
       ]

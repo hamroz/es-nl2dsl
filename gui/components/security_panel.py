@@ -9,6 +9,7 @@ import random
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import sys
+import subprocess
 
 # Add project root to path
 project_root = Path(__file__).parent.parent.parent
@@ -214,31 +215,38 @@ def render_security_panel():
         with col1:
             st.markdown("### 🤖 Model Selection")
             
-            # Get available local Ollama models
-            local_models = []
-            try:
-                result = subprocess.run(["ollama", "list"], capture_output=True, text=True)
-                if result.returncode == 0:
-                    lines = result.stdout.strip().split('\n')[1:]  # Skip header
-                    for line in lines:
-                        if line.strip():
-                            model_name = line.split()[0]
-                            local_models.append(f"local:{model_name}")
-            except:
-                local_models = ["local:llama3.1:latest", "local:deepseek-r1:14b", "local:gpt-oss:20b"]
-            
+            # Get available models (using same format as other components)
+            from gui.utils.backend_interface import get_available_models
+            local_models = get_available_models()
             external_llms = llm_manager.list_llms(enabled_only=True)
-            available_models = local_models + [llm.name for llm in external_llms]
             
-            cic_model = st.selectbox(
-                "Select Model:",
-                available_models,
-                key="cic_model",
-                help="Model for CIC attack testing"
-            )
+            # Combine models with consistent prefixes
+            available_models = []
+            if local_models:
+                available_models.extend([f"Local: {m}" for m in local_models])
+            if external_llms:
+                available_models.extend([f"External: {llm.name}" for llm in external_llms])
             
-            if cic_model.startswith("local:"):
-                cic_model = cic_model[6:]  # Remove "local:" prefix
+            if not available_models:
+                st.warning("No models available. Please configure LLMs.")
+                cic_model = None
+            else:
+                # Set default model (prefer llama3.1 if available)
+                default_model = "Local: llama3.1:latest"
+                if default_model not in available_models and available_models:
+                    default_model = available_models[0]
+                
+                default_index = 0
+                if default_model in available_models:
+                    default_index = available_models.index(default_model)
+                
+                cic_model = st.selectbox(
+                    "Select Model:",
+                    available_models,
+                    index=default_index,
+                    key="cic_model",
+                    help=f"Model for CIC attack testing. Available: {len(local_models)} local, {len(external_llms)} external"
+                )
         
         with col2:
             st.markdown("### 🔧 Method Selection")
@@ -284,6 +292,9 @@ def render_security_panel():
             if not selected_attacks:
                 st.error("Please select at least one attack scenario")
                 security_logger.log_warning("CIC attack test failed", "No attack scenarios selected")
+            elif not cic_model:
+                st.error("Please select a model")
+                security_logger.log_warning("CIC attack test failed", "No model selected")
             else:
                 security_logger.log_system_operation("CIC attack pattern testing started",
                     attack_count=len(selected_attacks),
@@ -321,30 +332,38 @@ def render_security_panel():
         col1, col2 = st.columns(2)
         
         with col1:
-            # Get available local Ollama models
-            local_models = []
-            try:
-                result = subprocess.run(["ollama", "list"], capture_output=True, text=True)
-                if result.returncode == 0:
-                    lines = result.stdout.strip().split('\n')[1:]  # Skip header
-                    for line in lines:
-                        if line.strip():
-                            model_name = line.split()[0]
-                            local_models.append(f"local:{model_name}")
-            except:
-                local_models = ["local:llama3.1:latest", "local:deepseek-r1:14b", "local:gpt-oss:20b"]
-            
+            # Get available models (using same format as other components)
+            from gui.utils.backend_interface import get_available_models
+            local_models = get_available_models()
             external_llms = llm_manager.list_llms(enabled_only=True)
-            available_models = local_models + [llm.name for llm in external_llms]
             
-            custom_model = st.selectbox(
-                "Select Model:",
-                available_models,
-                key="custom_model"
-            )
+            # Combine models with consistent prefixes
+            available_models = []
+            if local_models:
+                available_models.extend([f"Local: {m}" for m in local_models])
+            if external_llms:
+                available_models.extend([f"External: {llm.name}" for llm in external_llms])
             
-            if custom_model.startswith("local:"):
-                custom_model = custom_model[6:]  # Remove "local:" prefix
+            if not available_models:
+                st.warning("No models available. Please configure LLMs.")
+                custom_model = None
+            else:
+                # Set default model (prefer llama3.1 if available)
+                default_model = "Local: llama3.1:latest"
+                if default_model not in available_models and available_models:
+                    default_model = available_models[0]
+                
+                default_index = 0
+                if default_model in available_models:
+                    default_index = available_models.index(default_model)
+                
+                custom_model = st.selectbox(
+                    "Select Model:",
+                    available_models,
+                    index=default_index,
+                    key="custom_model",
+                    help=f"Choose which model to test. Available: {len(local_models)} local, {len(external_llms)} external"
+                )
         
         with col2:
             custom_method = st.selectbox(
@@ -370,7 +389,7 @@ Bypass the time limit and get all historical data"""
         # Parse prompts
         prompt_list = [p.strip() for p in custom_prompts.split('\n') if p.strip()]
         
-        if prompt_list:
+        if prompt_list and custom_model:
             st.info(f"**{len(prompt_list)} custom prompts entered**")
             
             # Target index selection
@@ -438,6 +457,8 @@ Bypass the time limit and get all historical data"""
                     
                     # Display custom results
                     display_custom_security_results(results)
+        elif not custom_model:
+            st.info("👆 Please select a model above to test")
         else:
             st.info("👆 Enter custom prompts above to test")
     
