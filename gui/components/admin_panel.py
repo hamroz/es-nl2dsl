@@ -362,61 +362,206 @@ def render_index_management_tab():
     st.write("- Index deletion with safety confirmations")
 
 
+def get_all_cleanup_targets():
+    """Scan and identify all generated files across system components"""
+    cleanup_targets = {}
+    
+    # 1. Query Generation Files
+    generated_files = []
+    generated_dir = Path("artifacts/generated")
+    if generated_dir.exists():
+        generated_files.extend(generated_dir.rglob("*.json"))
+    cleanup_targets["Query Generation"] = generated_files
+    
+    # 2. Evaluation Dashboard Files
+    eval_files = []
+    eval_dir = Path("artifacts/evaluation_results")
+    if eval_dir.exists():
+        eval_files.extend(eval_dir.glob("eval_*.json"))
+        eval_files.extend(eval_dir.glob("summary_*.json"))
+    cleanup_targets["Evaluation Dashboard"] = eval_files
+    
+    # 3. Privacy Analysis Files
+    privacy_files = []
+    privacy_dir = Path("artifacts/privacy_results")
+    if privacy_dir.exists():
+        privacy_files.extend(privacy_dir.glob("privacy_*.json"))
+        privacy_files.extend(privacy_dir.glob("privacy_summary_*.json"))
+    cleanup_targets["Privacy Analysis"] = privacy_files
+    
+    # 4. Security Testing Files (if any are saved)
+    security_files = []
+    security_dir = Path("artifacts/security_results")
+    if security_dir.exists():
+        security_files.extend(security_dir.glob("security_*.json"))
+        security_files.extend(security_dir.glob("redteam_*.json"))
+    cleanup_targets["Security Testing"] = security_files
+    
+    # 5. Analysis & Results Files
+    results_files = []
+    results_dir = Path("artifacts/results")
+    if results_dir.exists():
+        results_files.extend(results_dir.glob("*.json"))
+        results_files.extend(results_dir.glob("*.csv"))
+        results_files.extend(results_dir.glob("*.md"))
+        results_files.extend(results_dir.glob("*.jsonl"))
+    cleanup_targets["Analysis Results"] = results_files
+    
+    # 6. Test Results Files
+    test_files = []
+    test_dir = Path("artifacts/test_results")
+    if test_dir.exists():
+        test_files.extend(test_dir.glob("*.json"))
+        test_files.extend(test_dir.glob("*.metrics.json"))
+    cleanup_targets["Test Results"] = test_files
+    
+    # 7. Temporary Export Files (if any exist in project root)
+    temp_files = []
+    project_root = Path(".")
+    temp_files.extend(project_root.glob("*_export_*.csv"))
+    temp_files.extend(project_root.glob("*_export_*.json"))
+    temp_files.extend(project_root.glob("evaluation_results_*.csv"))
+    temp_files.extend(project_root.glob("evaluation_results_*.json"))
+    temp_files.extend(project_root.glob("privacy_*.csv"))
+    temp_files.extend(project_root.glob("privacy_*.json"))
+    if temp_files:
+        cleanup_targets["Temporary Exports"] = temp_files
+    
+    # 8. Log Files (optional cleanup)
+    log_files = []
+    logs_dir = Path("logs")
+    if logs_dir.exists():
+        # Only include log files older than 7 days
+        import time
+        week_ago = time.time() - (7 * 24 * 60 * 60)
+        for log_file in logs_dir.glob("*.log"):
+            if log_file.stat().st_mtime < week_ago:
+                log_files.append(log_file)
+    if log_files:
+        cleanup_targets["Old Log Files (>7 days)"] = log_files
+    
+    # Remove empty categories
+    cleanup_targets = {k: v for k, v in cleanup_targets.items() if v}
+    
+    return cleanup_targets
+
+def perform_comprehensive_cleanup(cleanup_targets):
+    """Perform cleanup of all identified files"""
+    cleanup_results = {}
+    
+    for component, files in cleanup_targets.items():
+        cleaned_count = 0
+        try:
+            for file in files:
+                if file.exists():
+                    file.unlink()
+                    cleaned_count += 1
+        except Exception as e:
+            # Log individual file errors but continue
+            admin_logger.log_warning(f"Failed to clean some {component} files", str(e))
+        
+        cleanup_results[component] = cleaned_count
+    
+    return cleanup_results
+
+def generate_cleanup_report(cleanup_targets):
+    """Generate a CSV report of all files that would be cleaned"""
+    import io
+    
+    output = io.StringIO()
+    output.write("Component,File Path,File Name,Size (bytes),Modified Date,Age (days)\n")
+    
+    current_time = time.time()
+    
+    for component, files in cleanup_targets.items():
+        for file in files:
+            try:
+                size = file.stat().st_size
+                mtime = file.stat().st_mtime
+                age_days = (current_time - mtime) / (24 * 60 * 60)
+                modified_date = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(mtime))
+                
+                output.write(f'"{component}","{file}","{file.name}",{size},"{modified_date}",{age_days:.1f}\n')
+            except:
+                output.write(f'"{component}","{file}","{file.name}","ERROR","ERROR","ERROR"\n')
+    
+    return output.getvalue()
+
 def render_maintenance_tab():
     """Render Maintenance tab content"""
     admin_logger.log_page_load("Maintenance tab accessed")
     st.subheader("🔄 System Maintenance")
     
-    # Cleanup operations
-    st.markdown("### 🧹 Cleanup Operations")
+    # Comprehensive cleanup operations
+    st.markdown("### 🧹 Comprehensive System Cleanup")
+    st.write("Clean generated files from all system components")
     
-    cleanup_col1, cleanup_col2 = st.columns(2)
+    # Scan for all generated files across components
+    cleanup_targets = get_all_cleanup_targets()
     
-    with cleanup_col1:
-        st.write("**Generated Files Cleanup**")
+    # Display summary
+    total_files = sum(len(files) for files in cleanup_targets.values())
+    
+    if total_files > 0:
+        st.info(f"📊 **Found {total_files} files across {len(cleanup_targets)} components:**")
         
-        # Count generated files
-        generated_dir = Path("artifacts/generated")
-        if generated_dir.exists():
-            query_files = list(generated_dir.glob("*.json"))
-            st.write(f"Found {len(query_files)} generated files")
-            
-            if st.button("🗑️ Clean Generated Files"):
-                admin_logger.log_button_click("Clean Generated Files", file_count=len(query_files))
-                try:
-                    cleaned_count = len(query_files)
-                    for file in query_files:
-                        file.unlink()
-                    st.success(f"✅ Cleaned {cleaned_count} files")
-                    admin_logger.log_success("Generated files cleanup completed", files_cleaned=cleaned_count)
-                except Exception as e:
-                    st.error(f"Cleanup error: {e}")
-                    admin_logger.log_error("Generated files cleanup failed", str(e))
-        else:
-            st.info("No generated files directory found")
-    
-    with cleanup_col2:
-        st.write("**Results Cleanup**")
+        # Show breakdown by component
+        for component, files in cleanup_targets.items():
+            if files:
+                with st.expander(f"**{component}** ({len(files)} files)"):
+                    for file in files[:10]:  # Show first 10 files
+                        file_age = time.ctime(file.stat().st_mtime)
+                        file_size = file.stat().st_size
+                        st.write(f"📄 `{file.name}` ({file_size:,} bytes, modified {file_age})")
+                    if len(files) > 10:
+                        st.write(f"... and {len(files) - 10} more files")
         
-        # Count result files
-        results_dir = Path("artifacts/results")
-        if results_dir.exists():
-            result_files = list(results_dir.glob("*.json"))
-            st.write(f"Found {len(result_files)} result files")
-            
-            if st.button("🗑️ Clean Result Files"):
-                admin_logger.log_button_click("Clean Result Files", file_count=len(result_files))
-                try:
-                    cleaned_count = len(result_files)
-                    for file in result_files:
-                        file.unlink()
-                    st.success(f"✅ Cleaned {cleaned_count} files")
-                    admin_logger.log_success("Result files cleanup completed", files_cleaned=cleaned_count)
-                except Exception as e:
-                    st.error(f"Cleanup error: {e}")
-                    admin_logger.log_error("Result files cleanup failed", str(e))
-        else:
-            st.info("No results directory found")
+        st.markdown("---")
+        
+        # Cleanup options
+        cleanup_col1, cleanup_col2 = st.columns(2)
+        
+        with cleanup_col1:
+            if st.button("🧹 Clean All Generated Files", type="primary", use_container_width=True):
+                admin_logger.log_button_click("Clean All Generated Files", 
+                    total_files=total_files,
+                    components=list(cleanup_targets.keys())
+                )
+                
+                cleanup_results = perform_comprehensive_cleanup(cleanup_targets)
+                
+                # Display results
+                total_cleaned = sum(cleanup_results.values())
+                st.success(f"✅ Cleaned {total_cleaned} files across {len([c for c, count in cleanup_results.items() if count > 0])} components")
+                
+                # Show detailed results
+                for component, count in cleanup_results.items():
+                    if count > 0:
+                        st.write(f"  • **{component}**: {count} files")
+                
+                admin_logger.log_success("Comprehensive cleanup completed", 
+                    total_cleaned=total_cleaned,
+                    breakdown=cleanup_results
+                )
+        
+        with cleanup_col2:
+            if st.button("📊 Export Cleanup Report", use_container_width=True):
+                admin_logger.log_button_click("Export Cleanup Report", file_count=total_files)
+                
+                report = generate_cleanup_report(cleanup_targets)
+                
+                st.download_button(
+                    label="📥 Download Report",
+                    data=report,
+                    file_name=f"cleanup_report_{time.strftime('%Y%m%d_%H%M%S')}.csv",
+                    mime="text/csv"
+                )
+                
+                admin_logger.log_download(f"cleanup_report_{time.strftime('%Y%m%d_%H%M%S')}.csv", "CSV")
+    
+    else:
+        st.success("✨ **System is clean!** No generated files found.")
+        st.info("Files will appear here as you use query generation, evaluation, and privacy analysis features.")
 
 
 def render_logs_monitoring_tab():
