@@ -24,6 +24,103 @@ from src.core.enhanced_evaluation import EnhancedEvaluator
 from src.external.llm_manager import get_external_llm_manager
 from gui.utils.backend_interface import get_available_indices
 
+def generate_summary_from_results(results):
+    """Generate summary statistics from evaluation results"""
+    if not results:
+        return {}
+    
+    successful_results = [r for r in results if r.get('success', False)]
+    total_results = len(results)
+    
+    # Overall statistics
+    overall = {
+        'total_evaluations': total_results,
+        'successful_evaluations': len(successful_results),
+        'success_rate': len(successful_results) / total_results if total_results > 0 else 0.0,
+        'avg_generation_time': sum(r.get('generation_time', 0) for r in successful_results) / len(successful_results) if successful_results else 0.0
+    }
+    
+    # Add metric averages if available
+    f1_scores = []
+    precisions = []
+    recalls = []
+    ast_similarities = []
+    
+    for r in successful_results:
+        if r.get('execution_metrics'):
+            metrics = r['execution_metrics']
+            if isinstance(metrics, dict) and 'traditional' in metrics:
+                f1_scores.append(metrics['traditional'].get('f1_score', 0))
+                precisions.append(metrics['traditional'].get('precision', 0))
+                recalls.append(metrics['traditional'].get('recall', 0))
+        
+        ast_similarities.append(r.get('ast_similarity', 0))
+    
+    if f1_scores:
+        overall['avg_f1_score'] = sum(f1_scores) / len(f1_scores)
+        overall['avg_precision'] = sum(precisions) / len(precisions)
+        overall['avg_recall'] = sum(recalls) / len(recalls)
+    
+    if ast_similarities:
+        overall['avg_ast_similarity'] = sum(ast_similarities) / len(ast_similarities)
+    
+    # By method statistics
+    by_method = {}
+    for method in set(r.get('method') for r in results if r.get('method')):
+        method_results = [r for r in results if r.get('method') == method]
+        method_successful = [r for r in method_results if r.get('success', False)]
+        
+        method_stats = {
+            'count': len(method_results),
+            'success_rate': len(method_successful) / len(method_results) if method_results else 0.0,
+            'avg_generation_time': sum(r.get('generation_time', 0) for r in method_successful) / len(method_successful) if method_successful else 0.0
+        }
+        
+        # Add method-specific metrics
+        method_f1s = []
+        for r in method_successful:
+            if r.get('execution_metrics'):
+                metrics = r['execution_metrics']
+                if isinstance(metrics, dict) and 'traditional' in metrics:
+                    method_f1s.append(metrics['traditional'].get('f1_score', 0))
+        
+        if method_f1s:
+            method_stats['avg_f1_score'] = sum(method_f1s) / len(method_f1s)
+        
+        by_method[method] = method_stats
+    
+    # By model statistics
+    by_model = {}
+    for model in set(r.get('model') for r in results if r.get('model')):
+        model_results = [r for r in results if r.get('model') == model]
+        model_successful = [r for r in model_results if r.get('success', False)]
+        
+        model_stats = {
+            'count': len(model_results),
+            'success_rate': len(model_successful) / len(model_results) if model_results else 0.0,
+            'avg_generation_time': sum(r.get('generation_time', 0) for r in model_successful) / len(model_successful) if model_successful else 0.0
+        }
+        
+        # Add model-specific metrics
+        model_f1s = []
+        for r in model_successful:
+            if r.get('execution_metrics'):
+                metrics = r['execution_metrics']
+                if isinstance(metrics, dict) and 'traditional' in metrics:
+                    model_f1s.append(metrics['traditional'].get('f1_score', 0))
+        
+        if model_f1s:
+            model_stats['avg_f1_score'] = sum(model_f1s) / len(model_f1s)
+        
+        by_model[model] = model_stats
+    
+    return {
+        'overall': overall,
+        'by_method': by_method,
+        'by_model': by_model,
+        'timestamp': time.time()
+    }
+
 def render_evaluation_dashboard():
     """Render the enhanced evaluation dashboard interface"""
     eval_logger.log_page_load("Evaluation Dashboard loaded")
@@ -293,7 +390,21 @@ def render_evaluation_dashboard():
                         with open(file, 'r') as f:
                             results_data = json.load(f)
                             st.session_state['eval_results'] = results_data
-                            st.toast(f"Loaded {len(results_data)} results", icon="✅")
+                            
+                        # Also load the corresponding summary file
+                        summary_file = file.parent / file.name.replace("eval_", "summary_")
+                        if summary_file.exists():
+                            with open(summary_file, 'r') as f:
+                                summary_data = json.load(f)
+                                st.session_state['eval_summary'] = summary_data
+                                
+                        # If no summary file exists, generate summary from results
+                        elif results_data:
+                            st.session_state['eval_summary'] = generate_summary_from_results(results_data)
+                            
+                        st.toast(f"Loaded {len(results_data)} results", icon="✅")
+                        eval_logger.log_user_action("Loaded recent evaluation", filename=file.name)
+                        st.rerun()  # Rerun to show the loaded results
             return
         
         results = st.session_state['eval_results']
