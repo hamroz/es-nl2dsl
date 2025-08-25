@@ -1,7 +1,15 @@
 #!/usr/bin/env python3
 """Health check utilities for ES-NL2DSL system"""
 from elasticsearch import Elasticsearch
-from .config import get_es_client_config, ES_DEFAULT_INDEX
+
+# Support both module and direct execution
+try:
+    from .config import get_es_client_config, ES_DEFAULT_INDEX
+except ImportError:
+    import sys
+    from pathlib import Path
+    sys.path.append(str(Path(__file__).parent.parent.parent))
+    from src.utils.config import get_es_client_config, ES_DEFAULT_INDEX
 
 def check_elasticsearch_health(index: str = None) -> dict:
     """Check Elasticsearch connectivity and index health"""
@@ -43,3 +51,29 @@ def check_elasticsearch_health(index: str = None) -> dict:
         result["error"] = f"Connection failed: {e}"
     
     return result
+
+def main():
+    """Main function for direct execution"""
+    import json
+    print("ES-NL2DSL Health Check")
+    print("=" * 30)
+    
+    # Check default index
+    result = check_elasticsearch_health()
+    
+    print(f"Index: {ES_DEFAULT_INDEX}")
+    print(f"Connected: {'✅' if result['connected'] else '❌'}")
+    print(f"Index exists: {'✅' if result['index_exists'] else '❌'}")
+    print(f"Sample data: {'✅' if result['sample_data'] else '❌'}")
+    print(f"Fields available: {len(result.get('fields', []))}")
+    
+    if result.get('error'):
+        print(f"Error: {result['error']}")
+    
+    if result['fields']:
+        print("Available fields:", ", ".join(result['fields'][:10]))
+        if len(result['fields']) > 10:
+            print(f"... and {len(result['fields']) - 10} more")
+
+if __name__ == "__main__":
+    main()

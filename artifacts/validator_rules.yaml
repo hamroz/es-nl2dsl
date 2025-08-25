@@ -1,0 +1,35 @@
+time_window:
+  required: true
+  max_days: 7
+allowed_fields:
+  - "@timestamp"
+  - "src_ip"
+  - "dst_ip"
+  - "src_port"
+  - "dst_port"
+  - "protocol"
+  - "bytes_in"
+  - "bytes_out"
+  - "label"
+  - "message"
+  - "attack_type"
+  - "flow_duration"
+  - "total_packets"
+  - "flow_bytes_s"
+  - "flow_packets_s"
+  - "day_of_week"
+  - "hour_of_day"
+mapping_types:
+  "@timestamp": date
+  src_port: integer
+  dst_port: integer
+  bytes_in: long
+  bytes_out: long
+  flow_duration: long
+  total_packets: long
+cost:
+  max_docs: 1000
+regex:
+  bounded_required: true
+retries:
+  max: 2

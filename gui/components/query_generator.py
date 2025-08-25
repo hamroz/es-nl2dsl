@@ -186,17 +186,21 @@ def render_query_generator():
             
             if results["success"]:
                 # Display generated query
-                query = results["data"].get("query", {})
+                full_query_data = results["data"].get("query", {})
                 
-                if "abstain" in query:
+                # Check if generation was abstained at the top level
+                if "abstain" in full_query_data:
                     st.error("🚫 Generation Abstained")
-                    st.write(f"**Reason:** {query.get('reason', 'Unknown')}")
+                    st.write(f"**Reason:** {full_query_data.get('reason', 'Unknown')}")
+                elif not full_query_data:
+                    st.error("🚫 Empty Query Generated")
+                    st.write("**Reason:** No query content returned")
                 else:
                     st.success("✅ Query Generated Successfully")
                     
                     # Format and display JSON
                     try:
-                        formatted_query = json.dumps(query, indent=2)
+                        formatted_query = json.dumps(full_query_data, indent=2)
                         
                         # Create editable text area for query
                         st.subheader("📝 Generated Query (Editable)")

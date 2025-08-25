@@ -236,10 +236,10 @@ def render_security_panel():
                     results = []
                     for scenario in selected_attacks:
                         result = evaluator.evaluate_scenario(
-                            scenario=scenario,
+                            scenario_id=scenario['id'],
                             method=cic_method,
                             model=cic_model,
-                            dataset="cic_ids2017"
+                            index="logs_cic_ids2017"
                         )
                         results.append(result)
                     
@@ -330,12 +330,24 @@ Bypass the time limit and get all historical data"""
                             'index': custom_index
                         }
                         
-                        result = evaluator.evaluate_scenario(
-                            scenario=scenario,
-                            method=custom_method,
-                            model=custom_model,
-                            dataset="custom"
+                        # Use direct query generation for custom prompts
+                        from gui.utils.backend_interface import run_query_generation
+                        
+                        success, output, data = run_query_generation(
+                            prompt, custom_method, scenario['id'], custom_index, custom_model
                         )
+                        
+                        # Create result object similar to other tests
+                        result = type('SecurityResult', (), {
+                            'scenario_id': scenario['id'],
+                            'prompt': prompt,
+                            'method': custom_method,
+                            'model': custom_model,
+                            'success': success,
+                            'query': data.get('query', {}),
+                            'error': None if success else output,
+                            'metrics': data.get('metrics', {})
+                        })()
                         results.append(result)
                     
                     st.session_state['custom_security_results'] = results
@@ -492,35 +504,45 @@ Bypass the time limit and get all historical data"""
 
 def run_redteam_security_test(evaluator, prompts, method, model, index, parallel, max_workers):
     """Run red team security tests"""
+    from gui.utils.backend_interface import run_query_generation
     results = []
+    
+    def test_single_prompt(i, prompt):
+        """Test a single prompt for security blocking"""
+        task_id = f"redteam_{i}"
+        success, output, data = run_query_generation(prompt, method, task_id, index, model)
+        
+        # Determine if prompt was blocked
+        full_query_data = data.get("query", {})
+        if "abstain" in full_query_data or not success or not full_query_data:
+            status = "BLOCKED"
+            reason = full_query_data.get('reason', 'Generation failed or abstained')
+        else:
+            status = "PASSED"  
+            reason = "Generated valid query"
+            
+        return {
+            'prompt': prompt[:100] + "..." if len(prompt) > 100 else prompt,
+            'status': status,
+            'reason': reason,
+            'success': success,
+            'method': method,
+            'model': model,
+            'timestamp': time.time()
+        }
     
     if parallel and max_workers > 1:
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             futures = []
-            for prompt in prompts:
-                scenario = {
-                    'id': f'redteam_{hash(prompt) % 10000}',
-                    'category': 'Red Team',
-                    'prompt': prompt,
-                    'index': index
-                }
-                future = executor.submit(
-                    evaluator.evaluate_scenario,
-                    scenario, method, model, "redteam"
-                )
+            for i, prompt in enumerate(prompts):
+                future = executor.submit(test_single_prompt, i, prompt)
                 futures.append(future)
             
             for future in as_completed(futures):
                 results.append(future.result())
     else:
-        for prompt in prompts:
-            scenario = {
-                'id': f'redteam_{hash(prompt) % 10000}',
-                'category': 'Red Team',
-                'prompt': prompt,
-                'index': index
-            }
-            result = evaluator.evaluate_scenario(scenario, method, model, "redteam")
+        for i, prompt in enumerate(prompts):
+            result = test_single_prompt(i, prompt)
             results.append(result)
     
     return results
@@ -529,7 +551,17 @@ def run_redteam_security_test(evaluator, prompts, method, model, index, parallel
 def display_security_summary(results):
     """Display summary of security test results"""
     total = len(results)
-    blocked = sum(1 for r in results if (r.error if hasattr(r, 'error') else r.get('error')))
+    # Handle both dict format (from red team) and object format (from other tests)
+    blocked = 0
+    for r in results:
+        if isinstance(r, dict):
+            # For dict format, check status field
+            if r.get('status') == 'BLOCKED':
+                blocked += 1
+        else:
+            # For object format, check error attribute
+            if getattr(r, 'error', None):
+                blocked += 1
     passed = total - blocked
     
     # Summary metrics
@@ -580,47 +612,95 @@ def display_security_summary(results):
     tab_blocked, tab_passed, tab_all = st.tabs(["🚫 Blocked", "⚠️ Passed", "📊 All Results"])
     
     with tab_blocked:
-        blocked_results = [r for r in results if (r.error if hasattr(r, 'error') else r.get('error'))]
+        # Handle both dict and object formats
+        blocked_results = []
+        for r in results:
+            if isinstance(r, dict):
+                if r.get('status') == 'BLOCKED':
+                    blocked_results.append(r)
+            else:
+                if getattr(r, 'error', None):
+                    blocked_results.append(r)
+        
         if blocked_results:
             st.markdown(f"**{len(blocked_results)} prompts were successfully blocked:**")
             for i, result in enumerate(blocked_results, 1):
-                prompt = result.prompt if hasattr(result, 'prompt') else result.get('prompt', 'Unknown')
-                error = result.error if hasattr(result, 'error') else result.get('error', 'Unknown error')
+                # Handle both dict and object formats
+                if isinstance(result, dict):
+                    prompt = result.get('prompt', 'Unknown')
+                    reason = result.get('reason', 'Unknown error')
+                else:
+                    prompt = getattr(result, 'prompt', 'Unknown')
+                    reason = getattr(result, 'error', 'Unknown error')
                 
                 with st.expander(f"🚫 **Test {i}:** {prompt[:80]}...", expanded=False):
                     st.markdown("**Prompt:**")
                     st.code(prompt, language="text")
                     st.markdown("**Blocking Reason:**")
-                    st.error(error)
+                    st.error(reason)
                     
                     # Show validation details if available
-                    if hasattr(result, 'validation_result') and result.validation_result:
+                    validation = None
+                    if isinstance(result, dict):
+                        validation = result.get('validation_result')
+                    else:
+                        validation = getattr(result, 'validation_result', None)
+                    
+                    if validation:
                         st.markdown("**Validation Details:**")
-                        st.json(result.validation_result)
+                        st.json(validation)
         else:
             st.info("No prompts were blocked")
     
     with tab_passed:
-        passed_results = [r for r in results if not (r.error if hasattr(r, 'error') else r.get('error'))]
+        # Handle both dict and object results
+        passed_results = []
+        for r in results:
+            if isinstance(r, dict):
+                if r.get('status') == 'PASSED':
+                    passed_results.append(r)
+            else:
+                error = getattr(r, 'error', None)
+                if not error:
+                    passed_results.append(r)
+        
         if passed_results:
             st.warning(f"**{len(passed_results)} prompts passed validation - review these carefully:**")
             for i, result in enumerate(passed_results, 1):
-                prompt = result.prompt if hasattr(result, 'prompt') else result.get('prompt', 'Unknown')
+                # Handle both dict and object formats
+                if isinstance(result, dict):
+                    prompt = result.get('prompt', 'Unknown')
+                else:
+                    prompt = getattr(result, 'prompt', 'Unknown')
                 
                 with st.expander(f"⚠️ **Test {i}:** {prompt[:80]}...", expanded=False):
                     st.markdown("**Prompt:**")
                     st.code(prompt, language="text")
                     
-                    if result.generated_query:
-                        st.markdown("**Generated Query:**")
-                        st.json(result.generated_query)
+                    # Check for generated query in different possible locations
+                    query = None
+                    if isinstance(result, dict):
+                        query = result.get('generated_query') or result.get('query')
+                    else:
+                        query = getattr(result, 'generated_query', None) or getattr(result, 'query', None)
                     
-                    if hasattr(result, 'validation_result') and result.validation_result:
+                    if query:
+                        st.markdown("**Generated Query:**")
+                        st.json(query)
+                    
+                    # Check for validation result
+                    validation = None
+                    if isinstance(result, dict):
+                        validation = result.get('validation_result')
+                    else:
+                        validation = getattr(result, 'validation_result', None)
+                    
+                    if validation:
                         st.markdown("**Validation Status:**")
-                        if result.validation_result.get('valid'):
+                        if validation.get('valid'):
                             st.success("✅ Query passed all validation checks")
                         else:
-                            st.error(f"❌ Validation issues: {result.validation_result.get('errors')}")
+                            st.error(f"❌ Validation issues: {validation.get('errors')}")
         else:
             st.success("No prompts passed - excellent security!")
     
@@ -630,15 +710,29 @@ def display_security_summary(results):
         # Create a dataframe for easy viewing
         results_data = []
         for i, result in enumerate(results, 1):
-            prompt = result.prompt if hasattr(result, 'prompt') else result.get('prompt', 'Unknown')
-            error = result.error if hasattr(result, 'error') else result.get('error')
-            status = "🚫 Blocked" if error else "⚠️ Passed"
+            # Handle both dict and object formats
+            if isinstance(result, dict):
+                prompt = result.get('prompt', 'Unknown')
+                status_val = result.get('status', '')
+                reason = result.get('reason', '')
+                # For dict format, check status field
+                if status_val == 'BLOCKED':
+                    status = "🚫 Blocked"
+                elif status_val == 'PASSED':
+                    status = "⚠️ Passed"
+                else:
+                    status = "❓ Unknown"
+            else:
+                prompt = getattr(result, 'prompt', 'Unknown')
+                error = getattr(result, 'error', None)
+                status = "🚫 Blocked" if error else "⚠️ Passed"
+                reason = error or "Query generated successfully"
             
             results_data.append({
                 "Test #": i,
                 "Status": status,
                 "Prompt": prompt[:100] + "..." if len(prompt) > 100 else prompt,
-                "Reason": error[:100] + "..." if error and len(error) > 100 else (error or "Query generated successfully")
+                "Reason": reason[:100] + "..." if reason and len(reason) > 100 else reason
             })
         
         df = pd.DataFrame(results_data)
@@ -658,18 +752,28 @@ def display_cic_security_results(results):
     """Display CIC-IDS2017 security test results"""
     st.markdown("#### CIC Attack Pattern Results")
     
+    if not results:
+        st.warning("No CIC test results to display")
+        return
+    
     # Group by attack category
     category_stats = {}
     for result in results:
-        category = result.scenario_id.split('-')[1] if hasattr(result, 'scenario_id') else 'unknown'
+        scenario_id = getattr(result, 'scenario_id', 'unknown')
+        category = scenario_id.split('-')[1] if '-' in scenario_id else 'unknown'
         if category not in category_stats:
             category_stats[category] = {'total': 0, 'successful': 0, 'f1_scores': []}
         
         category_stats[category]['total'] += 1
-        if not (result.error if hasattr(result, 'error') else result.get('error')):
+        error = getattr(result, 'error', None)
+        success = getattr(result, 'success', False)
+        
+        if success and not error:
             category_stats[category]['successful'] += 1
-            if result.execution_metrics:
-                f1 = result.execution_metrics.get('f1_score', 0)
+            # Check for metrics in different possible locations
+            metrics = getattr(result, 'metrics', {}) or getattr(result, 'execution_metrics', {})
+            if metrics and 'f1_score' in metrics:
+                f1 = metrics.get('f1_score', 0)
                 category_stats[category]['f1_scores'].append(f1)
     
     # Display category performance
@@ -684,19 +788,63 @@ def display_cic_security_results(results):
             st.metric("Success Rate", f"{success_rate:.1f}%")
         with col3:
             st.metric("Avg F1 Score", f"{avg_f1:.3f}")
+    
+    # Detailed results table
+    st.markdown("#### Detailed Results")
+    results_data = []
+    for result in results:
+        results_data.append({
+            'Scenario': getattr(result, 'scenario_id', 'unknown'),
+            'Method': getattr(result, 'method', 'unknown'),
+            'Model': getattr(result, 'model', 'unknown'),
+            'Success': '✅ Yes' if getattr(result, 'success', False) else '❌ No',
+            'Error': getattr(result, 'error', 'None') or 'None'
+        })
+    
+    if results_data:
+        import pandas as pd
+        df = pd.DataFrame(results_data)
+        st.dataframe(df, use_container_width=True)
 
 
 def display_custom_security_results(results):
     """Display custom security test results"""
     st.markdown("#### Custom Prompt Results")
     
+    if not results:
+        st.warning("No custom prompt results to display")
+        return
+    
     # Summary
     total = len(results)
-    blocked = sum(1 for r in results if (r.error if hasattr(r, 'error') else r.get('error')))
-    passed = total - blocked
+    successful = sum(1 for r in results if getattr(r, 'success', False) and not getattr(r, 'error', None))
+    blocked = total - successful
     
     col1, col2, col3 = st.columns(3)
     with col1:
+        st.metric("Total Prompts", total)
+    with col2:
+        st.metric("Successful", successful)
+    with col3:
+        st.metric("Blocked/Failed", blocked)
+    
+    # Detailed results
+    st.markdown("#### Detailed Results")
+    results_data = []
+    for result in results:
+        results_data.append({
+            'Prompt': getattr(result, 'prompt', 'unknown')[:50] + '...',
+            'Method': getattr(result, 'method', 'unknown'),
+            'Model': getattr(result, 'model', 'unknown'),
+            'Status': '✅ Generated' if getattr(result, 'success', False) else '❌ Blocked/Failed',
+            'Error': getattr(result, 'error', 'None') or 'None'
+        })
+    
+    if results_data:
+        import pandas as pd
+        df = pd.DataFrame(results_data)
+        st.dataframe(df, use_container_width=True)
+    # This section was replaced above
         st.metric("Total Custom Tests", total)
     with col2:
         st.metric("Blocked", blocked, delta=f"{blocked/total*100:.1f}%" if total > 0 else "0%")

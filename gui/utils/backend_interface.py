@@ -87,7 +87,7 @@ def run_query_generation(prompt: str, method: str = "constrained",
     if model and model.startswith("External:"):
         external_llm_name = model.replace("External: ", "")
         cmd = [
-            sys.executable, "src/generate_with_external.py",
+            sys.executable, "src/generators/external.py",
             "--prompt", prompt,
             "--llm", external_llm_name,
             "--task-id", task_id
@@ -96,7 +96,7 @@ def run_query_generation(prompt: str, method: str = "constrained",
             cmd.extend(["--index", index])
     elif method == "constrained":
         cmd = [
-            sys.executable, "src/generate_constrained.py",
+            sys.executable, "src/generators/constrained.py",
             "--prompt", prompt,
             "--task-id", task_id
         ]
@@ -108,13 +108,13 @@ def run_query_generation(prompt: str, method: str = "constrained",
             cmd.extend(["--model", local_model])
     elif method == "rules":
         cmd = [
-            sys.executable, "src/baseline_rules.py",
+            sys.executable, "src/generators/rules_based.py",
             "--prompt", prompt,
             "--task-id", task_id
         ]
     elif method == "zeroshot":
         cmd = [
-            sys.executable, "src/baseline_zeroshot.py",
+            sys.executable, "src/generators/zero_shot.py",
             "--prompt", prompt,
             "--task-id", task_id
         ]
@@ -157,7 +157,7 @@ def run_scenario_evaluation(scenario_id: str, method: str = "constrained",
     
     try:
         if method == "constrained":
-            cmd = [sys.executable, "src/run_one.py", "--id", scenario_id, "--gen"]
+            cmd = [sys.executable, "src/cli/run_one.py", "--id", scenario_id, "--gen"]
         else:
             # Generate query first
             import yaml
@@ -175,7 +175,7 @@ def run_scenario_evaluation(scenario_id: str, method: str = "constrained",
             else:
                 candidate_file = f"artifacts/generated/zeroshot_{scenario_id}.json"
             
-            cmd = [sys.executable, "src/run_one.py", "--id", scenario_id, 
+            cmd = [sys.executable, "src/cli/run_one.py", "--id", scenario_id, 
                    "--candidate", candidate_file, "--index", index]
         
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=180)

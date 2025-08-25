@@ -459,46 +459,50 @@ class EnhancedEvaluator:
             
             if method == "constrained":
                 # Use constrained generation
+                task_id = f"eval_{scenario_id}_{int(time.time())}"
                 result = subprocess.run([
-                    "python", "src/generate_constrained.py",
+                    "python", "src/generators/constrained.py",
                     "--prompt", prompt,
                     "--model", model,
-                    "--output", "/tmp/generated_query.json"
+                    "--task-id", task_id
                 ], capture_output=True, text=True, cwd=Path.cwd())
                 
-                if result.returncode == 0 and Path("/tmp/generated_query.json").exists():
-                    with open("/tmp/generated_query.json") as f:
+                query_file = Path(f"artifacts/generated/{task_id}.json")
+                if result.returncode == 0 and query_file.exists():
+                    with open(query_file) as f:
                         generated_query = json.load(f)
                 else:
                     error = f"Constrained generation failed: {result.stderr}"
             
             elif method == "rules":
                 # Use rules baseline
+                task_id = f"eval_rules_{scenario_id}_{int(time.time())}"
                 result = subprocess.run([
-                    "python", "src/baseline_rules.py",
+                    "python", "src/generators/rules_based.py",
                     "--prompt", prompt,
-                    "--task-id", scenario_id,
-                    "--output", "/tmp/rules_query.json"
+                    "--task-id", task_id
                 ], capture_output=True, text=True, cwd=Path.cwd())
                 
-                if result.returncode == 0 and Path("/tmp/rules_query.json").exists():
-                    with open("/tmp/rules_query.json") as f:
+                query_file = Path(f"artifacts/generated/rules_{task_id}.json")
+                if result.returncode == 0 and query_file.exists():
+                    with open(query_file) as f:
                         generated_query = json.load(f)
                 else:
                     error = f"Rules generation failed: {result.stderr}"
             
             elif method == "zeroshot":
                 # Use zero-shot baseline
+                task_id = f"eval_zeroshot_{scenario_id}_{int(time.time())}"
                 result = subprocess.run([
-                    "python", "src/baseline_zeroshot.py",
+                    "python", "src/generators/zero_shot.py",
                     "--prompt", prompt,
-                    "--task-id", scenario_id,
-                    "--model", model,
-                    "--output", "/tmp/zeroshot_query.json"
+                    "--task-id", task_id,
+                    "--model", model
                 ], capture_output=True, text=True, cwd=Path.cwd())
                 
-                if result.returncode == 0 and Path("/tmp/zeroshot_query.json").exists():
-                    with open("/tmp/zeroshot_query.json") as f:
+                query_file = Path(f"artifacts/generated/zeroshot_{task_id}.json")
+                if result.returncode == 0 and query_file.exists():
+                    with open(query_file) as f:
                         generated_query = json.load(f)
                 else:
                     error = f"Zero-shot generation failed: {result.stderr}"

@@ -20,7 +20,7 @@ def load_scenario(prompts_file, scenario_id):
 
 def generate_query(prompt, task_id, index=None):
     """Generate a query using generate_constrained.py"""
-    cmd = [sys.executable, "src/generate_constrained.py", 
+    cmd = [sys.executable, "src/generators/constrained.py", 
            "--prompt", prompt,
            "--task-id", task_id]
     if index:
@@ -54,7 +54,7 @@ def validate_query(query_file, rules_file="artifacts/validator_rules.yaml", inde
             rules_file = str(cic_rules)
     
     result = subprocess.run(
-        [sys.executable, "src/validator.py",
+        [sys.executable, "src/core/validator.py",
          "--dsl", query_file,
          "--rules", rules_file],
         capture_output=True,
@@ -70,7 +70,7 @@ def evaluate_queries(expert_file, candidate_file, index="logs_net"):
     output_dir.mkdir(parents=True, exist_ok=True)
     
     result = subprocess.run(
-        [sys.executable, "src/eval_exec.py",
+        [sys.executable, "src/core/eval_exec.py",
          "--expert", expert_file,
          "--candidate", candidate_file,
          "--out", str(output_dir),

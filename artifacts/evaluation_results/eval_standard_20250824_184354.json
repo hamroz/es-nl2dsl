@@ -1,0 +1,74 @@
+[
+  {
+    "scenario_id": "scan-001",
+    "method": "rules",
+    "model": "llama3.1:latest",
+    "error": "[Errno 21] Is a directory: '/tmp/rules_query.json'",
+    "success": false,
+    "timestamp": 1756053776.1035452
+  },
+  {
+    "scenario_id": "scan-003",
+    "method": "rules",
+    "model": "llama3.1:latest",
+    "error": "[Errno 21] Is a directory: '/tmp/rules_query.json'",
+    "success": false,
+    "timestamp": 1756053776.434886
+  },
+  {
+    "scenario_id": "scan-003",
+    "method": "constrained",
+    "model": "llama3.1:latest",
+    "error": "[Errno 21] Is a directory: '/tmp/generated_query.json'",
+    "success": false,
+    "timestamp": 1756053782.234068
+  },
+  {
+    "scenario_id": "scan-001",
+    "method": "constrained",
+    "model": "llama3.1:latest",
+    "error": "[Errno 21] Is a directory: '/tmp/generated_query.json'",
+    "success": false,
+    "timestamp": 1756053785.211447
+  },
+  {
+    "scenario_id": "scan-011",
+    "method": "rules",
+    "model": "llama3.1:latest",
+    "error": "[Errno 21] Is a directory: '/tmp/rules_query.json'",
+    "success": false,
+    "timestamp": 1756053785.577039
+  },
+  {
+    "scenario_id": "scan-001",
+    "method": "zeroshot",
+    "model": "llama3.1:latest",
+    "error": "[Errno 21] Is a directory: '/tmp/zeroshot_query.json'",
+    "success": false,
+    "timestamp": 1756053797.849545
+  },
+  {
+    "scenario_id": "scan-003",
+    "method": "zeroshot",
+    "model": "llama3.1:latest",
+    "error": "[Errno 21] Is a directory: '/tmp/zeroshot_query.json'",
+    "success": false,
+    "timestamp": 1756053809.710433
+  },
+  {
+    "scenario_id": "scan-011",
+    "method": "constrained",
+    "model": "llama3.1:latest",
+    "error": "[Errno 21] Is a directory: '/tmp/generated_query.json'",
+    "success": false,
+    "timestamp": 1756053815.951165
+  },
+  {
+    "scenario_id": "scan-011",
+    "method": "zeroshot",
+    "model": "llama3.1:latest",
+    "error": "[Errno 21] Is a directory: '/tmp/zeroshot_query.json'",
+    "success": false,
+    "timestamp": 1756053834.353879
+  }
+]

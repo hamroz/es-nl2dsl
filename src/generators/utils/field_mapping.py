@@ -6,8 +6,10 @@ FIELD_CORRECTIONS = {
     "event.label": "label",
     "event.type": "label",
     "source.ip": "src_ip",
+    "source_ip": "src_ip",  # Common underscore variant
     "source.port": "src_port",
     "destination.ip": "dst_ip",
+    "destination_ip": "dst_ip",  # Common underscore variant
     "destination.port": "dst_port",
     "destination_port": "dst_port",
     "source_port": "src_port",
