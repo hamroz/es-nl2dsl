@@ -394,6 +394,10 @@ def get_all_cleanup_targets():
     security_dir = Path("artifacts/security_results")
     if security_dir.exists():
         security_files.extend(security_dir.glob("security_*.json"))
+        security_files.extend(security_dir.glob("security_redteam_*.json"))
+        security_files.extend(security_dir.glob("security_cic_*.json"))
+        security_files.extend(security_dir.glob("security_custom_*.json"))
+        security_files.extend(security_dir.glob("security_summary_*.json"))
         security_files.extend(security_dir.glob("redteam_*.json"))
     cleanup_targets["Security Testing"] = security_files
     

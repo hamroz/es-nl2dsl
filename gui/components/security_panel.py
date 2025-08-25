@@ -193,6 +193,38 @@ def render_security_panel():
                         passed_count=sum(1 for r in results if r.get('status') == 'PASSED')
                     )
                     
+                    # Auto-save results to disk
+                    try:
+                        timestamp = time.strftime('%Y%m%d_%H%M%S')
+                        results_dir = Path("artifacts/security_results")
+                        results_dir.mkdir(exist_ok=True)
+                        
+                        # Save red team results
+                        security_data = {
+                            'timestamp': timestamp,
+                            'test_type': 'red_team',
+                            'total_tests': len(results),
+                            'blocked_tests': sum(1 for r in results if r.get('status') == 'BLOCKED'),
+                            'passed_tests': sum(1 for r in results if r.get('status') == 'PASSED'),
+                            'block_rate': (sum(1 for r in results if r.get('status') == 'BLOCKED') / len(results) * 100) if len(results) > 0 else 0,
+                            'results': {
+                                'red_team': results,
+                                'cic_security': [],
+                                'custom_security': []
+                            }
+                        }
+                        
+                        results_file = results_dir / f"security_redteam_{timestamp}.json"
+                        with open(results_file, 'w') as f:
+                            json.dump(security_data, f, indent=2, default=str)
+                        
+                        st.toast(f"Results auto-saved to {results_file.name}", icon="💾")
+                        security_logger.log_success("Red team results auto-saved", filename=str(results_file))
+                        
+                    except Exception as e:
+                        st.toast(f"Failed to auto-save: {e}", icon="⚠️")
+                        security_logger.log_error("Red team auto-save failed", str(e))
+                    
                     # Display summary
                     display_security_summary(results)
         else:
@@ -320,6 +352,38 @@ def render_security_panel():
                         test_count=len(results),
                         successful_tests=sum(1 for r in results if r.get('success', False))
                     )
+                    
+                    # Auto-save CIC security results to disk
+                    try:
+                        timestamp = time.strftime('%Y%m%d_%H%M%S')
+                        results_dir = Path("artifacts/security_results")
+                        results_dir.mkdir(exist_ok=True)
+                        
+                        # Save CIC attack results
+                        security_data = {
+                            'timestamp': timestamp,
+                            'test_type': 'cic_attack',
+                            'total_tests': len(results),
+                            'blocked_tests': sum(1 for r in results if getattr(r, 'error', None)),
+                            'passed_tests': sum(1 for r in results if not getattr(r, 'error', None)),
+                            'block_rate': (sum(1 for r in results if getattr(r, 'error', None)) / len(results) * 100) if len(results) > 0 else 0,
+                            'results': {
+                                'red_team': [],
+                                'cic_security': results,
+                                'custom_security': []
+                            }
+                        }
+                        
+                        results_file = results_dir / f"security_cic_{timestamp}.json"
+                        with open(results_file, 'w') as f:
+                            json.dump(security_data, f, indent=2, default=str)
+                        
+                        st.toast(f"CIC results auto-saved to {results_file.name}", icon="💾")
+                        security_logger.log_success("CIC attack results auto-saved", filename=str(results_file))
+                        
+                    except Exception as e:
+                        st.toast(f"Failed to auto-save CIC results: {e}", icon="⚠️")
+                        security_logger.log_error("CIC attack auto-save failed", str(e))
                     
                     # Display CIC results
                     display_cic_security_results(results)
@@ -455,6 +519,38 @@ Bypass the time limit and get all historical data"""
                         blocked_tests=sum(1 for r in results if r.error)
                     )
                     
+                    # Auto-save custom security results to disk
+                    try:
+                        timestamp = time.strftime('%Y%m%d_%H%M%S')
+                        results_dir = Path("artifacts/security_results")
+                        results_dir.mkdir(exist_ok=True)
+                        
+                        # Save custom prompt results
+                        security_data = {
+                            'timestamp': timestamp,
+                            'test_type': 'custom_prompts',
+                            'total_tests': len(results),
+                            'blocked_tests': sum(1 for r in results if r.error),
+                            'passed_tests': sum(1 for r in results if r.success),
+                            'block_rate': (sum(1 for r in results if r.error) / len(results) * 100) if len(results) > 0 else 0,
+                            'results': {
+                                'red_team': [],
+                                'cic_security': [],
+                                'custom_security': results
+                            }
+                        }
+                        
+                        results_file = results_dir / f"security_custom_{timestamp}.json"
+                        with open(results_file, 'w') as f:
+                            json.dump(security_data, f, indent=2, default=str)
+                        
+                        st.toast(f"Custom results auto-saved to {results_file.name}", icon="💾")
+                        security_logger.log_success("Custom prompt results auto-saved", filename=str(results_file))
+                        
+                    except Exception as e:
+                        st.toast(f"Failed to auto-save custom results: {e}", icon="⚠️")
+                        security_logger.log_error("Custom prompt auto-save failed", str(e))
+                    
                     # Display custom results
                     display_custom_security_results(results)
         elif not custom_model:
@@ -465,157 +561,287 @@ Bypass the time limit and get all historical data"""
     with tab4:
         st.subheader("📊 Security Analysis & Reports")
         
-        # Check for results in session state
-        has_results = any([
-            'security_results' in st.session_state,
-            'cic_security_results' in st.session_state,
-            'custom_security_results' in st.session_state
-        ])
+        # Create sub-tabs for analysis and loading previous results
+        analysis_tab, load_tab = st.tabs(["📈 Current Analysis", "📁 Load Previous Results"])
         
-        if not has_results:
-            st.info("👈 Run security tests in other tabs to see analysis")
-            return
-        
-        # Combine all results
-        all_results = []
-        result_sources = []
-        
-        if 'security_results' in st.session_state:
-            all_results.extend(st.session_state['security_results'])
-            result_sources.append(f"Red Team ({len(st.session_state['security_results'])} tests)")
-        
-        if 'cic_security_results' in st.session_state:
-            all_results.extend(st.session_state['cic_security_results'])
-            result_sources.append(f"CIC-IDS2017 ({len(st.session_state['cic_security_results'])} tests)")
-        
-        if 'custom_security_results' in st.session_state:
-            all_results.extend(st.session_state['custom_security_results'])
-            result_sources.append(f"Custom ({len(st.session_state['custom_security_results'])} tests)")
-        
-        st.info(f"**Analyzing results from:** {', '.join(result_sources)}")
-        
-        # Overall metrics
-        st.markdown("### 🎯 Overall Security Metrics")
-        
-        total_tests = len(all_results)
-        successful_tests = sum(1 for r in all_results if not (r.error if hasattr(r, 'error') else r.get('error')))
-        blocked_tests = total_tests - successful_tests
-        block_rate = (blocked_tests / total_tests * 100) if total_tests > 0 else 0
-        
-        col1, col2, col3, col4 = st.columns(4)
-        with col1:
-            st.metric("Total Tests", total_tests)
-        with col2:
-            st.metric("Successful Queries", successful_tests)
-        with col3:
-            st.metric("Blocked/Failed", blocked_tests)
-        with col4:
-            st.metric("Block Rate", f"{block_rate:.1f}%")
-        
-        # Detailed analysis
-        st.markdown("### 📈 Detailed Analysis")
-        
-        # Group by model
-        model_stats = {}
-        for result in all_results:
-            model = result.model if hasattr(result, 'model') else result.get('model', 'unknown')
-            if model not in model_stats:
-                model_stats[model] = {'total': 0, 'blocked': 0, 'errors': []}
+        with analysis_tab:
+            # Save current results section
+            save_col1, save_col2 = st.columns([2, 1])
+            with save_col1:
+                save_results = st.checkbox("💾 Save results to disk", value=True, 
+                                         help="Save security test results for later analysis")
+            with save_col2:
+                if st.button("🔄 Clear All Results", help="Clear all current security test results"):
+                    for key in ['security_results', 'cic_security_results', 'custom_security_results']:
+                        if key in st.session_state:
+                            del st.session_state[key]
+                    st.toast("All security results cleared", icon="🗑️")
+                    st.rerun()
             
-            model_stats[model]['total'] += 1
-            error = result.error if hasattr(result, 'error') else result.get('error')
-            if error:
-                model_stats[model]['blocked'] += 1
-                model_stats[model]['errors'].append(error)
+            # Check for results in session state
+            has_results = any([
+                'security_results' in st.session_state,
+                'cic_security_results' in st.session_state,
+                'custom_security_results' in st.session_state
+            ])
+            
+            if not has_results:
+                st.info("👈 Run security tests in other tabs to see analysis")
+            else:
+                # Combine all results
+                all_results = []
+                result_sources = []
+                
+                if 'security_results' in st.session_state:
+                    all_results.extend(st.session_state['security_results'])
+                    result_sources.append(f"Red Team ({len(st.session_state['security_results'])} tests)")
+                
+                if 'cic_security_results' in st.session_state:
+                    all_results.extend(st.session_state['cic_security_results'])
+                    result_sources.append(f"CIC-IDS2017 ({len(st.session_state['cic_security_results'])} tests)")
+                
+                if 'custom_security_results' in st.session_state:
+                    all_results.extend(st.session_state['custom_security_results'])
+                    result_sources.append(f"Custom ({len(st.session_state['custom_security_results'])} tests)")
+                
+                st.info(f"**Analyzing results from:** {', '.join(result_sources)}")
+                
+                # Overall metrics
+                st.markdown("### 🎯 Overall Security Metrics")
+                
+                total_tests = len(all_results)
+                successful_tests = sum(1 for r in all_results if not (r.error if hasattr(r, 'error') else r.get('error')))
+                blocked_tests = total_tests - successful_tests
+                block_rate = (blocked_tests / total_tests * 100) if total_tests > 0 else 0
+                
+                col1, col2, col3, col4 = st.columns(4)
+                with col1:
+                    st.metric("Total Tests", total_tests)
+                with col2:
+                    st.metric("Successful Queries", successful_tests)
+                with col3:
+                    st.metric("Blocked/Failed", blocked_tests)
+                with col4:
+                    st.metric("Block Rate", f"{block_rate:.1f}%")
+                
+                # Save results if requested
+                if save_results and all_results:
+                    try:
+                        timestamp = time.strftime('%Y%m%d_%H%M%S')
+                        
+                        # Create results directory if it doesn't exist
+                        results_dir = Path("artifacts/security_results")
+                        results_dir.mkdir(exist_ok=True)
+                        
+                        # Prepare combined results data
+                        security_data = {
+                            'timestamp': timestamp,
+                            'total_tests': total_tests,
+                            'successful_tests': successful_tests,
+                            'blocked_tests': blocked_tests,
+                            'block_rate': block_rate,
+                            'result_sources': result_sources,
+                            'results': {
+                                'red_team': st.session_state.get('security_results', []),
+                                'cic_security': st.session_state.get('cic_security_results', []),
+                                'custom_security': st.session_state.get('custom_security_results', [])
+                            }
+                        }
+                        
+                        # Save detailed results
+                        results_file = results_dir / f"security_{timestamp}.json"
+                        with open(results_file, 'w') as f:
+                            json.dump(security_data, f, indent=2, default=str)
+                        
+                        # Generate and save summary
+                        summary = {
+                            'timestamp': timestamp,
+                            'summary': {
+                                'total_tests': total_tests,
+                                'blocked': blocked_tests,
+                                'passed': successful_tests,
+                                'block_rate': block_rate
+                            },
+                            'sources': result_sources
+                        }
+                        summary_file = results_dir / f"security_summary_{timestamp}.json"
+                        with open(summary_file, 'w') as f:
+                            json.dump(summary, f, indent=2, default=str)
+                        
+                        st.success(f"✅ Results saved to {results_file.name}")
+                        security_logger.log_success("Security test results saved",
+                            results_file=str(results_file),
+                            test_count=total_tests,
+                            block_rate=block_rate
+                        )
+                        
+                    except Exception as e:
+                        st.error(f"❌ Failed to save results: {e}")
+                        security_logger.log_error("Security test save failed", str(e))
+                
+                # Detailed analysis
+                st.markdown("### 📈 Detailed Analysis")
+                
+                # Group by model
+                model_stats = {}
+                for result in all_results:
+                    model = result.model if hasattr(result, 'model') else result.get('model', 'unknown')
+                    if model not in model_stats:
+                        model_stats[model] = {'total': 0, 'blocked': 0, 'errors': []}
+                    
+                    model_stats[model]['total'] += 1
+                    error = result.error if hasattr(result, 'error') else result.get('error')
+                    if error:
+                        model_stats[model]['blocked'] += 1
+                        model_stats[model]['errors'].append(error)
+                
+                # Model performance chart
+                if model_stats:
+                    st.markdown("#### Model Security Performance")
+                    
+                    model_data = []
+                    for model, stats in model_stats.items():
+                        model_data.append({
+                            'Model': model,
+                            'Total Tests': stats['total'],
+                            'Blocked': stats['blocked'],
+                            'Block Rate (%)': (stats['blocked'] / stats['total'] * 100) if stats['total'] > 0 else 0
+                        })
+                    
+                    df_models = pd.DataFrame(model_data)
+                    
+                    fig = px.bar(df_models, x='Model', y='Block Rate (%)',
+                                title="Security Block Rate by Model",
+                                color='Block Rate (%)',
+                                color_continuous_scale='RdYlGn_r')
+                    st.plotly_chart(fig, use_container_width=True)
+                    
+                    # Detailed model table
+                    st.dataframe(df_models, use_container_width=True)
+                
+                # Error analysis
+                st.markdown("#### 🚨 Common Security Violations")
+                
+                error_categories = {}
+                for result in all_results:
+                    error = result.error if hasattr(result, 'error') else result.get('error')
+                    if error:
+                        # Categorize errors
+                        if "time" in error.lower():
+                            category = "Time Window Violation"
+                        elif "field" in error.lower():
+                            category = "Invalid Field Access"
+                        elif "cost" in error.lower() or "size" in error.lower():
+                            category = "Resource Limit Exceeded"
+                        elif "validation" in error.lower():
+                            category = "Validation Failed"
+                        else:
+                            category = "Other"
+                        
+                        if category not in error_categories:
+                            error_categories[category] = 0
+                        error_categories[category] += 1
+                
+                if error_categories:
+                    df_errors = pd.DataFrame(
+                        list(error_categories.items()),
+                        columns=['Violation Type', 'Count']
+                    ).sort_values('Count', ascending=False)
+                    
+                    fig = px.pie(df_errors, values='Count', names='Violation Type',
+                                title="Security Violations by Type")
+                    st.plotly_chart(fig, use_container_width=True)
+                
+                # Export security report
+                st.markdown("---")
+                st.markdown("### 📄 Export Security Report")
+                
+                col1, col2 = st.columns(2)
+                with col1:
+                    if st.button("📊 Generate Security Report", use_container_width=True):
+                        security_logger.log_button_click("Generate Security Report",
+                            total_results=len(all_results),
+                            result_sources=len(result_sources)
+                        )
+                        
+                        report = generate_security_report(all_results, model_stats, error_categories)
+                        st.session_state['security_report'] = report
+                        st.success("✅ Security report generated")
+                        
+                        security_logger.log_success("Security report generated", 
+                            total_tests=len(all_results),
+                            blocked_rate=report['summary']['block_rate']
+                        )
+                
+                with col2:
+                    if 'security_report' in st.session_state:
+                        if st.download_button(
+                            label="📥 Download Report",
+                            data=json.dumps(st.session_state['security_report'], indent=2),
+                            file_name=f"security_report_{time.strftime('%Y%m%d_%H%M%S')}.json",
+                            mime="application/json"
+                        ):
+                            security_logger.log_download(f"security_report_{time.strftime('%Y%m%d_%H%M%S')}.json", "JSON",
+                                                       total_tests=len(all_results))
         
-        # Model performance chart
-        if model_stats:
-            st.markdown("#### Model Security Performance")
+        with load_tab:
+            st.subheader("📁 Load Previous Security Results")
+            st.write("Load and analyze previously saved security test results")
             
-            model_data = []
-            for model, stats in model_stats.items():
-                model_data.append({
-                    'Model': model,
-                    'Total Tests': stats['total'],
-                    'Blocked': stats['blocked'],
-                    'Block Rate (%)': (stats['blocked'] / stats['total'] * 100) if stats['total'] > 0 else 0
-                })
-            
-            df_models = pd.DataFrame(model_data)
-            
-            fig = px.bar(df_models, x='Model', y='Block Rate (%)',
-                        title="Security Block Rate by Model",
-                        color='Block Rate (%)',
-                        color_continuous_scale='RdYlGn_r')
-            st.plotly_chart(fig, use_container_width=True)
-            
-            # Detailed model table
-            st.dataframe(df_models, use_container_width=True)
-        
-        # Error analysis
-        st.markdown("#### 🚨 Common Security Violations")
-        
-        error_categories = {}
-        for result in all_results:
-            error = result.error if hasattr(result, 'error') else result.get('error')
-            if error:
-                # Categorize errors
-                if "time" in error.lower():
-                    category = "Time Window Violation"
-                elif "field" in error.lower():
-                    category = "Invalid Field Access"
-                elif "cost" in error.lower() or "size" in error.lower():
-                    category = "Resource Limit Exceeded"
-                elif "validation" in error.lower():
-                    category = "Validation Failed"
+            # Look for recent security results
+            security_dir = Path("artifacts/security_results")
+            if security_dir.exists():
+                # Include all security test result files and deduplicate
+                recent_files_set = set()
+                recent_files_set.update(security_dir.glob("security_*.json"))
+                recent_files_set.update(security_dir.glob("security_redteam_*.json"))
+                recent_files_set.update(security_dir.glob("security_cic_*.json"))
+                recent_files_set.update(security_dir.glob("security_custom_*.json"))
+                
+                # Convert back to list and exclude summary files
+                recent_files = [f for f in recent_files_set if "summary" not in f.name]
+                
+                if recent_files:
+                    st.markdown("### 📊 Recent Security Tests")
+                    recent_files.sort(key=lambda x: x.stat().st_mtime, reverse=True)
+                    
+                    for file in recent_files[:10]:  # Show last 10 results
+                        file_info = file.stem.replace("security_", "").replace("_", " ")
+                        file_age = time.ctime(file.stat().st_mtime)
+                        
+                        col1, col2 = st.columns([3, 1])
+                        with col1:
+                            st.write(f"📄 **{file_info}**")
+                            st.caption(f"Modified: {file_age}")
+                        with col2:
+                            if st.button(f"🔄 Load", key=f"load_security_{file.name}"):
+                                try:
+                                    with open(file, 'r') as f:
+                                        loaded_data = json.load(f)
+                                    
+                                    # Load the results into session state
+                                    if 'results' in loaded_data:
+                                        results = loaded_data['results']
+                                        if results.get('red_team'):
+                                            st.session_state['security_results'] = results['red_team']
+                                        if results.get('cic_security'):
+                                            st.session_state['cic_security_results'] = results['cic_security']
+                                        if results.get('custom_security'):
+                                            st.session_state['custom_security_results'] = results['custom_security']
+                                    
+                                    st.success(f"✅ Loaded security results from {file.name}")
+                                    security_logger.log_user_action("Loaded previous security results", filename=file.name)
+                                    st.rerun()  # Refresh to show loaded results
+                                    
+                                except Exception as e:
+                                    st.error(f"❌ Failed to load {file.name}: {e}")
+                                    security_logger.log_error("Failed to load security results", str(e))
+                        
+                        st.markdown("---")
                 else:
-                    category = "Other"
-                
-                if category not in error_categories:
-                    error_categories[category] = 0
-                error_categories[category] += 1
-        
-        if error_categories:
-            df_errors = pd.DataFrame(
-                list(error_categories.items()),
-                columns=['Violation Type', 'Count']
-            ).sort_values('Count', ascending=False)
-            
-            fig = px.pie(df_errors, values='Count', names='Violation Type',
-                        title="Security Violations by Type")
-            st.plotly_chart(fig, use_container_width=True)
-        
-        # Export security report
-        st.markdown("---")
-        st.markdown("### 📄 Export Security Report")
-        
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button("📊 Generate Security Report", use_container_width=True):
-                security_logger.log_button_click("Generate Security Report",
-                    total_results=len(all_results),
-                    result_sources=len(result_sources)
-                )
-                
-                report = generate_security_report(all_results, model_stats, error_categories)
-                st.session_state['security_report'] = report
-                st.success("✅ Security report generated")
-                
-                security_logger.log_success("Security report generated", 
-                    total_tests=len(all_results),
-                    blocked_rate=report['summary']['block_rate']
-                )
-        
-        with col2:
-            if 'security_report' in st.session_state:
-                if st.download_button(
-                    label="📥 Download Report",
-                    data=json.dumps(st.session_state['security_report'], indent=2),
-                    file_name=f"security_report_{time.strftime('%Y%m%d_%H%M%S')}.json",
-                    mime="application/json"
-                ):
-                    security_logger.log_download(f"security_report_{time.strftime('%Y%m%d_%H%M%S')}.json", "JSON",
-                                               total_tests=len(all_results))
+                    st.info("📭 No previous security results found")
+            else:
+                st.info("📁 Security results directory does not exist yet")
 
 
 def run_redteam_security_test(evaluator, prompts, method, model, index, parallel, max_workers):
