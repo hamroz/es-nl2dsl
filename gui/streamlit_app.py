@@ -8,6 +8,12 @@ import time
 project_root = Path(__file__).parent.parent
 sys.path.append(str(project_root))
 
+# Import logging utilities
+from gui.utils.logging_utils import get_gui_logger
+
+# Initialize main app logger
+app_logger = get_gui_logger("main_app")
+
 # Import components
 from gui.utils.backend_interface import check_system_status
 from gui.components.query_generator import render_query_generator
@@ -74,6 +80,7 @@ st.markdown("""
 
 def render_header():
     """Render the main header"""
+    app_logger.log_page_load("Application header rendered")
     st.markdown(
         '<h1 class="main-header">🔍 ES-NL2DSL: Natural Language to Elasticsearch DSL</h1>', 
         unsafe_allow_html=True
@@ -86,11 +93,20 @@ def render_status_bar():
     if "system_status" not in st.session_state or \
        time.time() - st.session_state.get("last_status_check", 0) > 30:
         
+        app_logger.log_system_operation("System status check initiated")
         with st.spinner("Checking system status..."):
             st.session_state.system_status = check_system_status()
             st.session_state.last_status_check = time.time()
+            app_logger.log_success("System status updated")
     
     status = st.session_state.system_status
+    
+    # Log status metrics for monitoring
+    app_logger.log_status("System status", "Status bar rendered", 
+                         elasticsearch=status["elasticsearch"],
+                         ollama=status["ollama"],
+                         indices=status["indices"],
+                         models=len(status["models"]))
     
     # Create status indicators
     col1, col2, col3, col4, col5 = st.columns([2, 2, 2, 2, 2])
@@ -124,15 +140,19 @@ def render_status_bar():
 
 def main():
     """Main application"""
+    app_logger.log_system_operation("Main application started")
+    
     render_header()
     render_status_bar()
     
     # Initialize current page in session state
     if "current_page" not in st.session_state:
         st.session_state.current_page = "🤖 Query Generator"
+        app_logger.log_state_change("current_page", None, st.session_state.current_page)
     
     # Sidebar navigation with persistent buttons
     st.sidebar.title("🧭 Navigation")
+    app_logger.log_page_load("Sidebar navigation rendered")
     
     # Show current page indicator
     st.sidebar.markdown(f"**Current:** {st.session_state.current_page}")
@@ -162,6 +182,8 @@ def main():
         ):
             # Only change page if it's different from current
             if not is_current:
+                app_logger.log_navigation(st.session_state.current_page, option)
+                app_logger.log_user_action("Navigation button clicked", destination=option)
                 st.session_state.current_page = option
                 st.rerun()  # Rerun only for navigation changes
     
@@ -169,12 +191,15 @@ def main():
     
     # Add refresh button in sidebar
     if st.sidebar.button("🔄 Refresh Status", use_container_width=True):
+        app_logger.log_user_action("Status refresh button clicked")
         st.session_state.pop("system_status", None)
         # Don't call st.rerun() here to avoid navigation reset and maintain user's current tab
         st.toast("Status refreshed!", icon="✅")
+        app_logger.log_success("System status manually refreshed")
     
     # Render selected page based on session state
     page = st.session_state.current_page
+    app_logger.log_page_load(page)
     if page == "🤖 Query Generator":
         render_query_generator()
     elif page == "🔍 Data Explorer":

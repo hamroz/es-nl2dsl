@@ -17,6 +17,12 @@ import sys
 project_root = Path(__file__).parent.parent.parent
 sys.path.append(str(project_root))
 
+# Import logging utilities
+from gui.utils.logging_utils import get_gui_logger
+
+# Initialize component logger
+query_logger = get_gui_logger("query_generator")
+
 from src.external.llm_manager import get_external_llm_manager
 from gui.utils.backend_interface import (
     run_query_generation, validate_query, get_available_models,
@@ -35,6 +41,7 @@ def get_external_llm_models():
 
 def render_query_generator():
     """Render the query generator interface"""
+    query_logger.log_page_load("Query Generator component loaded")
     st.header("🤖 Query Generator")
     st.write("Generate Elasticsearch DSL queries from natural language descriptions")
     
@@ -61,6 +68,10 @@ def render_query_generator():
             help="Enter your query in natural language. Be specific about time ranges and conditions."
         )
         
+        # Log input changes (without storing the actual prompt for privacy)
+        if prompt and prompt != default_prompt:
+            query_logger.log_input_change("text_area", "natural_language_query", len(prompt))
+        
         # Clear selected example if user modified the text
         if "selected_example" in st.session_state and prompt != st.session_state.selected_example:
             st.session_state.pop("selected_example", None)
@@ -75,6 +86,12 @@ def render_query_generator():
                 index=0,
                 help="Choose the query generation method"
             )
+            # Log method selection
+            if "last_selected_method" not in st.session_state:
+                st.session_state.last_selected_method = method
+            elif st.session_state.last_selected_method != method:
+                query_logger.log_selection_change("method", st.session_state.last_selected_method, method)
+                st.session_state.last_selected_method = method
         
         with index_col:
             # Get available indices
@@ -87,6 +104,12 @@ def render_query_generator():
                 index=available_indices.index(default_index) if default_index in available_indices else 0,
                 help="Select the Elasticsearch index to query"
             )
+            # Log index selection
+            if "last_selected_index" not in st.session_state:
+                st.session_state.last_selected_index = selected_index
+            elif st.session_state.last_selected_index != selected_index:
+                query_logger.log_selection_change("index", st.session_state.last_selected_index, selected_index)
+                st.session_state.last_selected_index = selected_index
         
         # Advanced options in expandable section
         with st.expander("⚙️ Advanced Options"):
@@ -127,6 +150,13 @@ def render_query_generator():
                         index=default_index,
                         help=f"Available LLMs: {len(available_models)} local, {len(external_models)} external"
                     )
+                    # Log model selection
+                    if "last_selected_model" not in st.session_state:
+                        st.session_state.last_selected_model = model
+                    elif st.session_state.last_selected_model != model:
+                        query_logger.log_selection_change("model", st.session_state.last_selected_model, model)
+                        st.session_state.last_selected_model = model
+                        
                 max_retries = st.number_input("Max Retries:", min_value=1, max_value=5, value=2)
         
         # Generate button
@@ -142,6 +172,7 @@ def render_query_generator():
         
         # Handle generation
         if generate_button:
+            query_logger.log_button_click("Generate Query", method=method, model=model, index=selected_index, prompt_length=len(prompt))
             st.session_state.show_generation_log = True
             
             with log_container:
@@ -158,6 +189,9 @@ def render_query_generator():
                 status_text.text("🤖 Generating query...")
                 progress_bar.progress(50)
                 
+                # Log generation start
+                query_logger.log_query_generation(method, model, len(prompt), index=selected_index)
+                
                 # Run generation
                 success, output, data = run_query_generation(
                     prompt, method, index=selected_index, model=model
@@ -170,6 +204,18 @@ def render_query_generator():
                 
                 progress_bar.progress(100)
                 status_text.text("✅ Generation complete!")
+                
+                # Log generation result
+                if success:
+                    query_logger.log_success("Query generation completed", {
+                        "method": method, 
+                        "model": model,
+                        "prompt_length": len(prompt),
+                        "has_query": bool(data.get("query"))
+                    })
+                else:
+                    query_logger.log_error("Query generation failed", output, 
+                                         method=method, model=model, prompt_length=len(prompt))
                 
                 # Store results in session state
                 st.session_state.generation_results = {
@@ -249,6 +295,8 @@ def render_query_generator():
                             
                             # Execute query if button pressed
                             if execute_button:
+                                query_logger.log_button_click("Execute Query", index=selected_index, 
+                                                            query_size=len(json.dumps(parsed_query)))
                                 st.session_state.execute_query = True
                                 st.session_state.query_to_execute = parsed_query
                                 st.session_state.target_index = selected_index
@@ -357,6 +405,7 @@ def render_query_generator():
             
             # Execute query if needed (first time or re-execute)
             if need_execution and query_to_execute:
+                query_logger.log_query_execution(target_index, "generated_query")
                 with st.spinner(f"Executing query on index '{target_index}'..."):
                     success, execution_results = execute_elasticsearch_query(
                         query_to_execute, target_index, max_size=size_limit
@@ -364,8 +413,16 @@ def render_query_generator():
                     # Store results in session state for persistence
                     if success:
                         st.session_state.last_execution_results = execution_results
+                        query_logger.log_success("Query executed successfully", {
+                            "index": target_index,
+                            "result_count": execution_results.get("returned_hits", 0),
+                            "total_hits": execution_results.get("total_hits", 0),
+                            "execution_time_ms": execution_results.get("took", 0)
+                        })
                     else:
                         st.session_state.last_execution_error = execution_results
+                        query_logger.log_error("Query execution failed", str(execution_results.get("error", "Unknown error")),
+                                             index=target_index)
             
             # Use stored results for display
             execution_results = st.session_state.get("last_execution_results")
@@ -425,22 +482,26 @@ def render_query_generator():
                         # Export buttons
                         if execution_results['results']:
                             csv_data = export_results_as_csv(execution_results)
-                            st.download_button(
+                            if st.download_button(
                                 "📊 Export CSV",
                                 data=csv_data,
                                 file_name=f"query_results_{int(time.time())}.csv",
                                 mime="text/csv"
-                            )
+                            ):
+                                query_logger.log_download(f"query_results_{int(time.time())}.csv", "CSV",
+                                                        record_count=len(execution_results['results']))
                     
                     with display_cols[2]:
                         if execution_results['results']:
                             json_data = export_results_as_json(execution_results)
-                            st.download_button(
+                            if st.download_button(
                                 "📋 Export JSON",
                                 data=json_data,
                                 file_name=f"query_results_{int(time.time())}.json",
                                 mime="application/json"
-                            )
+                            ):
+                                query_logger.log_download(f"query_results_{int(time.time())}.json", "JSON",
+                                                        record_count=len(execution_results['results']))
                     
                     # Display results based on format selection
                     if display_format == "Table":
@@ -561,9 +622,11 @@ def render_query_generator():
     for i, (col, example) in enumerate(zip(example_cols, examples)):
         with col:
             if st.button(f"📝 Example {i+1}", key=f"example_{i}", use_container_width=True):
+                query_logger.log_button_click(f"Example {i+1}", example_length=len(example))
                 # Store selected example for immediate text area update
                 st.session_state.selected_example = example
                 st.toast(f"Example {i+1} selected!", icon="📝")
+                query_logger.log_user_action("Example query selected", example_number=i+1)
                 # Force rerun to immediately update text area with new value
                 st.rerun()
     
@@ -581,6 +644,7 @@ def render_query_generator():
     )
     
     if uploaded_file:
+        query_logger.log_file_upload(uploaded_file.name, uploaded_file.size, uploaded_file.type)
         try:
             query_content = json.load(uploaded_file)
             st.code(json.dumps(query_content, indent=2), language="json")
@@ -591,14 +655,17 @@ def render_query_generator():
                 json.dump(query_content, f)
             
             if st.button("🔍 Validate Query"):
+                query_logger.log_button_click("Validate Uploaded Query", filename=uploaded_file.name)
                 with st.spinner("Validating query..."):
                     is_valid, validation_output = validate_query(str(temp_file))
                 
                 if is_valid:
                     st.success("✅ Query is valid!")
+                    query_logger.log_success("Query validation passed", {"filename": uploaded_file.name})
                 else:
                     st.error("❌ Query validation failed")
                     st.code(validation_output)
+                    query_logger.log_error("Query validation failed", validation_output, filename=uploaded_file.name)
                 
                 # Clean up temp file
                 temp_file.unlink(missing_ok=True)

@@ -14,12 +14,19 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 project_root = Path(__file__).parent.parent.parent
 sys.path.append(str(project_root))
 
+# Import logging utilities
+from gui.utils.logging_utils import get_gui_logger
+
+# Initialize component logger
+eval_logger = get_gui_logger("evaluation_dashboard")
+
 from src.core.enhanced_evaluation import EnhancedEvaluator
 from src.external.llm_manager import get_external_llm_manager
 from gui.utils.backend_interface import get_available_indices
 
 def render_evaluation_dashboard():
     """Render the enhanced evaluation dashboard interface"""
+    eval_logger.log_page_load("Evaluation Dashboard loaded")
     st.header("📊 Enhanced Evaluation Dashboard")
     st.write("Comprehensive evaluation across datasets, methods, and models")
     
@@ -41,6 +48,13 @@ def render_evaluation_dashboard():
             format_func=lambda x: "Standard Test Scenarios" if x == "standard" else "CIC-IDS2017 Attack Scenarios",
             help="Select the dataset to evaluate against"
         )
+        
+        # Log dataset selection
+        if "last_eval_dataset" not in st.session_state:
+            st.session_state.last_eval_dataset = dataset
+        elif st.session_state.last_eval_dataset != dataset:
+            eval_logger.log_selection_change("dataset", st.session_state.last_eval_dataset, dataset)
+            st.session_state.last_eval_dataset = dataset
         
         # Load scenarios for selected dataset
         scenarios = evaluator.load_scenarios(dataset)
@@ -112,12 +126,14 @@ def render_evaluation_dashboard():
         select_col1, select_col2 = st.columns(2)
         with select_col1:
             if st.button("✅ Select All", use_container_width=True):
+                eval_logger.log_button_click("Select All Scenarios", dataset=dataset, scenario_count=len(scenarios))
                 for scenario in scenarios:
                     st.session_state[f"eval_scenario_{scenario['id']}"] = True
                 st.toast(f"All {len(scenarios)} scenarios selected!", icon="✅")
         
         with select_col2:
             if st.button("❌ Clear All", use_container_width=True):
+                eval_logger.log_button_click("Clear All Scenarios", dataset=dataset, scenario_count=len(scenarios))
                 for scenario in scenarios:
                     st.session_state[f"eval_scenario_{scenario['id']}"] = False
                 st.toast("All scenarios cleared!", icon="❌")
@@ -211,13 +227,31 @@ def render_evaluation_dashboard():
         
         # Run button
         if st.button("🚀 Run Evaluation", type="primary", use_container_width=True):
+            eval_logger.log_button_click("Run Evaluation",
+                dataset=dataset,
+                scenario_count=len(selected_scenarios),
+                method_count=len(methods),
+                model_count=len(cleaned_models),
+                total_evaluations=len(selected_scenarios) * len(methods) * len(cleaned_models)
+            )
+            
             if not selected_scenarios:
                 st.error("Please select at least one scenario")
+                eval_logger.log_warning("Evaluation start failed", "No scenarios selected")
             elif not methods:
                 st.error("Please select at least one method")
+                eval_logger.log_warning("Evaluation start failed", "No methods selected")
             elif not cleaned_models:
                 st.error("Please select at least one compatible model")
+                eval_logger.log_warning("Evaluation start failed", "No compatible models selected")
             else:
+                eval_logger.log_system_operation("Evaluation batch started",
+                    dataset=dataset,
+                    scenarios=selected_scenarios,
+                    methods=methods,
+                    models=cleaned_models
+                )
+                
                 with st.spinner(f"Running {len(selected_scenarios) * len(methods) * len(cleaned_models)} evaluations..."):
                     # Run evaluation
                     summary = evaluator.run_evaluation(
@@ -233,6 +267,12 @@ def render_evaluation_dashboard():
                     st.session_state['eval_summary'] = summary
                     st.success("✅ Evaluation complete!")
                     st.balloons()
+                    
+                    eval_logger.log_success("Evaluation batch completed", {
+                        "dataset": dataset,
+                        "total_evaluations": len(selected_scenarios) * len(methods) * len(cleaned_models),
+                        "results_count": len(evaluator.results) if hasattr(evaluator, 'results') else 0
+                    })
     
     with col2:
         st.subheader("📊 Results & Analysis")
@@ -263,6 +303,9 @@ def render_evaluation_dashboard():
         tab1, tab2, tab3, tab4, tab5 = st.tabs([
             "📈 Overview", "🎯 By Method", "🤖 By Model", "📊 By Scenario", "📋 Detailed Results"
         ])
+        
+        # Log tab access for evaluation results
+        eval_logger.log_page_load("Evaluation results viewed")
         
         with tab1:
             st.markdown("### 📊 Overall Performance")
@@ -532,6 +575,11 @@ def render_evaluation_dashboard():
         col1, col2 = st.columns(2)
         with col1:
             if st.button("📊 Export to CSV", use_container_width=True):
+                eval_logger.log_button_click("Export Evaluation Results to CSV",
+                    dataset=dataset,
+                    result_count=len(results)
+                )
+                
                 # Convert results to DataFrame
                 df_export = pd.DataFrame([
                     {
@@ -552,9 +600,17 @@ def render_evaluation_dashboard():
                     file_name=f"evaluation_results_{dataset}_{time.strftime('%Y%m%d_%H%M%S')}.csv",
                     mime="text/csv"
                 )
+                
+                eval_logger.log_download(f"evaluation_results_{dataset}.csv", "CSV",
+                                       record_count=len(results))
         
         with col2:
             if st.button("📋 Export to JSON", use_container_width=True):
+                eval_logger.log_button_click("Export Evaluation Results to JSON",
+                    dataset=dataset,
+                    result_count=len(results)
+                )
+                
                 json_data = json.dumps(results if isinstance(results[0], dict) else [r.__dict__ for r in results], indent=2, default=str)
                 st.download_button(
                     label="Download JSON",
@@ -562,3 +618,6 @@ def render_evaluation_dashboard():
                     file_name=f"evaluation_results_{dataset}_{time.strftime('%Y%m%d_%H%M%S')}.json",
                     mime="application/json"
                 )
+                
+                eval_logger.log_download(f"evaluation_results_{dataset}.json", "JSON",
+                                       record_count=len(results))

@@ -7,8 +7,16 @@ import json
 from pathlib import Path
 import argparse
 
+# Import logging utilities
+sys.path.append(str(Path(__file__).parent))
+from utils.logging_utils import get_gui_logger
+
+# Initialize logger
+logger = get_gui_logger("startup")
+
 def check_dependencies():
     """Check if required dependencies are installed"""
+    logger.log_system_operation("Dependency check started")
     print("🔍 Checking dependencies...")
     
     required_packages = [
@@ -20,20 +28,25 @@ def check_dependencies():
         try:
             __import__(package)
             print(f"  ✅ {package}")
+            logger.log_success(f"Package available: {package}")
         except ImportError:
             print(f"  ❌ {package}")
             missing_packages.append(package)
+            logger.log_warning("Missing dependency", f"Package {package} not found")
     
     if missing_packages:
         print(f"\n❌ Missing packages: {', '.join(missing_packages)}")
         print("Install with: pip install -r requirements.txt -r requirements-gui.txt")
+        logger.log_error("Dependencies missing", f"Missing: {', '.join(missing_packages)}")
         return False
     
     print("✅ All dependencies found")
+    logger.log_success("All dependencies verified")
     return True
 
 def check_elasticsearch():
     """Check if Elasticsearch is running"""
+    logger.log_system_operation("Elasticsearch connectivity check started")
     print("🔍 Checking Elasticsearch...")
     
     try:
@@ -45,16 +58,20 @@ def check_elasticsearch():
         
         if result.stdout.strip() == "200":
             print("✅ Elasticsearch is running")
+            logger.log_success("Elasticsearch connectivity verified")
             return True
         else:
             print("❌ Elasticsearch not responding")
+            logger.log_error("Elasticsearch check failed", f"HTTP response: {result.stdout.strip()}")
             return False
-    except:
+    except Exception as e:
         print("❌ Elasticsearch not accessible")
+        logger.log_error("Elasticsearch connection error", str(e))
         return False
 
 def check_ollama():
     """Check if Ollama is running and has models"""
+    logger.log_system_operation("Ollama service check started")
     print("🔍 Checking Ollama...")
     
     try:
@@ -71,32 +88,42 @@ def check_ollama():
             
             if models:
                 print(f"✅ Ollama running with models: {', '.join(models)}")
+                logger.log_success("Ollama service verified", model_count=len(models), models=models)
                 return True
             else:
                 print("⚠️ Ollama running but no models found")
                 print("  Install models with: ollama pull llama3.1:latest")
+                logger.log_warning("Ollama models missing", "Service running but no models available")
                 return False
         else:
             print("❌ Ollama not responding")
+            logger.log_error("Ollama check failed", f"Return code: {result.returncode}")
             return False
-    except:
+    except Exception as e:
         print("❌ Ollama not accessible")
+        logger.log_error("Ollama connection error", str(e))
         return False
 
 def setup_directories():
     """Create necessary directories"""
+    logger.log_system_operation("Directory setup started")
     print("📁 Setting up directories...")
     
     directories = [
         "artifacts/generated",
         "artifacts/results", 
         "data_raw",
-        "gui/components"
+        "gui/components",
+        "logs"
     ]
     
+    created_dirs = []
     for dir_path in directories:
         Path(dir_path).mkdir(parents=True, exist_ok=True)
         print(f"  ✅ {dir_path}")
+        created_dirs.append(dir_path)
+    
+    logger.log_success("Directories setup completed", directories=created_dirs)
 
 def check_configuration():
     """Check if configuration files exist"""
@@ -201,6 +228,7 @@ def pull_ollama_model():
 
 def start_streamlit():
     """Start the Streamlit application"""
+    logger.log_system_operation("Streamlit application startup initiated")
     print("🚀 Starting Streamlit GUI...")
     
     try:
@@ -221,13 +249,22 @@ def start_streamlit():
         print("👆 Click the link above or open it in your browser")
         print("\nPress Ctrl+C to stop the application")
         
+        logger.log_success("Streamlit server starting",
+            command=' '.join(cmd), 
+            port="8501",
+            address="0.0.0.0",
+            project_root=str(project_root)
+        )
+        
         # Start Streamlit
         subprocess.run(cmd, cwd=project_root)
         
     except KeyboardInterrupt:
         print("\n🛑 Shutting down...")
+        logger.log_system_operation("Streamlit application shutdown by user interrupt")
     except Exception as e:
         print(f"❌ Error starting Streamlit: {e}")
+        logger.log_error("Streamlit startup failed", str(e))
 
 def main():
     """Main startup function"""
@@ -237,6 +274,13 @@ def main():
     parser.add_argument("--port", type=int, default=8501, help="Streamlit port (default: 8501)")
     
     args = parser.parse_args()
+    
+    # Log startup initiation
+    logger.log_system_operation("GUI startup initiated",
+        docker_mode=args.docker,
+        skip_checks=args.skip_checks,
+        port=args.port
+    )
     
     print("🔍 ES-NL2DSL GUI Startup")
     print("=" * 50)

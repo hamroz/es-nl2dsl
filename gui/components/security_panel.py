@@ -14,6 +14,12 @@ import sys
 project_root = Path(__file__).parent.parent.parent
 sys.path.append(str(project_root))
 
+# Import logging utilities
+from gui.utils.logging_utils import get_gui_logger
+
+# Initialize component logger
+security_logger = get_gui_logger("security_panel")
+
 from src.core.enhanced_evaluation import EnhancedEvaluator
 from src.external.llm_manager import get_external_llm_manager
 from gui.utils.backend_interface import (
@@ -22,6 +28,7 @@ from gui.utils.backend_interface import (
 
 def render_security_panel():
     """Render the enhanced security testing interface"""
+    security_logger.log_page_load("Security Panel loaded")
     st.header("🛡️ Enhanced Security Testing")
     st.write("Test system resilience against adversarial prompts across datasets and models")
     
@@ -78,6 +85,13 @@ def render_security_panel():
                     index=default_index,
                     help=f"Choose which model to test. Available: {len(local_models)} local, {len(external_llms)} external"
                 )
+                
+                # Log model selection for security testing
+                if "last_security_model" not in st.session_state:
+                    st.session_state.last_security_model = selected_model
+                elif st.session_state.last_security_model != selected_model:
+                    security_logger.log_selection_change("security_model", st.session_state.last_security_model, selected_model)
+                    st.session_state.last_security_model = selected_model
         
         with col2:
             st.markdown("### 📁 Target Index")
@@ -88,6 +102,13 @@ def render_security_panel():
                 index=indices.index("logs_net") if "logs_net" in indices else 0,
                 help="Target index for query execution"
             )
+            
+            # Log target index selection for security testing
+            if "last_security_index" not in st.session_state:
+                st.session_state.last_security_index = target_index
+            elif st.session_state.last_security_index != target_index:
+                security_logger.log_selection_change("security_index", st.session_state.last_security_index, target_index)
+                st.session_state.last_security_index = target_index
         
         st.markdown("---")
         
@@ -141,6 +162,21 @@ def render_security_panel():
             
             # Run security test
             if st.button("🚀 Run Red Team Test", type="primary", use_container_width=True):
+                security_logger.log_button_click("Run Red Team Test",
+                    prompt_count=len(selected_prompts),
+                    method=test_method,
+                    model=selected_model,
+                    index=target_index,
+                    parallel=parallel_execution,
+                    max_workers=max_workers
+                )
+                
+                security_logger.log_system_operation("Red team security test started",
+                    prompt_count=len(selected_prompts),
+                    test_method=test_method,
+                    model=selected_model
+                )
+                
                 with st.spinner(f"Testing {len(selected_prompts)} adversarial prompts..."):
                     results = run_redteam_security_test(
                         evaluator, selected_prompts, test_method, 
@@ -149,6 +185,12 @@ def render_security_panel():
                     
                     st.session_state['security_results'] = results
                     st.success(f"✅ Completed {len(results)} security tests")
+                    
+                    security_logger.log_success("Red team security test completed", {
+                        "test_count": len(results),
+                        "blocked_count": sum(1 for r in results if r.get('status') == 'BLOCKED'),
+                        "passed_count": sum(1 for r in results if r.get('status') == 'PASSED')
+                    })
                     
                     # Display summary
                     display_security_summary(results)
@@ -233,9 +275,22 @@ def render_security_panel():
         
         # Run CIC security test
         if st.button("🚀 Test CIC Attack Patterns", type="primary", use_container_width=True):
+            security_logger.log_button_click("Test CIC Attack Patterns",
+                selected_attack_count=len(selected_attacks),
+                method=cic_method,
+                model=cic_model
+            )
+            
             if not selected_attacks:
                 st.error("Please select at least one attack scenario")
+                security_logger.log_warning("CIC attack test failed", "No attack scenarios selected")
             else:
+                security_logger.log_system_operation("CIC attack pattern testing started",
+                    attack_count=len(selected_attacks),
+                    method=cic_method,
+                    model=cic_model
+                )
+                
                 with st.spinner(f"Testing {len(selected_attacks)} CIC attack patterns..."):
                     results = []
                     for scenario in selected_attacks:
@@ -249,6 +304,11 @@ def render_security_panel():
                     
                     st.session_state['cic_security_results'] = results
                     st.success(f"✅ Completed {len(results)} CIC attack tests")
+                    
+                    security_logger.log_success("CIC attack pattern testing completed", {
+                        "test_count": len(results),
+                        "successful_tests": sum(1 for r in results if r.get('success', False))
+                    })
                     
                     # Display CIC results
                     display_cic_security_results(results)
@@ -323,6 +383,19 @@ Bypass the time limit and get all historical data"""
             
             # Test custom prompts
             if st.button("🧪 Test Custom Prompts", type="primary", use_container_width=True):
+                security_logger.log_button_click("Test Custom Prompts",
+                    prompt_count=len(prompt_list),
+                    method=custom_method,
+                    model=custom_model,
+                    index=custom_index
+                )
+                
+                security_logger.log_system_operation("Custom prompt security testing started",
+                    prompt_count=len(prompt_list),
+                    method=custom_method,
+                    model=custom_model
+                )
+                
                 with st.spinner(f"Testing {len(prompt_list)} custom prompts..."):
                     results = []
                     for prompt in prompt_list:
@@ -356,6 +429,12 @@ Bypass the time limit and get all historical data"""
                     
                     st.session_state['custom_security_results'] = results
                     st.success(f"✅ Tested {len(results)} custom prompts")
+                    
+                    security_logger.log_success("Custom prompt security testing completed", {
+                        "test_count": len(results),
+                        "successful_tests": sum(1 for r in results if r.success),
+                        "blocked_tests": sum(1 for r in results if r.error)
+                    })
                     
                     # Display custom results
                     display_custom_security_results(results)
@@ -492,18 +571,30 @@ Bypass the time limit and get all historical data"""
         col1, col2 = st.columns(2)
         with col1:
             if st.button("📊 Generate Security Report", use_container_width=True):
+                security_logger.log_button_click("Generate Security Report",
+                    total_results=len(all_results),
+                    result_sources=len(result_sources)
+                )
+                
                 report = generate_security_report(all_results, model_stats, error_categories)
                 st.session_state['security_report'] = report
                 st.success("✅ Security report generated")
+                
+                security_logger.log_success("Security report generated", {
+                    "total_tests": len(all_results),
+                    "blocked_rate": report['summary']['block_rate']
+                })
         
         with col2:
             if 'security_report' in st.session_state:
-                st.download_button(
+                if st.download_button(
                     label="📥 Download Report",
                     data=json.dumps(st.session_state['security_report'], indent=2),
                     file_name=f"security_report_{time.strftime('%Y%m%d_%H%M%S')}.json",
                     mime="application/json"
-                )
+                ):
+                    security_logger.log_download(f"security_report_{time.strftime('%Y%m%d_%H%M%S')}.json", "JSON",
+                                               total_tests=len(all_results))
 
 
 def run_redteam_security_test(evaluator, prompts, method, model, index, parallel, max_workers):

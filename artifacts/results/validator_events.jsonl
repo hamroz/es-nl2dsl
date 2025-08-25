@@ -1054,3 +1054,10 @@
 {"timestamp": "2025-08-25T03:28:11.703365", "dsl_file": "/var/folders/k9/410c4xgn0r9494l65rnrw_lm0000gn/T/tmptzj1p07s.json", "check_passed": false, "failure_category": "invalid_time_window_format"}
 {"timestamp": "2025-08-25T03:28:18.180122", "dsl_file": "/var/folders/k9/410c4xgn0r9494l65rnrw_lm0000gn/T/tmpxwyx4kll.json", "check_passed": false, "failure_category": "invalid_time_window_format"}
 {"timestamp": "2025-08-25T03:45:56.897947", "dsl_file": "/var/folders/k9/410c4xgn0r9494l65rnrw_lm0000gn/T/tmpi0p8uv8u.json", "check_passed": false, "failure_category": "invalid_time_window_format"}
+{"timestamp": "2025-08-25T03:54:24.463904", "dsl_file": "/var/folders/k9/410c4xgn0r9494l65rnrw_lm0000gn/T/tmpraokvhm8.json", "check_passed": false, "failure_category": "invalid_time_window_format"}
+{"timestamp": "2025-08-25T03:54:58.597378", "dsl_file": "/var/folders/k9/410c4xgn0r9494l65rnrw_lm0000gn/T/tmpkd28yo8a.json", "check_passed": false, "failure_category": "invalid_time_window_format"}
+{"timestamp": "2025-08-25T04:27:15.265624", "dsl_file": "/var/folders/k9/410c4xgn0r9494l65rnrw_lm0000gn/T/tmp132k602y.json", "check_passed": true, "failure_category": null}
+{"timestamp": "2025-08-25T04:27:15.266871", "dsl_file": "/var/folders/k9/410c4xgn0r9494l65rnrw_lm0000gn/T/tmp132k602y.json", "check_passed": true, "failure_category": null}
+{"timestamp": "2025-08-25T04:27:15.266942", "dsl_file": "/var/folders/k9/410c4xgn0r9494l65rnrw_lm0000gn/T/tmp132k602y.json", "check_passed": true, "failure_category": null}
+{"timestamp": "2025-08-25T04:27:15.285471", "dsl_file": "/var/folders/k9/410c4xgn0r9494l65rnrw_lm0000gn/T/tmp132k602y.json", "check_passed": true, "failure_category": null}
+{"timestamp": "2025-08-25T04:27:15.285641", "dsl_file": "/var/folders/k9/410c4xgn0r9494l65rnrw_lm0000gn/T/tmp132k602y.json", "check_passed": true, "failure_category": null}

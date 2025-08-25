@@ -5,8 +5,20 @@ import argparse
 import subprocess
 import yaml
 import time
+import logging
 from pathlib import Path
 from jsonschema import validate, ValidationError
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - [CONSTRAINED] - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(sys.stdout),
+        logging.FileHandler('logs/gui_backend.log', mode='a')
+    ]
+)
+logger = logging.getLogger(__name__)
 # Add project root to path for absolute imports
 project_root = Path(__file__).parent.parent.parent
 sys.path.append(str(project_root))

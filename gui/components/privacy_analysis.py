@@ -22,12 +22,19 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 project_root = Path(__file__).parent.parent.parent
 sys.path.append(str(project_root))
 
+# Import logging utilities
+from gui.utils.logging_utils import get_gui_logger
+
+# Initialize component logger
+privacy_logger = get_gui_logger("privacy_analysis")
+
 from gui.utils.backend_interface import (
     load_scenarios, run_scenario_evaluation, check_system_status
 )
 
 def render_privacy_analysis():
     """Render the privacy analysis interface"""
+    privacy_logger.log_page_load("Privacy Analysis component loaded")
     st.header("🔒 Privacy Analysis")
     st.write("Analyze privacy-utility tradeoffs using Differential Privacy techniques")
     
@@ -137,6 +144,7 @@ def render_privacy_analysis():
                 select_col1, select_col2 = st.columns(2)
                 with select_col1:
                     if st.button("✅ Select All Scenarios", use_container_width=True):
+                        privacy_logger.log_button_click("Select All Privacy Scenarios", scenario_count=len(scenarios))
                         for scenario in scenarios:
                             st.session_state[f"privacy_scenario_{scenario['id']}"] = True
                         st.toast("All scenarios selected for privacy analysis!", icon="✅")
@@ -144,6 +152,7 @@ def render_privacy_analysis():
                 
                 with select_col2:
                     if st.button("❌ Clear All Scenarios", use_container_width=True):
+                        privacy_logger.log_button_click("Clear All Privacy Scenarios", scenario_count=len(scenarios))
                         for scenario in scenarios:
                             st.session_state[f"privacy_scenario_{scenario['id']}"] = False
                         st.toast("All scenarios cleared!", icon="❌")
@@ -193,6 +202,14 @@ def render_privacy_analysis():
         
         # Run privacy analysis
         if run_analysis and selected_scenarios and epsilon_options:
+            privacy_logger.log_button_click("Run Privacy Analysis",
+                scenario_count=len(selected_scenarios),
+                epsilon_options=epsilon_options,
+                method=method,
+                parallel=parallel,
+                max_workers=max_workers if parallel else 1
+            )
+            
             st.session_state.privacy_analysis_running = True
             
             # Map epsilon options to indices
@@ -205,6 +222,13 @@ def render_privacy_analysis():
             
             selected_indices = [epsilon_to_index[eps] for eps in epsilon_options]
             total_runs = len(selected_scenarios) * len(selected_indices)
+            
+            privacy_logger.log_system_operation("Privacy analysis batch started",
+                total_runs=total_runs,
+                scenarios=len(selected_scenarios),
+                epsilon_values=epsilon_options,
+                method=method
+            )
             
             # Progress tracking
             progress_bar = st.progress(0)

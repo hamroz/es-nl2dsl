@@ -13,8 +13,15 @@ from gui.utils.backend_interface import (
     export_results_as_json
 )
 
+# Import logging utilities
+from gui.utils.logging_utils import get_gui_logger
+
+# Initialize component logger
+explorer_logger = get_gui_logger("data_explorer")
+
 def render_data_explorer():
     """Render the Data Explorer interface"""
+    explorer_logger.log_page_load("Data Explorer component loaded")
     st.title("🔍 Data Explorer")
     st.markdown("Browse and explore raw data from Elasticsearch indices without writing queries.")
     
@@ -22,6 +29,7 @@ def render_data_explorer():
     indices = get_available_indices()
     if not indices:
         st.error("No indices available. Please ingest data first.")
+        explorer_logger.log_warning("Data Explorer access", "No indices available")
         return
     
     # Index selection
@@ -32,6 +40,13 @@ def render_data_explorer():
             options=indices,
             help="Choose which Elasticsearch index to explore"
         )
+        
+        # Log index selection for data exploration
+        if "last_explorer_index" not in st.session_state:
+            st.session_state.last_explorer_index = selected_index
+        elif st.session_state.last_explorer_index != selected_index:
+            explorer_logger.log_selection_change("explorer_index", st.session_state.last_explorer_index, selected_index)
+            st.session_state.last_explorer_index = selected_index
     
     with col2:
         # Get document count for selected index
@@ -181,13 +196,23 @@ def render_data_explorer():
         clear_button = st.button("🔄 Clear Results", use_container_width=True)
     
     if clear_button:
+        explorer_logger.log_button_click("Clear Explorer Results")
         if 'explorer_results' in st.session_state:
             del st.session_state.explorer_results
             st.toast("Results cleared successfully!", icon="🔄")
+            explorer_logger.log_success("Explorer results cleared")
         else:
             st.info("No results to clear")
     
     if load_button:
+        explorer_logger.log_button_click("Load Data",
+            index=selected_index,
+            result_limit=result_limit,
+            sort_field=sort_field,
+            sort_order=sort_order,
+            use_filters=any([use_time_filter, use_field_filter, use_attack_filter, use_text_search, use_sampling])
+        )
+        
         with st.spinner("Loading data..."):
             try:
                 es = get_elasticsearch_client()
@@ -208,8 +233,21 @@ def render_data_explorer():
                 st.session_state.explorer_index = selected_index
                 st.session_state.explorer_query = query
                 
+                # Log successful data load
+                total_hits = response.get('hits', {}).get('total', {}).get('value', 0)
+                returned_hits = len(response.get('hits', {}).get('hits', []))
+                explorer_logger.log_success("Data exploration query executed", {
+                    "index": selected_index,
+                    "total_hits": total_hits,
+                    "returned_hits": returned_hits,
+                    "execution_time_ms": response.get('took', 0),
+                    "result_limit": result_limit
+                })
+                
             except Exception as e:
                 st.error(f"Error loading data: {str(e)}")
+                explorer_logger.log_error("Data exploration query failed", str(e), 
+                                        index=selected_index, result_limit=result_limit)
                 return
     
     # Display results
@@ -241,21 +279,25 @@ def render_data_explorer():
             col1, col2, col3 = st.columns([1, 1, 4])
             with col1:
                 csv_data = export_results_as_csv(hits)
-                st.download_button(
+                if st.download_button(
                     label="📊 Export CSV",
                     data=csv_data,
                     file_name=f"data_export_{selected_index}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
                     mime="text/csv"
-                )
+                ):
+                    explorer_logger.log_download(f"data_export_{selected_index}.csv", "CSV",
+                                               record_count=len(hits))
             
             with col2:
                 json_data = export_results_as_json(hits)
-                st.download_button(
+                if st.download_button(
                     label="📋 Export JSON",
                     data=json_data,
                     file_name=f"data_export_{selected_index}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
                     mime="application/json"
-                )
+                ):
+                    explorer_logger.log_download(f"data_export_{selected_index}.json", "JSON",
+                                               record_count=len(hits))
             
             # Display data based on selected format
             if "Table View" in display_format:

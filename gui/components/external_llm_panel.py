@@ -11,12 +11,19 @@ from datetime import datetime
 project_root = Path(__file__).parent.parent.parent
 sys.path.append(str(project_root))
 
+# Import logging utilities
+from gui.utils.logging_utils import get_gui_logger
+
+# Initialize component logger
+llm_logger = get_gui_logger("external_llm_panel")
+
 from src.external.llm_manager import ExternalLLM, get_external_llm_manager
 import os
 
 
 def render_external_llm_panel():
     """Render the External LLM management interface"""
+    llm_logger.log_page_load("External LLM Panel loaded")
     st.title("🤖 External LLM Management")
     st.markdown("Configure and manage external AI models (OpenAI, Google, DeepSeek, Qwen).")
 
@@ -39,7 +46,11 @@ def render_external_llm_panel():
     )
     
     # Update session state with current tab index
-    st.session_state.external_llm_current_tab = tab_names.index(current_tab_name)
+    new_tab_index = tab_names.index(current_tab_name)
+    if st.session_state.external_llm_current_tab != new_tab_index:
+        llm_logger.log_tab_switch(f"external_llm_tab_{st.session_state.external_llm_current_tab}", 
+                                  f"external_llm_tab_{new_tab_index}")
+    st.session_state.external_llm_current_tab = new_tab_index
     
     # Add separator
     st.markdown("---")
@@ -149,12 +160,21 @@ def render_add_llm_tab(manager):
     col1b, col2b, col3b = st.columns([1, 1, 2])
     with col1b:
         if st.button("🚀 Add LLM", type="primary", use_container_width=True):
+            llm_logger.log_button_click("Add LLM",
+                provider=provider,
+                model_id=model_id,
+                llm_name=llm_name
+            )
+            
             if not llm_name:
                 st.error("Please provide a configuration name")
+                llm_logger.log_warning("Add LLM failed", "No configuration name provided")
             elif not api_key and not has_env_key:
                 st.error(f"Please provide an API key or set {manager._get_env_key_name(provider)} in .env file")
+                llm_logger.log_warning("Add LLM failed", f"No API key for provider {provider}")
             elif llm_name in [llm.name for llm in manager.list_llms()]:
                 st.error(f"Configuration '{llm_name}' already exists")
+                llm_logger.log_warning("Add LLM failed", f"Configuration {llm_name} already exists")
             else:
                 # Create LLM configuration
                 llm = ExternalLLM(
@@ -173,9 +193,16 @@ def render_add_llm_tab(manager):
                         st.success(f"✅ Successfully added '{llm_name}'!")
                         st.balloons()
                         st.toast(f"LLM '{llm_name}' added successfully!", icon="✅")
+                        llm_logger.log_success("External LLM added successfully", {
+                            "llm_name": llm_name,
+                            "provider": provider,
+                            "model_id": model_id
+                        })
                     else:
                         err = manager.last_error or "Failed to validate API key."
                         st.error(f"❌ {err}")
+                        llm_logger.log_error("External LLM addition failed", str(err), 
+                                           llm_name=llm_name, provider=provider)
 
     # Show environment variable configuration info
     st.markdown("---")
