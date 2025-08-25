@@ -121,7 +121,7 @@ def render_system_status_tab():
                     if result.returncode == 0:
                         health_data = json.loads(result.stdout)
                         st.json(health_data)
-                        admin_logger.log_success("ES connection test passed", {"cluster_status": health_data.get("status")})
+                        admin_logger.log_success("ES connection test passed", cluster_status=health_data.get("status"))
                     else:
                         st.error("Connection failed")
                         admin_logger.log_error("ES connection test failed", f"Return code: {result.returncode}")
@@ -154,7 +154,7 @@ def render_system_status_tab():
                         st.code(result.stdout)
                         # Count models from output
                         model_count = len([line for line in result.stdout.split('\n')[1:] if line.strip()])
-                        admin_logger.log_success("Ollama test passed", {"model_count": model_count})
+                        admin_logger.log_success("Ollama test passed", model_count=model_count)
                     else:
                         st.error("Ollama not responding")
                         admin_logger.log_error("Ollama test failed", f"Return code: {result.returncode}")
@@ -276,11 +276,11 @@ def render_data_management_tab():
                             if result.returncode == 0:
                                 st.success("✅ Ingestion completed successfully!")
                                 st.code(result.stdout)
-                                admin_logger.log_success("Data ingestion completed", {
-                                    "filename": uploaded_file.name,
-                                    "target_index": target_index,
-                                    "record_count": len(df)
-                                })
+                                admin_logger.log_success("Data ingestion completed", 
+                                    filename=uploaded_file.name,
+                                    target_index=target_index,
+                                    record_count=len(df)
+                                )
                             else:
                                 st.error("❌ Ingestion failed")
                                 st.code(result.stderr)
@@ -388,7 +388,7 @@ def render_maintenance_tab():
                     for file in query_files:
                         file.unlink()
                     st.success(f"✅ Cleaned {cleaned_count} files")
-                    admin_logger.log_success("Generated files cleanup completed", {"files_cleaned": cleaned_count})
+                    admin_logger.log_success("Generated files cleanup completed", files_cleaned=cleaned_count)
                 except Exception as e:
                     st.error(f"Cleanup error: {e}")
                     admin_logger.log_error("Generated files cleanup failed", str(e))
@@ -411,7 +411,7 @@ def render_maintenance_tab():
                     for file in result_files:
                         file.unlink()
                     st.success(f"✅ Cleaned {cleaned_count} files")
-                    admin_logger.log_success("Result files cleanup completed", {"files_cleaned": cleaned_count})
+                    admin_logger.log_success("Result files cleanup completed", files_cleaned=cleaned_count)
                 except Exception as e:
                     st.error(f"Cleanup error: {e}")
                     admin_logger.log_error("Result files cleanup failed", str(e))
@@ -439,7 +439,7 @@ def render_logs_monitoring_tab():
                 
                 if result.returncode == 0:
                     st.code(result.stdout, language="bash")
-                    admin_logger.log_success("Docker logs retrieved", {"log_lines": len(result.stdout.split('\n'))})
+                    admin_logger.log_success("Docker logs retrieved", log_lines=len(result.stdout.split('\n')))
                 else:
                     st.error("Could not retrieve Docker logs")
                     admin_logger.log_error("Docker logs retrieval failed", f"Return code: {result.returncode}")

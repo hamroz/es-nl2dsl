@@ -207,12 +207,12 @@ def render_query_generator():
                 
                 # Log generation result
                 if success:
-                    query_logger.log_success("Query generation completed", {
-                        "method": method, 
-                        "model": model,
-                        "prompt_length": len(prompt),
-                        "has_query": bool(data.get("query"))
-                    })
+                    query_logger.log_success("Query generation completed", 
+                        method=method, 
+                        model=model,
+                        prompt_length=len(prompt),
+                        has_query=bool(data.get("query"))
+                    )
                 else:
                     query_logger.log_error("Query generation failed", output, 
                                          method=method, model=model, prompt_length=len(prompt))
@@ -413,12 +413,12 @@ def render_query_generator():
                     # Store results in session state for persistence
                     if success:
                         st.session_state.last_execution_results = execution_results
-                        query_logger.log_success("Query executed successfully", {
-                            "index": target_index,
-                            "result_count": execution_results.get("returned_hits", 0),
-                            "total_hits": execution_results.get("total_hits", 0),
-                            "execution_time_ms": execution_results.get("took", 0)
-                        })
+                        query_logger.log_success("Query executed successfully", 
+                            index=target_index,
+                            result_count=execution_results.get("returned_hits", 0),
+                            total_hits=execution_results.get("total_hits", 0),
+                            execution_time_ms=execution_results.get("took", 0)
+                        )
                     else:
                         st.session_state.last_execution_error = execution_results
                         query_logger.log_error("Query execution failed", str(execution_results.get("error", "Unknown error")),
@@ -661,7 +661,7 @@ def render_query_generator():
                 
                 if is_valid:
                     st.success("✅ Query is valid!")
-                    query_logger.log_success("Query validation passed", {"filename": uploaded_file.name})
+                    query_logger.log_success("Query validation passed", filename=uploaded_file.name)
                 else:
                     st.error("❌ Query validation failed")
                     st.code(validation_output)

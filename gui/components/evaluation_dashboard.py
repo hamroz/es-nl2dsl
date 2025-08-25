@@ -268,11 +268,11 @@ def render_evaluation_dashboard():
                     st.success("✅ Evaluation complete!")
                     st.balloons()
                     
-                    eval_logger.log_success("Evaluation batch completed", {
-                        "dataset": dataset,
-                        "total_evaluations": len(selected_scenarios) * len(methods) * len(cleaned_models),
-                        "results_count": len(evaluator.results) if hasattr(evaluator, 'results') else 0
-                    })
+                    eval_logger.log_success("Evaluation batch completed", 
+                        dataset=dataset,
+                        total_evaluations=len(selected_scenarios) * len(methods) * len(cleaned_models),
+                        results_count=len(evaluator.results) if hasattr(evaluator, 'results') else 0
+                    )
     
     with col2:
         st.subheader("📊 Results & Analysis")

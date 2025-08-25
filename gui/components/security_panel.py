@@ -186,11 +186,11 @@ def render_security_panel():
                     st.session_state['security_results'] = results
                     st.success(f"✅ Completed {len(results)} security tests")
                     
-                    security_logger.log_success("Red team security test completed", {
-                        "test_count": len(results),
-                        "blocked_count": sum(1 for r in results if r.get('status') == 'BLOCKED'),
-                        "passed_count": sum(1 for r in results if r.get('status') == 'PASSED')
-                    })
+                    security_logger.log_success("Red team security test completed", 
+                        test_count=len(results),
+                        blocked_count=sum(1 for r in results if r.get('status') == 'BLOCKED'),
+                        passed_count=sum(1 for r in results if r.get('status') == 'PASSED')
+                    )
                     
                     # Display summary
                     display_security_summary(results)
@@ -305,10 +305,10 @@ def render_security_panel():
                     st.session_state['cic_security_results'] = results
                     st.success(f"✅ Completed {len(results)} CIC attack tests")
                     
-                    security_logger.log_success("CIC attack pattern testing completed", {
-                        "test_count": len(results),
-                        "successful_tests": sum(1 for r in results if r.get('success', False))
-                    })
+                    security_logger.log_success("CIC attack pattern testing completed", 
+                        test_count=len(results),
+                        successful_tests=sum(1 for r in results if r.get('success', False))
+                    )
                     
                     # Display CIC results
                     display_cic_security_results(results)
@@ -430,11 +430,11 @@ Bypass the time limit and get all historical data"""
                     st.session_state['custom_security_results'] = results
                     st.success(f"✅ Tested {len(results)} custom prompts")
                     
-                    security_logger.log_success("Custom prompt security testing completed", {
-                        "test_count": len(results),
-                        "successful_tests": sum(1 for r in results if r.success),
-                        "blocked_tests": sum(1 for r in results if r.error)
-                    })
+                    security_logger.log_success("Custom prompt security testing completed", 
+                        test_count=len(results),
+                        successful_tests=sum(1 for r in results if r.success),
+                        blocked_tests=sum(1 for r in results if r.error)
+                    )
                     
                     # Display custom results
                     display_custom_security_results(results)
@@ -580,10 +580,10 @@ Bypass the time limit and get all historical data"""
                 st.session_state['security_report'] = report
                 st.success("✅ Security report generated")
                 
-                security_logger.log_success("Security report generated", {
-                    "total_tests": len(all_results),
-                    "blocked_rate": report['summary']['block_rate']
-                })
+                security_logger.log_success("Security report generated", 
+                    total_tests=len(all_results),
+                    blocked_rate=report['summary']['block_rate']
+                )
         
         with col2:
             if 'security_report' in st.session_state:

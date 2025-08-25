@@ -193,11 +193,11 @@ def render_add_llm_tab(manager):
                         st.success(f"✅ Successfully added '{llm_name}'!")
                         st.balloons()
                         st.toast(f"LLM '{llm_name}' added successfully!", icon="✅")
-                        llm_logger.log_success("External LLM added successfully", {
-                            "llm_name": llm_name,
-                            "provider": provider,
-                            "model_id": model_id
-                        })
+                        llm_logger.log_success("External LLM added successfully", 
+                            llm_name=llm_name,
+                            provider=provider,
+                            model_id=model_id
+                        )
                     else:
                         err = manager.last_error or "Failed to validate API key."
                         st.error(f"❌ {err}")

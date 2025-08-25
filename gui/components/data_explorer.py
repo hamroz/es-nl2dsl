@@ -236,13 +236,13 @@ def render_data_explorer():
                 # Log successful data load
                 total_hits = response.get('hits', {}).get('total', {}).get('value', 0)
                 returned_hits = len(response.get('hits', {}).get('hits', []))
-                explorer_logger.log_success("Data exploration query executed", {
-                    "index": selected_index,
-                    "total_hits": total_hits,
-                    "returned_hits": returned_hits,
-                    "execution_time_ms": response.get('took', 0),
-                    "result_limit": result_limit
-                })
+                explorer_logger.log_success("Data exploration query executed", 
+                    index=selected_index,
+                    total_hits=total_hits,
+                    returned_hits=returned_hits,
+                    execution_time_ms=response.get('took', 0),
+                    result_limit=result_limit
+                )
                 
             except Exception as e:
                 st.error(f"Error loading data: {str(e)}")
@@ -278,7 +278,9 @@ def render_data_explorer():
             # Export buttons
             col1, col2, col3 = st.columns([1, 1, 4])
             with col1:
-                csv_data = export_results_as_csv(hits)
+                # Wrap hits in expected format for export functions
+                export_data = {"results": [hit["_source"] for hit in hits]}
+                csv_data = export_results_as_csv(export_data)
                 if st.download_button(
                     label="📊 Export CSV",
                     data=csv_data,
@@ -289,7 +291,9 @@ def render_data_explorer():
                                                record_count=len(hits))
             
             with col2:
-                json_data = export_results_as_json(hits)
+                # Wrap hits in expected format for export functions
+                export_data = {"results": [hit["_source"] for hit in hits]}
+                json_data = export_results_as_json(export_data)
                 if st.download_button(
                     label="📋 Export JSON",
                     data=json_data,
