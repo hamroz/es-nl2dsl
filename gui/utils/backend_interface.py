@@ -268,6 +268,14 @@ def run_scenario_evaluation(scenario_id: str, method: str = "constrained",
                 metrics["precision"] = float(line.split(":")[1].strip())
             elif "Recall:" in line:
                 metrics["recall"] = float(line.split(":")[1].strip())
+            elif "Semantic Similarity:" in line:
+                metrics["semantic_similarity"] = float(line.split(":")[1].strip())
+            elif "Comprehensiveness:" in line:
+                metrics["comprehensiveness"] = float(line.split(":")[1].strip())
+            elif "Efficiency Score:" in line:
+                metrics["efficiency"] = float(line.split(":")[1].strip())
+            elif "Quality Level:" in line:
+                metrics["quality_level"] = line.split(":")[1].strip().lower()
             elif "Validator Status:" in line:
                 metrics["validation"] = "PASS" in line
         

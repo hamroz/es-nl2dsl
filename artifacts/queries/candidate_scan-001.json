@@ -4,15 +4,12 @@
       "filter": [
         {
           "term": {
-            "label": "malicious"
+            "@timestamp": "2017-07-04"
           }
         },
         {
-          "range": {
-            "@timestamp": {
-              "gte": "2017-01-01",
-              "lte": "2017-12-31"
-            }
+          "term": {
+            "label": "malicious"
           }
         }
       ]

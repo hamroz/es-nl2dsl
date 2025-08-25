@@ -507,8 +507,17 @@ def main():
     parser.add_argument("--output-dir", default="artifacts/generated", help="Output directory")
     parser.add_argument("--model", default="llama3.1:latest", help="Ollama model to use")
     parser.add_argument("--index", help="Target index (auto-selects appropriate rules)")
+    parser.add_argument("--seed", type=int, help="Random seed for reproducible generation")
     
     args = parser.parse_args()
+    
+    # Set random seed if provided
+    if args.seed is not None:
+        import random
+        import numpy as np
+        random.seed(args.seed)
+        np.random.seed(args.seed)
+        print(f"Set random seed to {args.seed} for reproducible generation")
     
     # Create output directory
     output_dir = Path(args.output_dir)

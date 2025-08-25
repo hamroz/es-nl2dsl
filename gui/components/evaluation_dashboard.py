@@ -416,14 +416,16 @@ def render_evaluation_dashboard():
                 overall = summary['overall']
                 
                 # Key metrics
-                col1, col2, col3, col4 = st.columns(4)
+                col1, col2, col3, col4, col5 = st.columns(5)
                 with col1:
                     st.metric("Success Rate", f"{overall.get('success_rate', 0)*100:.1f}%")
                 with col2:
                     st.metric("Avg F1 Score", f"{overall.get('avg_f1_score', 0):.3f}")
                 with col3:
-                    st.metric("Avg AST Similarity", f"{overall.get('avg_ast_similarity', 0):.3f}")
+                    st.metric("Semantic Similarity", f"{overall.get('avg_semantic_similarity', 0):.3f}")
                 with col4:
+                    st.metric("AST Similarity", f"{overall.get('avg_ast_similarity', 0):.3f}")
+                with col5:
                     st.metric("Avg Gen Time", f"{overall.get('avg_generation_time', 0):.2f}s")
                 
                 # Performance chart
@@ -436,12 +438,13 @@ def render_evaluation_dashboard():
                             'F1 Score': metrics.get('avg_f1_score', 0),
                             'Precision': metrics.get('avg_precision', 0),
                             'Recall': metrics.get('avg_recall', 0),
+                            'Semantic Similarity': metrics.get('avg_semantic_similarity', 0),
                             'AST Similarity': metrics.get('avg_ast_similarity', 0)
                         })
                     
                     df_methods = pd.DataFrame(method_data)
                     fig = px.bar(df_methods, x='Method', 
-                                y=['F1 Score', 'Precision', 'Recall', 'AST Similarity'],
+                                y=['F1 Score', 'Precision', 'Recall', 'Semantic Similarity', 'AST Similarity'],
                                 title="Performance by Method",
                                 barmode='group')
                     st.plotly_chart(fig, use_container_width=True)
@@ -660,6 +663,7 @@ def render_evaluation_dashboard():
                         metrics = None
                     
                     if metrics:
+                        st.markdown("**Traditional Metrics:**")
                         col1, col2, col3, col4 = st.columns(4)
                         with col1:
                             st.metric("Precision", f"{metrics.get('precision', 0):.3f}")
@@ -669,6 +673,20 @@ def render_evaluation_dashboard():
                             st.metric("F1 Score", f"{metrics.get('f1_score', 0):.3f}")
                         with col4:
                             st.metric("Jaccard", f"{metrics.get('jaccard', 0):.3f}")
+                        
+                        # Enhanced metrics if available
+                        if any(k in metrics for k in ['semantic_similarity', 'comprehensiveness', 'efficiency', 'quality_level']):
+                            st.markdown("**Enhanced Metrics:**")
+                            col5, col6, col7, col8 = st.columns(4)
+                            with col5:
+                                st.metric("Semantic Similarity", f"{metrics.get('semantic_similarity', 0):.3f}")
+                            with col6:
+                                st.metric("Comprehensiveness", f"{metrics.get('comprehensiveness', 0):.3f}")
+                            with col7:
+                                st.metric("Efficiency", f"{metrics.get('efficiency', 0):.3f}")
+                            with col8:
+                                quality = metrics.get('quality_level', 'unknown')
+                                st.metric("Quality Level", quality.upper())
         
         # Export options
         st.markdown("---")

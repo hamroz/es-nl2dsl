@@ -3,10 +3,26 @@
 import json
 import argparse
 import time
+import numpy as np
 from pathlib import Path
 from typing import Dict, List, Tuple, Any, Optional
 from dataclasses import dataclass
 from enum import Enum
+import hashlib
+
+# Optional imports for enhanced semantic analysis
+try:
+    from sentence_transformers import SentenceTransformer
+    SENTENCE_TRANSFORMERS_AVAILABLE = True
+except ImportError:
+    SENTENCE_TRANSFORMERS_AVAILABLE = False
+    print("Warning: sentence-transformers not available. Using basic semantic similarity.")
+
+try:
+    from sklearn.metrics.pairwise import cosine_similarity
+    SKLEARN_AVAILABLE = True
+except ImportError:
+    SKLEARN_AVAILABLE = False
 
 class QueryQuality(Enum):
     """Quality assessment levels for generated queries"""
@@ -66,6 +82,15 @@ class SemanticQueryAnalyzer:
             "field_filters": ["term", "terms"],
             "logical_structure": ["bool", "filter", "must", "should"]
         }
+        
+        # Initialize embedding model for enhanced semantic analysis
+        self.embedding_model = None
+        if SENTENCE_TRANSFORMERS_AVAILABLE:
+            try:
+                self.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
+            except Exception as e:
+                print(f"Warning: Could not load sentence transformer model: {e}")
+                self.embedding_model = None
     
     def extract_semantic_components(self, query: Dict) -> Dict[str, Any]:
         """Extract semantic components from a query"""
@@ -80,9 +105,14 @@ class SemanticQueryAnalyzer:
         def analyze_clause(clause, context=""):
             if isinstance(clause, dict):
                 for key, value in clause.items():
-                    if key == "range" and "@timestamp" in str(value):
-                        components["time_constraints"].append(value)
-                        components["complexity_score"] += 1
+                    if key == "range":
+                        if isinstance(value, dict) and "@timestamp" in value:
+                            components["time_constraints"].append(value)
+                            components["complexity_score"] += 1
+                        elif isinstance(value, dict):
+                            # Other range constraints
+                            components["field_constraints"].append({key: value})
+                            components["complexity_score"] += 1
                     elif key in ["term", "terms", "match"]:
                         components["field_constraints"].append({key: value})
                         components["complexity_score"] += 1
@@ -91,13 +121,20 @@ class SemanticQueryAnalyzer:
                         if isinstance(value, list):
                             for sub_clause in value:
                                 analyze_clause(sub_clause, f"{context}.{key}")
-                        else:
+                        elif isinstance(value, dict):
                             analyze_clause(value, f"{context}.{key}")
                     elif key == "aggs":
                         components["aggregations"].append(value)
                         components["complexity_score"] += 2
+            elif isinstance(clause, list):
+                for item in clause:
+                    analyze_clause(item, context)
         
-        analyze_clause(query)
+        # Start analysis from the query root
+        if "query" in query:
+            analyze_clause(query["query"])
+        else:
+            analyze_clause(query)
         return components
     
     def calculate_semantic_similarity(self, generated: Dict, ground_truth: Dict) -> float:
@@ -151,6 +188,69 @@ class SemanticQueryAnalyzer:
             similarities.append(0.5)  # Different logical structure
         
         return sum(similarities) / len(similarities) if similarities else 0.0
+    
+    def query_to_semantic_description(self, query: Dict) -> str:
+        """Convert DSL query to natural language description for embedding"""
+        description_parts = []
+        
+        def extract_descriptions(obj, path=""):
+            if isinstance(obj, dict):
+                for key, value in obj.items():
+                    if key == "range" and isinstance(value, dict):
+                        for field, constraints in value.items():
+                            if field == "@timestamp":
+                                gte = constraints.get("gte", "")
+                                lte = constraints.get("lte", "")
+                                description_parts.append(f"time filter from {gte} to {lte}")
+                            else:
+                                description_parts.append(f"range filter on {field}")
+                    elif key == "term" and isinstance(value, dict):
+                        for field, term_value in value.items():
+                            description_parts.append(f"exact match {field} equals {term_value}")
+                    elif key == "terms" and isinstance(value, dict):
+                        for field, term_values in value.items():
+                            description_parts.append(f"match {field} in {term_values}")
+                    elif key in ["must", "filter", "should"]:
+                        description_parts.append(f"logical {key} condition")
+                    
+                    extract_descriptions(value, f"{path}.{key}" if path else key)
+            elif isinstance(obj, list):
+                for item in obj:
+                    extract_descriptions(item, path)
+        
+        extract_descriptions(query)
+        return " ".join(description_parts) if description_parts else "empty query"
+    
+    def calculate_embedding_similarity(self, generated: Dict, ground_truth: Dict) -> float:
+        """Calculate semantic similarity using sentence embeddings"""
+        if not self.embedding_model or not SKLEARN_AVAILABLE:
+            # Fallback to structural similarity
+            return self.calculate_semantic_similarity(generated, ground_truth)
+        
+        try:
+            # Convert queries to semantic descriptions
+            gen_description = self.query_to_semantic_description(generated)
+            truth_description = self.query_to_semantic_description(ground_truth)
+            
+            # Generate embeddings
+            embeddings = self.embedding_model.encode([gen_description, truth_description])
+            
+            # Calculate cosine similarity
+            similarity_matrix = cosine_similarity([embeddings[0]], [embeddings[1]])
+            embedding_similarity = similarity_matrix[0][0]
+            
+            # Combine with structural similarity for robustness
+            structural_similarity = self.calculate_semantic_similarity(generated, ground_truth)
+            
+            # Weighted combination: 60% embedding, 40% structural
+            combined_similarity = 0.6 * embedding_similarity + 0.4 * structural_similarity
+            
+            return float(combined_similarity)
+            
+        except Exception as e:
+            print(f"Warning: Embedding similarity calculation failed: {e}")
+            # Fallback to structural similarity
+            return self.calculate_semantic_similarity(generated, ground_truth)
     
     def calculate_comprehensiveness_score(self, generated: Dict, ground_truth: Dict, 
                                         generated_results: List, truth_results: List) -> float:
@@ -246,8 +346,8 @@ def enhanced_evaluate_query(generated_query: Dict, ground_truth_query: Dict,
         f1 = (2 * precision * recall / (precision + recall)) if (precision + recall) > 0 else 0.0
         jaccard = intersection / len(gen_set | truth_set)
     
-    # Enhanced metrics
-    semantic_similarity = analyzer.calculate_semantic_similarity(generated_query, ground_truth_query)
+    # Enhanced metrics - use embedding-based similarity if available
+    semantic_similarity = analyzer.calculate_embedding_similarity(generated_query, ground_truth_query)
     comprehensiveness_score = analyzer.calculate_comprehensiveness_score(
         generated_query, ground_truth_query, generated_results, ground_truth_results
     )

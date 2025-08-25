@@ -18,13 +18,15 @@ def load_scenario(prompts_file, scenario_id):
     
     raise ValueError(f"Scenario {scenario_id} not found")
 
-def generate_query(prompt, task_id, index=None):
+def generate_query(prompt, task_id, index=None, seed=None):
     """Generate a query using generate_constrained.py"""
     cmd = [sys.executable, "src/generators/constrained.py", 
            "--prompt", prompt,
            "--task-id", task_id]
     if index:
         cmd.extend(["--index", index])
+    if seed is not None:
+        cmd.extend(["--seed", str(seed)])
     
     result = subprocess.run(
         cmd,
@@ -99,6 +101,7 @@ def main():
     parser.add_argument("--prompts", default="tasks/prompts.yaml", help="Prompts file")
     parser.add_argument("--index", default="logs_net", help="Elasticsearch index")
     parser.add_argument("--candidate", help="Path to candidate query (if not generating)")
+    parser.add_argument("--seed", type=int, help="Random seed for reproducible generation")
     
     args = parser.parse_args()
     
@@ -115,7 +118,9 @@ def main():
     # Determine candidate query path
     if args.gen:
         print("Generating query...")
-        query, error = generate_query(scenario['prompt'], scenario['id'], args.index)
+        if args.seed is not None:
+            print(f"Using seed: {args.seed}")
+        query, error = generate_query(scenario['prompt'], scenario['id'], args.index, args.seed)
         if error:
             print(f"Generation failed: {error}")
             sys.exit(1)

@@ -100,7 +100,7 @@ def calculate_aggregate_metrics(df):
     
     return metrics
 
-def save_outputs(df, aggregate_metrics, output_dir):
+def save_outputs(df, aggregate_metrics, output_dir, include_confidence_intervals=False):
     """Save outputs in multiple formats"""
     output_path = Path(output_dir)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -131,6 +131,12 @@ def save_outputs(df, aggregate_metrics, output_dir):
                 f.write(f"- **{key}**: {value:.3f}\n")
             else:
                 f.write(f"- **{key}**: {value}\n")
+        
+        # Add confidence intervals if available
+        if include_confidence_intervals:
+            f.write("\n\n## Statistical Analysis\n\n")
+            f.write("*Note: Confidence intervals and significance testing require multiple runs.*\n")
+            f.write("*Run with statistical evaluation suite for full statistical analysis.*\n")
     print(f"Saved markdown to {md_file}")
 
 def main():
