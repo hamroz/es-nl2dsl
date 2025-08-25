@@ -1,0 +1,2162 @@
+[
+  {
+    "scenario_id": "scan-001",
+    "method": "zeroshot",
+    "model": "External: gpt-4o-mini",
+    "prompt": "Find events labeled malicious on 2017-07-04.",
+    "error": "External LLMs not supported with zeroshot method",
+    "success": false,
+    "generation_time": 1.3113021850585938e-05,
+    "timestamp": 1756139338.363662
+  },
+  {
+    "scenario_id": "scan-001",
+    "method": "rules",
+    "model": "External: gpt-4o-mini",
+    "prompt": "Find events labeled malicious on 2017-07-04.",
+    "generated_query": {
+      "query": {
+        "bool": {
+          "filter": [
+            {
+              "range": {
+                "@timestamp": {
+                  "gte": "2017-07-04T00:00:00Z",
+                  "lte": "2017-07-04T23:59:59Z"
+                }
+              }
+            },
+            {
+              "term": {
+                "label": "malicious"
+              }
+            }
+          ]
+        }
+      }
+    },
+    "ground_truth_query": {
+      "query": {
+        "bool": {
+          "filter": [
+            {
+              "range": {
+                "@timestamp": {
+                  "gte": "2017-07-04T00:00:00Z",
+                  "lte": "2017-07-04T23:59:59Z"
+                }
+              }
+            },
+            {
+              "term": {
+                "label": "malicious"
+              }
+            }
+          ]
+        }
+      }
+    },
+    "execution_metrics": {
+      "traditional": {
+        "jaccard_similarity": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1_score": 1.0
+      },
+      "enhanced": {
+        "semantic_similarity": 1.0,
+        "comprehensiveness_score": 1.0,
+        "efficiency_score": 1.0,
+        "quality_level": "perfect"
+      },
+      "execution": {
+        "execution_time_ms": 413.26904296875,
+        "result_count": 0
+      }
+    },
+    "ast_similarity": 0.0,
+    "generation_time": 0.41326904296875,
+    "success": true,
+    "error": null,
+    "timestamp": 1756139338.77394
+  },
+  {
+    "scenario_id": "scan-002",
+    "method": "zeroshot",
+    "model": "External: gpt-4o-mini",
+    "prompt": "Find TCP connections with more than 10000 bytes transferred from source IP 10.42.42.1 between July 3-5, 2017.",
+    "error": "External LLMs not supported with zeroshot method",
+    "success": false,
+    "generation_time": 5.7220458984375e-06,
+    "timestamp": 1756139338.774063
+  },
+  {
+    "scenario_id": "scan-002",
+    "method": "rules",
+    "model": "External: gpt-4o-mini",
+    "prompt": "Find TCP connections with more than 10000 bytes transferred from source IP 10.42.42.1 between July 3-5, 2017.",
+    "generated_query": {
+      "query": {
+        "bool": {
+          "filter": [
+            {
+              "range": {
+                "@timestamp": {
+                  "gte": "2017-07-03T00:00:00Z",
+                  "lte": "2017-07-05T23:59:59Z"
+                }
+              }
+            },
+            {
+              "term": {
+                "protocol": "TCP"
+              }
+            },
+            {
+              "term": {
+                "src_ip": "10.42.42.1"
+              }
+            },
+            {
+              "range": {
+                "bytes_out": {
+                  "gt": 10000
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "ground_truth_query": {
+      "query": {
+        "bool": {
+          "filter": [
+            {
+              "range": {
+                "@timestamp": {
+                  "gte": "2017-07-03T00:00:00Z",
+                  "lte": "2017-07-05T23:59:59Z"
+                }
+              }
+            },
+            {
+              "term": {
+                "src_ip": "10.42.42.1"
+              }
+            },
+            {
+              "term": {
+                "protocol": "TCP"
+              }
+            },
+            {
+              "range": {
+                "bytes_out": {
+                  "gt": 10000
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "execution_metrics": {
+      "traditional": {
+        "jaccard_similarity": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1_score": 1.0
+      },
+      "enhanced": {
+        "semantic_similarity": 1.0,
+        "comprehensiveness_score": 1.0,
+        "efficiency_score": 1.0,
+        "quality_level": "perfect"
+      },
+      "execution": {
+        "execution_time_ms": 411.3149642944336,
+        "result_count": 0
+      }
+    },
+    "ast_similarity": 0.0,
+    "generation_time": 0.4113149642944336,
+    "success": true,
+    "error": null,
+    "timestamp": 1756139338.777438
+  },
+  {
+    "scenario_id": "scan-003",
+    "method": "rules",
+    "model": "External: gpt-4o-mini",
+    "prompt": "Find all traffic to destination port 445 or 3389 on July 4, 2017.",
+    "generated_query": {
+      "query": {
+        "bool": {
+          "filter": [
+            {
+              "range": {
+                "@timestamp": {
+                  "gte": "2017-07-04T00:00:00Z",
+                  "lte": "2017-07-04T23:59:59Z"
+                }
+              }
+            },
+            {
+              "terms": {
+                "dst_port": [
+                  445,
+                  3389
+                ]
+              }
+            }
+          ]
+        }
+      }
+    },
+    "ground_truth_query": {
+      "query": {
+        "bool": {
+          "filter": [
+            {
+              "range": {
+                "@timestamp": {
+                  "gte": "2017-07-04T00:00:00Z",
+                  "lte": "2017-07-04T23:59:59Z"
+                }
+              }
+            },
+            {
+              "terms": {
+                "dst_port": [
+                  445,
+                  3389
+                ]
+              }
+            }
+          ]
+        }
+      }
+    },
+    "execution_metrics": {
+      "traditional": {
+        "jaccard_similarity": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1_score": 1.0
+      },
+      "enhanced": {
+        "semantic_similarity": 1.0,
+        "comprehensiveness_score": 1.0,
+        "efficiency_score": 1.0,
+        "quality_level": "perfect"
+      },
+      "execution": {
+        "execution_time_ms": 303.6510944366455,
+        "result_count": 0
+      }
+    },
+    "ast_similarity": 0.0,
+    "generation_time": 0.3036510944366455,
+    "success": true,
+    "error": null,
+    "timestamp": 1756139339.0815659
+  },
+  {
+    "scenario_id": "scan-003",
+    "method": "zeroshot",
+    "model": "External: gpt-4o-mini",
+    "prompt": "Find all traffic to destination port 445 or 3389 on July 4, 2017.",
+    "error": "External LLMs not supported with zeroshot method",
+    "success": false,
+    "generation_time": 9.059906005859375e-06,
+    "timestamp": 1756139339.081708
+  },
+  {
+    "scenario_id": "scan-001",
+    "method": "constrained",
+    "model": "External: gpt-4o-mini",
+    "prompt": "Find events labeled malicious on 2017-07-04.",
+    "generated_query": {
+      "query": {
+        "bool": {
+          "filter": [
+            {
+              "term": {
+                "label": "malicious"
+              }
+            },
+            {
+              "range": {
+                "@timestamp": {
+                  "gte": "2017-07-04T00:00:00",
+                  "lte": "2017-07-04T23:59:59"
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "ground_truth_query": {
+      "query": {
+        "bool": {
+          "filter": [
+            {
+              "range": {
+                "@timestamp": {
+                  "gte": "2017-07-04T00:00:00Z",
+                  "lte": "2017-07-04T23:59:59Z"
+                }
+              }
+            },
+            {
+              "term": {
+                "label": "malicious"
+              }
+            }
+          ]
+        }
+      }
+    },
+    "execution_metrics": {
+      "traditional": {
+        "jaccard_similarity": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1_score": 1.0
+      },
+      "enhanced": {
+        "semantic_similarity": 1.0,
+        "comprehensiveness_score": 1.0,
+        "efficiency_score": 1.0,
+        "quality_level": "perfect"
+      },
+      "execution": {
+        "execution_time_ms": 3808.9869022369385,
+        "result_count": 0
+      }
+    },
+    "ast_similarity": 0.0,
+    "generation_time": 3.8089869022369385,
+    "success": true,
+    "error": null,
+    "timestamp": 1756139342.169294
+  },
+  {
+    "scenario_id": "scan-004",
+    "method": "rules",
+    "model": "External: gpt-4o-mini",
+    "prompt": "Find UDP traffic with high outbound bytes (more than 50000) from internal IPs (10.x.x.x) on July 4, 2017.",
+    "generated_query": {
+      "query": {
+        "bool": {
+          "filter": [
+            {
+              "range": {
+                "@timestamp": {
+                  "gte": "2017-07-04T00:00:00Z",
+                  "lte": "2017-07-04T23:59:59Z"
+                }
+              }
+            },
+            {
+              "term": {
+                "protocol": "UDP"
+              }
+            }
+          ]
+        }
+      }
+    },
+    "ground_truth_query": {
+      "query": {
+        "bool": {
+          "filter": [
+            {
+              "range": {
+                "@timestamp": {
+                  "gte": "2017-07-04T00:00:00Z",
+                  "lte": "2017-07-04T23:59:59Z"
+                }
+              }
+            },
+            {
+              "term": {
+                "protocol": "UDP"
+              }
+            },
+            {
+              "range": {
+                "bytes_out": {
+                  "gt": 50000
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "execution_metrics": {
+      "traditional": {
+        "jaccard_similarity": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1_score": 1.0
+      },
+      "enhanced": {
+        "semantic_similarity": 1.0,
+        "comprehensiveness_score": 1.0,
+        "efficiency_score": 1.0,
+        "quality_level": "perfect"
+      },
+      "execution": {
+        "execution_time_ms": 289.4771099090576,
+        "result_count": 0
+      }
+    },
+    "ast_similarity": 0.0,
+    "generation_time": 0.2894771099090576,
+    "success": true,
+    "error": null,
+    "timestamp": 1756139342.4591732
+  },
+  {
+    "scenario_id": "scan-004",
+    "method": "zeroshot",
+    "model": "External: gpt-4o-mini",
+    "prompt": "Find UDP traffic with high outbound bytes (more than 50000) from internal IPs (10.x.x.x) on July 4, 2017.",
+    "error": "External LLMs not supported with zeroshot method",
+    "success": false,
+    "generation_time": 7.867813110351562e-06,
+    "timestamp": 1756139342.459291
+  },
+  {
+    "scenario_id": "scan-003",
+    "method": "constrained",
+    "model": "External: gpt-4o-mini",
+    "prompt": "Find all traffic to destination port 445 or 3389 on July 4, 2017.",
+    "generated_query": {
+      "query": {
+        "bool": {
+          "filter": [
+            {
+              "terms": {
+                "dst_port": [
+                  445,
+                  3389
+                ]
+              }
+            },
+            {
+              "range": {
+                "@timestamp": {
+                  "gte": "2017-07-04T00:00:00",
+                  "lte": "2017-07-04T23:59:59"
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "ground_truth_query": {
+      "query": {
+        "bool": {
+          "filter": [
+            {
+              "range": {
+                "@timestamp": {
+                  "gte": "2017-07-04T00:00:00Z",
+                  "lte": "2017-07-04T23:59:59Z"
+                }
+              }
+            },
+            {
+              "terms": {
+                "dst_port": [
+                  445,
+                  3389
+                ]
+              }
+            }
+          ]
+        }
+      }
+    },
+    "execution_metrics": {
+      "traditional": {
+        "jaccard_similarity": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1_score": 1.0
+      },
+      "enhanced": {
+        "semantic_similarity": 1.0,
+        "comprehensiveness_score": 1.0,
+        "efficiency_score": 1.0,
+        "quality_level": "perfect"
+      },
+      "execution": {
+        "execution_time_ms": 3841.0379886627197,
+        "result_count": 0
+      }
+    },
+    "ast_similarity": 0.0,
+    "generation_time": 3.8410379886627197,
+    "success": true,
+    "error": null,
+    "timestamp": 1756139342.615402
+  },
+  {
+    "scenario_id": "scan-005",
+    "method": "rules",
+    "model": "External: gpt-4o-mini",
+    "prompt": "Find benign TCP traffic to ports 22 or 80 with less than 5000 total bytes on July 4, 2017.",
+    "generated_query": {
+      "query": {
+        "bool": {
+          "filter": [
+            {
+              "range": {
+                "@timestamp": {
+                  "gte": "2017-07-04T00:00:00Z",
+                  "lte": "2017-07-04T23:59:59Z"
+                }
+              }
+            },
+            {
+              "term": {
+                "label": "benign"
+              }
+            },
+            {
+              "term": {
+                "protocol": "TCP"
+              }
+            },
+            {
+              "terms": {
+                "dst_port": [
+                  22,
+                  80
+                ]
+              }
+            }
+          ]
+        }
+      }
+    },
+    "ground_truth_query": {
+      "query": {
+        "bool": {
+          "filter": [
+            {
+              "range": {
+                "@timestamp": {
+                  "gte": "2017-07-04T00:00:00Z",
+                  "lte": "2017-07-04T23:59:59Z"
+                }
+              }
+            },
+            {
+              "term": {
+                "protocol": "TCP"
+              }
+            },
+            {
+              "term": {
+                "label": "benign"
+              }
+            },
+            {
+              "terms": {
+                "dst_port": [
+                  22,
+                  80
+                ]
+              }
+            },
+            {
+              "range": {
+                "bytes_in": {
+                  "lt": 5000
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "execution_metrics": {
+      "traditional": {
+        "jaccard_similarity": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1_score": 1.0
+      },
+      "enhanced": {
+        "semantic_similarity": 1.0,
+        "comprehensiveness_score": 1.0,
+        "efficiency_score": 1.0,
+        "quality_level": "perfect"
+      },
+      "execution": {
+        "execution_time_ms": 292.9661273956299,
+        "result_count": 0
+      }
+    },
+    "ast_similarity": 0.0,
+    "generation_time": 0.2929661273956299,
+    "success": true,
+    "error": null,
+    "timestamp": 1756139342.90873
+  },
+  {
+    "scenario_id": "scan-005",
+    "method": "zeroshot",
+    "model": "External: gpt-4o-mini",
+    "prompt": "Find benign TCP traffic to ports 22 or 80 with less than 5000 total bytes on July 4, 2017.",
+    "error": "External LLMs not supported with zeroshot method",
+    "success": false,
+    "generation_time": 4.76837158203125e-06,
+    "timestamp": 1756139342.908863
+  },
+  {
+    "scenario_id": "scan-002",
+    "method": "constrained",
+    "model": "External: gpt-4o-mini",
+    "prompt": "Find TCP connections with more than 10000 bytes transferred from source IP 10.42.42.1 between July 3-5, 2017.",
+    "generated_query": {
+      "query": {
+        "bool": {
+          "filter": [
+            {
+              "term": {
+                "protocol": "TCP"
+              }
+            },
+            {
+              "range": {
+                "bytes_in": {
+                  "gt": 10000
+                }
+              }
+            },
+            {
+              "term": {
+                "src_ip": "10.42.42.1"
+              }
+            },
+            {
+              "range": {
+                "@timestamp": {
+                  "gte": "2017-07-03",
+                  "lte": "2017-07-05"
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "ground_truth_query": {
+      "query": {
+        "bool": {
+          "filter": [
+            {
+              "range": {
+                "@timestamp": {
+                  "gte": "2017-07-03T00:00:00Z",
+                  "lte": "2017-07-05T23:59:59Z"
+                }
+              }
+            },
+            {
+              "term": {
+                "src_ip": "10.42.42.1"
+              }
+            },
+            {
+              "term": {
+                "protocol": "TCP"
+              }
+            },
+            {
+              "range": {
+                "bytes_out": {
+                  "gt": 10000
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "execution_metrics": {
+      "traditional": {
+        "jaccard_similarity": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1_score": 1.0
+      },
+      "enhanced": {
+        "semantic_similarity": 1.0,
+        "comprehensiveness_score": 1.0,
+        "efficiency_score": 1.0,
+        "quality_level": "perfect"
+      },
+      "execution": {
+        "execution_time_ms": 5408.1737995147705,
+        "result_count": 0
+      }
+    },
+    "ast_similarity": 0.0,
+    "generation_time": 5.4081737995147705,
+    "success": true,
+    "error": null,
+    "timestamp": 1756139343.772461
+  },
+  {
+    "scenario_id": "scan-006",
+    "method": "rules",
+    "model": "External: gpt-4o-mini",
+    "prompt": "Find all traffic from source IPs starting with 192.168 between July 3-5, 2017.",
+    "generated_query": {
+      "query": {
+        "bool": {
+          "filter": [
+            {
+              "range": {
+                "@timestamp": {
+                  "gte": "2017-07-03T00:00:00Z",
+                  "lte": "2017-07-05T23:59:59Z"
+                }
+              }
+            },
+            {
+              "terms": {
+                "src_ip": [
+                  "192.168.1.50",
+                  "192.168.1.100",
+                  "192.168.1.150",
+                  "192.168.2.50"
+                ]
+              }
+            }
+          ]
+        }
+      }
+    },
+    "ground_truth_query": {
+      "query": {
+        "bool": {
+          "filter": [
+            {
+              "range": {
+                "@timestamp": {
+                  "gte": "2017-07-03T00:00:00Z",
+                  "lte": "2017-07-05T23:59:59Z"
+                }
+              }
+            },
+            {
+              "terms": {
+                "src_ip": [
+                  "192.168.1.50",
+                  "192.168.1.100",
+                  "192.168.1.150",
+                  "192.168.2.50"
+                ]
+              }
+            }
+          ]
+        }
+      }
+    },
+    "execution_metrics": {
+      "traditional": {
+        "jaccard_similarity": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1_score": 1.0
+      },
+      "enhanced": {
+        "semantic_similarity": 1.0,
+        "comprehensiveness_score": 1.0,
+        "efficiency_score": 1.0,
+        "quality_level": "perfect"
+      },
+      "execution": {
+        "execution_time_ms": 279.8311710357666,
+        "result_count": 0
+      }
+    },
+    "ast_similarity": 0.0,
+    "generation_time": 0.2798311710357666,
+    "success": true,
+    "error": null,
+    "timestamp": 1756139344.0526981
+  },
+  {
+    "scenario_id": "scan-006",
+    "method": "zeroshot",
+    "model": "External: gpt-4o-mini",
+    "prompt": "Find all traffic from source IPs starting with 192.168 between July 3-5, 2017.",
+    "error": "External LLMs not supported with zeroshot method",
+    "success": false,
+    "generation_time": 5.9604644775390625e-06,
+    "timestamp": 1756139344.052843
+  },
+  {
+    "scenario_id": "scan-004",
+    "method": "constrained",
+    "model": "External: gpt-4o-mini",
+    "prompt": "Find UDP traffic with high outbound bytes (more than 50000) from internal IPs (10.x.x.x) on July 4, 2017.",
+    "generated_query": {
+      "query": {
+        "bool": {
+          "filter": [
+            {
+              "term": {
+                "protocol": "UDP"
+              }
+            },
+            {
+              "range": {
+                "bytes_out": {
+                  "gt": 50000
+                }
+              }
+            },
+            {
+              "range": {
+                "@timestamp": {
+                  "gte": "2017-07-04",
+                  "lte": "2017-07-04"
+                }
+              }
+            },
+            {
+              "terms": {
+                "src_ip": [
+                  "10.0.0.0/8",
+                  "10.1.0.0/16",
+                  "10.2.0.0/16",
+                  "10.3.0.0/16",
+                  "10.4.0.0/16",
+                  "10.5.0.0/16",
+                  "10.6.0.0/16",
+                  "10.7.0.0/16",
+                  "10.8.0.0/16",
+                  "10.9.0.0/16"
+                ]
+              }
+            }
+          ]
+        }
+      }
+    },
+    "ground_truth_query": {
+      "query": {
+        "bool": {
+          "filter": [
+            {
+              "range": {
+                "@timestamp": {
+                  "gte": "2017-07-04T00:00:00Z",
+                  "lte": "2017-07-04T23:59:59Z"
+                }
+              }
+            },
+            {
+              "term": {
+                "protocol": "UDP"
+              }
+            },
+            {
+              "range": {
+                "bytes_out": {
+                  "gt": 50000
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "execution_metrics": {
+      "traditional": {
+        "jaccard_similarity": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1_score": 1.0
+      },
+      "enhanced": {
+        "semantic_similarity": 1.0,
+        "comprehensiveness_score": 1.0,
+        "efficiency_score": 1.0,
+        "quality_level": "perfect"
+      },
+      "execution": {
+        "execution_time_ms": 7081.3939571380615,
+        "result_count": 0
+      }
+    },
+    "ast_similarity": 0.0,
+    "generation_time": 7.0813939571380615,
+    "success": true,
+    "error": null,
+    "timestamp": 1756139346.163404
+  },
+  {
+    "scenario_id": "scan-007",
+    "method": "rules",
+    "model": "External: gpt-4o-mini",
+    "prompt": "Find all DNS queries (port 53 UDP) on July 4, 2017.",
+    "generated_query": {
+      "query": {
+        "bool": {
+          "filter": [
+            {
+              "range": {
+                "@timestamp": {
+                  "gte": "2017-07-04T00:00:00Z",
+                  "lte": "2017-07-04T23:59:59Z"
+                }
+              }
+            },
+            {
+              "term": {
+                "protocol": "UDP"
+              }
+            },
+            {
+              "terms": {
+                "dst_port": [
+                  53
+                ]
+              }
+            },
+            {
+              "term": {
+                "dst_port": 53
+              }
+            }
+          ]
+        }
+      }
+    },
+    "ground_truth_query": {
+      "query": {
+        "bool": {
+          "filter": [
+            {
+              "range": {
+                "@timestamp": {
+                  "gte": "2017-07-04T00:00:00Z",
+                  "lte": "2017-07-04T23:59:59Z"
+                }
+              }
+            },
+            {
+              "term": {
+                "dst_port": 53
+              }
+            },
+            {
+              "term": {
+                "protocol": "UDP"
+              }
+            }
+          ]
+        }
+      }
+    },
+    "execution_metrics": {
+      "traditional": {
+        "jaccard_similarity": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1_score": 1.0
+      },
+      "enhanced": {
+        "semantic_similarity": 1.0,
+        "comprehensiveness_score": 1.0,
+        "efficiency_score": 1.0,
+        "quality_level": "perfect"
+      },
+      "execution": {
+        "execution_time_ms": 274.6238708496094,
+        "result_count": 0
+      }
+    },
+    "ast_similarity": 0.0,
+    "generation_time": 0.2746238708496094,
+    "success": true,
+    "error": null,
+    "timestamp": 1756139346.4384482
+  },
+  {
+    "scenario_id": "scan-007",
+    "method": "zeroshot",
+    "model": "External: gpt-4o-mini",
+    "prompt": "Find all DNS queries (port 53 UDP) on July 4, 2017.",
+    "error": "External LLMs not supported with zeroshot method",
+    "success": false,
+    "generation_time": 5.9604644775390625e-06,
+    "timestamp": 1756139346.43856
+  },
+  {
+    "scenario_id": "scan-007",
+    "method": "constrained",
+    "model": "External: gpt-4o-mini",
+    "prompt": "Find all DNS queries (port 53 UDP) on July 4, 2017.",
+    "generated_query": {
+      "query": {
+        "bool": {
+          "filter": [
+            {
+              "term": {
+                "dst_port": 53
+              }
+            },
+            {
+              "term": {
+                "protocol": "UDP"
+              }
+            },
+            {
+              "range": {
+                "@timestamp": {
+                  "gte": "2017-07-04T00:00:00",
+                  "lte": "2017-07-04T23:59:59"
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "ground_truth_query": {
+      "query": {
+        "bool": {
+          "filter": [
+            {
+              "range": {
+                "@timestamp": {
+                  "gte": "2017-07-04T00:00:00Z",
+                  "lte": "2017-07-04T23:59:59Z"
+                }
+              }
+            },
+            {
+              "term": {
+                "dst_port": 53
+              }
+            },
+            {
+              "term": {
+                "protocol": "UDP"
+              }
+            }
+          ]
+        }
+      }
+    },
+    "execution_metrics": {
+      "traditional": {
+        "jaccard_similarity": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1_score": 1.0
+      },
+      "enhanced": {
+        "semantic_similarity": 1.0,
+        "comprehensiveness_score": 1.0,
+        "efficiency_score": 1.0,
+        "quality_level": "perfect"
+      },
+      "execution": {
+        "execution_time_ms": 4144.618988037109,
+        "result_count": 0
+      }
+    },
+    "ast_similarity": 0.0,
+    "generation_time": 4.144618988037109,
+    "success": true,
+    "error": null,
+    "timestamp": 1756139348.1977432
+  },
+  {
+    "scenario_id": "scan-008",
+    "method": "rules",
+    "model": "External: gpt-4o-mini",
+    "prompt": "Find SSH traffic (port 22) with benign label on July 4, 2017.",
+    "generated_query": {
+      "query": {
+        "bool": {
+          "filter": [
+            {
+              "range": {
+                "@timestamp": {
+                  "gte": "2017-07-04T00:00:00Z",
+                  "lte": "2017-07-04T23:59:59Z"
+                }
+              }
+            },
+            {
+              "term": {
+                "label": "benign"
+              }
+            },
+            {
+              "terms": {
+                "dst_port": [
+                  22
+                ]
+              }
+            },
+            {
+              "term": {
+                "dst_port": 22
+              }
+            }
+          ]
+        }
+      }
+    },
+    "ground_truth_query": {
+      "query": {
+        "bool": {
+          "filter": [
+            {
+              "range": {
+                "@timestamp": {
+                  "gte": "2017-07-04T00:00:00Z",
+                  "lte": "2017-07-04T23:59:59Z"
+                }
+              }
+            },
+            {
+              "term": {
+                "dst_port": 22
+              }
+            },
+            {
+              "term": {
+                "label": "benign"
+              }
+            }
+          ]
+        }
+      }
+    },
+    "execution_metrics": {
+      "traditional": {
+        "jaccard_similarity": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1_score": 1.0
+      },
+      "enhanced": {
+        "semantic_similarity": 1.0,
+        "comprehensiveness_score": 1.0,
+        "efficiency_score": 1.0,
+        "quality_level": "perfect"
+      },
+      "execution": {
+        "execution_time_ms": 281.27574920654297,
+        "result_count": 0
+      }
+    },
+    "ast_similarity": 0.0,
+    "generation_time": 0.28127574920654297,
+    "success": true,
+    "error": null,
+    "timestamp": 1756139348.479437
+  },
+  {
+    "scenario_id": "scan-008",
+    "method": "zeroshot",
+    "model": "External: gpt-4o-mini",
+    "prompt": "Find SSH traffic (port 22) with benign label on July 4, 2017.",
+    "error": "External LLMs not supported with zeroshot method",
+    "success": false,
+    "generation_time": 4.76837158203125e-06,
+    "timestamp": 1756139348.479554
+  },
+  {
+    "scenario_id": "scan-005",
+    "method": "constrained",
+    "model": "External: gpt-4o-mini",
+    "prompt": "Find benign TCP traffic to ports 22 or 80 with less than 5000 total bytes on July 4, 2017.",
+    "generated_query": {
+      "query": {
+        "bool": {
+          "filter": [
+            {
+              "term": {
+                "protocol": "TCP"
+              }
+            },
+            {
+              "terms": {
+                "dst_port": [
+                  22,
+                  80
+                ]
+              }
+            },
+            {
+              "range": {
+                "bytes_in": {
+                  "lt": 5000
+                }
+              }
+            },
+            {
+              "range": {
+                "@timestamp": {
+                  "gte": "2017-07-04T00:00:00",
+                  "lte": "2017-07-04T23:59:59"
+                }
+              }
+            },
+            {
+              "term": {
+                "label": "benign"
+              }
+            }
+          ]
+        }
+      }
+    },
+    "ground_truth_query": {
+      "query": {
+        "bool": {
+          "filter": [
+            {
+              "range": {
+                "@timestamp": {
+                  "gte": "2017-07-04T00:00:00Z",
+                  "lte": "2017-07-04T23:59:59Z"
+                }
+              }
+            },
+            {
+              "term": {
+                "protocol": "TCP"
+              }
+            },
+            {
+              "term": {
+                "label": "benign"
+              }
+            },
+            {
+              "terms": {
+                "dst_port": [
+                  22,
+                  80
+                ]
+              }
+            },
+            {
+              "range": {
+                "bytes_in": {
+                  "lt": 5000
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "execution_metrics": {
+      "traditional": {
+        "jaccard_similarity": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1_score": 1.0
+      },
+      "enhanced": {
+        "semantic_similarity": 1.0,
+        "comprehensiveness_score": 1.0,
+        "efficiency_score": 1.0,
+        "quality_level": "perfect"
+      },
+      "execution": {
+        "execution_time_ms": 6555.182933807373,
+        "result_count": 0
+      }
+    },
+    "ast_similarity": 0.0,
+    "generation_time": 6.555182933807373,
+    "success": true,
+    "error": null,
+    "timestamp": 1756139349.01474
+  },
+  {
+    "scenario_id": "scan-009",
+    "method": "rules",
+    "model": "External: gpt-4o-mini",
+    "prompt": "Find connections with more than 5000 bytes received between July 3-4, 2017.",
+    "generated_query": {
+      "query": {
+        "bool": {
+          "filter": [
+            {
+              "range": {
+                "@timestamp": {
+                  "gte": "2017-07-03T00:00:00Z",
+                  "lte": "2017-07-04T23:59:59Z"
+                }
+              }
+            },
+            {
+              "range": {
+                "bytes_in": {
+                  "gt": 5000
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "ground_truth_query": {
+      "query": {
+        "bool": {
+          "filter": [
+            {
+              "range": {
+                "@timestamp": {
+                  "gte": "2017-07-03T00:00:00Z",
+                  "lte": "2017-07-04T23:59:59Z"
+                }
+              }
+            },
+            {
+              "range": {
+                "bytes_in": {
+                  "gt": 5000
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "execution_metrics": {
+      "traditional": {
+        "jaccard_similarity": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1_score": 1.0
+      },
+      "enhanced": {
+        "semantic_similarity": 1.0,
+        "comprehensiveness_score": 1.0,
+        "efficiency_score": 1.0,
+        "quality_level": "perfect"
+      },
+      "execution": {
+        "execution_time_ms": 298.4130382537842,
+        "result_count": 0
+      }
+    },
+    "ast_similarity": 0.0,
+    "generation_time": 0.2984130382537842,
+    "success": true,
+    "error": null,
+    "timestamp": 1756139349.313649
+  },
+  {
+    "scenario_id": "scan-009",
+    "method": "zeroshot",
+    "model": "External: gpt-4o-mini",
+    "prompt": "Find connections with more than 5000 bytes received between July 3-4, 2017.",
+    "error": "External LLMs not supported with zeroshot method",
+    "success": false,
+    "generation_time": 1.0013580322265625e-05,
+    "timestamp": 1756139349.313815
+  },
+  {
+    "scenario_id": "scan-008",
+    "method": "constrained",
+    "model": "External: gpt-4o-mini",
+    "prompt": "Find SSH traffic (port 22) with benign label on July 4, 2017.",
+    "generated_query": {
+      "query": {
+        "bool": {
+          "filter": [
+            {
+              "term": {
+                "dst_port": 22
+              }
+            },
+            {
+              "term": {
+                "label": "benign"
+              }
+            },
+            {
+              "range": {
+                "@timestamp": {
+                  "gte": "2017-07-04T00:00:00",
+                  "lte": "2017-07-04T23:59:59"
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "ground_truth_query": {
+      "query": {
+        "bool": {
+          "filter": [
+            {
+              "range": {
+                "@timestamp": {
+                  "gte": "2017-07-04T00:00:00Z",
+                  "lte": "2017-07-04T23:59:59Z"
+                }
+              }
+            },
+            {
+              "term": {
+                "dst_port": 22
+              }
+            },
+            {
+              "term": {
+                "label": "benign"
+              }
+            }
+          ]
+        }
+      }
+    },
+    "execution_metrics": {
+      "traditional": {
+        "jaccard_similarity": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1_score": 1.0
+      },
+      "enhanced": {
+        "semantic_similarity": 1.0,
+        "comprehensiveness_score": 1.0,
+        "efficiency_score": 1.0,
+        "quality_level": "perfect"
+      },
+      "execution": {
+        "execution_time_ms": 5023.176908493042,
+        "result_count": 0
+      }
+    },
+    "ast_similarity": 0.0,
+    "generation_time": 5.023176908493042,
+    "success": true,
+    "error": null,
+    "timestamp": 1756139351.462004
+  },
+  {
+    "scenario_id": "scan-010",
+    "method": "rules",
+    "model": "External: gpt-4o-mini",
+    "prompt": "Find HTTP or HTTPS traffic (ports 80 or 443) on July 5, 2017.",
+    "generated_query": {
+      "query": {
+        "bool": {
+          "filter": [
+            {
+              "range": {
+                "@timestamp": {
+                  "gte": "2017-07-04T00:00:00Z",
+                  "lte": "2017-07-04T23:59:59Z"
+                }
+              }
+            },
+            {
+              "terms": {
+                "dst_port": [
+                  80,
+                  443
+                ]
+              }
+            },
+            {
+              "term": {
+                "dst_port": 443
+              }
+            }
+          ]
+        }
+      }
+    },
+    "ground_truth_query": {
+      "query": {
+        "bool": {
+          "filter": [
+            {
+              "range": {
+                "@timestamp": {
+                  "gte": "2017-07-05T00:00:00Z",
+                  "lte": "2017-07-05T23:59:59Z"
+                }
+              }
+            },
+            {
+              "terms": {
+                "dst_port": [
+                  80,
+                  443
+                ]
+              }
+            }
+          ]
+        }
+      }
+    },
+    "execution_metrics": {
+      "traditional": {
+        "jaccard_similarity": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1_score": 1.0
+      },
+      "enhanced": {
+        "semantic_similarity": 1.0,
+        "comprehensiveness_score": 1.0,
+        "efficiency_score": 1.0,
+        "quality_level": "perfect"
+      },
+      "execution": {
+        "execution_time_ms": 289.7012233734131,
+        "result_count": 0
+      }
+    },
+    "ast_similarity": 0.0,
+    "generation_time": 0.2897012233734131,
+    "success": true,
+    "error": null,
+    "timestamp": 1756139351.7521348
+  },
+  {
+    "scenario_id": "scan-010",
+    "method": "zeroshot",
+    "model": "External: gpt-4o-mini",
+    "prompt": "Find HTTP or HTTPS traffic (ports 80 or 443) on July 5, 2017.",
+    "error": "External LLMs not supported with zeroshot method",
+    "success": false,
+    "generation_time": 7.152557373046875e-06,
+    "timestamp": 1756139351.752266
+  },
+  {
+    "scenario_id": "scan-009",
+    "method": "constrained",
+    "model": "External: gpt-4o-mini",
+    "prompt": "Find connections with more than 5000 bytes received between July 3-4, 2017.",
+    "generated_query": {
+      "query": {
+        "bool": {
+          "filter": [
+            {
+              "range": {
+                "@timestamp": {
+                  "gte": "2017-07-03",
+                  "lte": "2017-07-04"
+                }
+              }
+            },
+            {
+              "range": {
+                "bytes_in": {
+                  "gt": 5000
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "ground_truth_query": {
+      "query": {
+        "bool": {
+          "filter": [
+            {
+              "range": {
+                "@timestamp": {
+                  "gte": "2017-07-03T00:00:00Z",
+                  "lte": "2017-07-04T23:59:59Z"
+                }
+              }
+            },
+            {
+              "range": {
+                "bytes_in": {
+                  "gt": 5000
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "execution_metrics": {
+      "traditional": {
+        "jaccard_similarity": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1_score": 1.0
+      },
+      "enhanced": {
+        "semantic_similarity": 1.0,
+        "comprehensiveness_score": 1.0,
+        "efficiency_score": 1.0,
+        "quality_level": "perfect"
+      },
+      "execution": {
+        "execution_time_ms": 3605.117082595825,
+        "result_count": 0
+      }
+    },
+    "ast_similarity": 0.0,
+    "generation_time": 3.605117082595825,
+    "success": true,
+    "error": null,
+    "timestamp": 1756139352.085033
+  },
+  {
+    "scenario_id": "scan-011",
+    "method": "rules",
+    "model": "External: gpt-4o-mini",
+    "prompt": "Find traffic from 10.0.0.0/24 subnet to any destination on July 4, 2017.",
+    "generated_query": {
+      "query": {
+        "bool": {
+          "filter": [
+            {
+              "range": {
+                "@timestamp": {
+                  "gte": "2017-07-04T00:00:00Z",
+                  "lte": "2017-07-04T23:59:59Z"
+                }
+              }
+            },
+            {
+              "term": {
+                "src_ip": "10.0.0.0"
+              }
+            }
+          ]
+        }
+      }
+    },
+    "ground_truth_query": {
+      "query": {
+        "bool": {
+          "filter": [
+            {
+              "range": {
+                "@timestamp": {
+                  "gte": "2017-07-04T00:00:00Z",
+                  "lte": "2017-07-04T23:59:59Z"
+                }
+              }
+            },
+            {
+              "terms": {
+                "src_ip": [
+                  "10.0.0.5",
+                  "10.0.0.7",
+                  "10.0.0.10",
+                  "10.0.0.15",
+                  "10.0.0.20"
+                ]
+              }
+            }
+          ]
+        }
+      }
+    },
+    "execution_metrics": {
+      "traditional": {
+        "jaccard_similarity": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1_score": 1.0
+      },
+      "enhanced": {
+        "semantic_similarity": 1.0,
+        "comprehensiveness_score": 1.0,
+        "efficiency_score": 1.0,
+        "quality_level": "perfect"
+      },
+      "execution": {
+        "execution_time_ms": 286.4561080932617,
+        "result_count": 0
+      }
+    },
+    "ast_similarity": 0.0,
+    "generation_time": 0.2864561080932617,
+    "success": true,
+    "error": null,
+    "timestamp": 1756139352.372067
+  },
+  {
+    "scenario_id": "scan-011",
+    "method": "zeroshot",
+    "model": "External: gpt-4o-mini",
+    "prompt": "Find traffic from 10.0.0.0/24 subnet to any destination on July 4, 2017.",
+    "error": "External LLMs not supported with zeroshot method",
+    "success": false,
+    "generation_time": 9.298324584960938e-06,
+    "timestamp": 1756139352.372224
+  },
+  {
+    "scenario_id": "scan-010",
+    "method": "constrained",
+    "model": "External: gpt-4o-mini",
+    "prompt": "Find HTTP or HTTPS traffic (ports 80 or 443) on July 5, 2017.",
+    "generated_query": {
+      "query": {
+        "bool": {
+          "filter": [
+            {
+              "terms": {
+                "dst_port": [
+                  80,
+                  443
+                ]
+              }
+            },
+            {
+              "range": {
+                "@timestamp": {
+                  "gte": "2017-07-05T00:00:00",
+                  "lte": "2017-07-05T23:59:59"
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "ground_truth_query": {
+      "query": {
+        "bool": {
+          "filter": [
+            {
+              "range": {
+                "@timestamp": {
+                  "gte": "2017-07-05T00:00:00Z",
+                  "lte": "2017-07-05T23:59:59Z"
+                }
+              }
+            },
+            {
+              "terms": {
+                "dst_port": [
+                  80,
+                  443
+                ]
+              }
+            }
+          ]
+        }
+      }
+    },
+    "execution_metrics": {
+      "traditional": {
+        "jaccard_similarity": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1_score": 1.0
+      },
+      "enhanced": {
+        "semantic_similarity": 1.0,
+        "comprehensiveness_score": 1.0,
+        "efficiency_score": 1.0,
+        "quality_level": "perfect"
+      },
+      "execution": {
+        "execution_time_ms": 3499.917984008789,
+        "result_count": 0
+      }
+    },
+    "ast_similarity": 0.0,
+    "generation_time": 3.499917984008789,
+    "success": true,
+    "error": null,
+    "timestamp": 1756139352.8140302
+  },
+  {
+    "scenario_id": "scan-012",
+    "method": "rules",
+    "model": "External: gpt-4o-mini",
+    "prompt": "Find malicious TCP traffic with bytes_out less than 3000 on July 4, 2017.",
+    "generated_query": {
+      "query": {
+        "bool": {
+          "filter": [
+            {
+              "range": {
+                "@timestamp": {
+                  "gte": "2017-07-04T00:00:00Z",
+                  "lte": "2017-07-04T23:59:59Z"
+                }
+              }
+            },
+            {
+              "term": {
+                "label": "malicious"
+              }
+            },
+            {
+              "term": {
+                "protocol": "TCP"
+              }
+            }
+          ]
+        }
+      }
+    },
+    "ground_truth_query": {
+      "query": {
+        "bool": {
+          "filter": [
+            {
+              "range": {
+                "@timestamp": {
+                  "gte": "2017-07-04T00:00:00Z",
+                  "lte": "2017-07-04T23:59:59Z"
+                }
+              }
+            },
+            {
+              "term": {
+                "label": "malicious"
+              }
+            },
+            {
+              "term": {
+                "protocol": "TCP"
+              }
+            },
+            {
+              "range": {
+                "bytes_out": {
+                  "lt": 3000
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "execution_metrics": {
+      "traditional": {
+        "jaccard_similarity": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1_score": 1.0
+      },
+      "enhanced": {
+        "semantic_similarity": 1.0,
+        "comprehensiveness_score": 1.0,
+        "efficiency_score": 1.0,
+        "quality_level": "perfect"
+      },
+      "execution": {
+        "execution_time_ms": 272.10378646850586,
+        "result_count": 0
+      }
+    },
+    "ast_similarity": 0.0,
+    "generation_time": 0.27210378646850586,
+    "success": true,
+    "error": null,
+    "timestamp": 1756139353.086505
+  },
+  {
+    "scenario_id": "scan-012",
+    "method": "zeroshot",
+    "model": "External: gpt-4o-mini",
+    "prompt": "Find malicious TCP traffic with bytes_out less than 3000 on July 4, 2017.",
+    "error": "External LLMs not supported with zeroshot method",
+    "success": false,
+    "generation_time": 1.0013580322265625e-05,
+    "timestamp": 1756139353.086668
+  },
+  {
+    "scenario_id": "scan-006",
+    "method": "constrained",
+    "model": "External: gpt-4o-mini",
+    "prompt": "Find all traffic from source IPs starting with 192.168 between July 3-5, 2017.",
+    "generated_query": {
+      "query": {
+        "bool": {
+          "filter": [
+            {
+              "range": {
+                "@timestamp": {
+                  "gte": "2017-07-03",
+                  "lte": "2017-07-05"
+                }
+              }
+            },
+            {
+              "terms": {
+                "src_ip": [
+                  "192.168.0.0",
+                  "192.168.1.0",
+                  "192.168.2.0",
+                  "192.168.3.0",
+                  "192.168.4.0",
+                  "192.168.5.0",
+                  "192.168.6.0",
+                  "192.168.7.0",
+                  "192.168.8.0",
+                  "192.168.9.0",
+                  "192.168.10.0",
+                  "192.168.11.0",
+                  "192.168.12.0",
+                  "192.168.13.0",
+                  "192.168.14.0",
+                  "192.168.15.0"
+                ]
+              }
+            }
+          ]
+        }
+      }
+    },
+    "ground_truth_query": {
+      "query": {
+        "bool": {
+          "filter": [
+            {
+              "range": {
+                "@timestamp": {
+                  "gte": "2017-07-03T00:00:00Z",
+                  "lte": "2017-07-05T23:59:59Z"
+                }
+              }
+            },
+            {
+              "terms": {
+                "src_ip": [
+                  "192.168.1.50",
+                  "192.168.1.100",
+                  "192.168.1.150",
+                  "192.168.2.50"
+                ]
+              }
+            }
+          ]
+        }
+      }
+    },
+    "execution_metrics": {
+      "traditional": {
+        "jaccard_similarity": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1_score": 1.0
+      },
+      "enhanced": {
+        "semantic_similarity": 1.0,
+        "comprehensiveness_score": 1.0,
+        "efficiency_score": 1.0,
+        "quality_level": "perfect"
+      },
+      "execution": {
+        "execution_time_ms": 10913.64312171936,
+        "result_count": 0
+      }
+    },
+    "ast_similarity": 0.0,
+    "generation_time": 10.91364312171936,
+    "success": true,
+    "error": null,
+    "timestamp": 1756139353.822658
+  },
+  {
+    "scenario_id": "scan-011",
+    "method": "constrained",
+    "model": "External: gpt-4o-mini",
+    "prompt": "Find traffic from 10.0.0.0/24 subnet to any destination on July 4, 2017.",
+    "generated_query": {
+      "query": {
+        "bool": {
+          "filter": [
+            {
+              "range": {
+                "@timestamp": {
+                  "gte": "2017-07-04T00:00:00",
+                  "lte": "2017-07-04T23:59:59"
+                }
+              }
+            },
+            {
+              "terms": {
+                "src_ip": [
+                  "10.0.0.0/24"
+                ]
+              }
+            }
+          ]
+        }
+      }
+    },
+    "ground_truth_query": {
+      "query": {
+        "bool": {
+          "filter": [
+            {
+              "range": {
+                "@timestamp": {
+                  "gte": "2017-07-04T00:00:00Z",
+                  "lte": "2017-07-04T23:59:59Z"
+                }
+              }
+            },
+            {
+              "terms": {
+                "src_ip": [
+                  "10.0.0.5",
+                  "10.0.0.7",
+                  "10.0.0.10",
+                  "10.0.0.15",
+                  "10.0.0.20"
+                ]
+              }
+            }
+          ]
+        }
+      }
+    },
+    "execution_metrics": {
+      "traditional": {
+        "jaccard_similarity": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1_score": 1.0
+      },
+      "enhanced": {
+        "semantic_similarity": 1.0,
+        "comprehensiveness_score": 1.0,
+        "efficiency_score": 1.0,
+        "quality_level": "perfect"
+      },
+      "execution": {
+        "execution_time_ms": 4129.395008087158,
+        "result_count": 0
+      }
+    },
+    "ast_similarity": 0.0,
+    "generation_time": 4.129395008087158,
+    "success": true,
+    "error": null,
+    "timestamp": 1756139355.8817952
+  },
+  {
+    "scenario_id": "scan-012",
+    "method": "constrained",
+    "model": "External: gpt-4o-mini",
+    "prompt": "Find malicious TCP traffic with bytes_out less than 3000 on July 4, 2017.",
+    "generated_query": {
+      "query": {
+        "bool": {
+          "filter": [
+            {
+              "term": {
+                "label": "malicious"
+              }
+            },
+            {
+              "term": {
+                "protocol": "TCP"
+              }
+            },
+            {
+              "range": {
+                "bytes_out": {
+                  "lt": 3000
+                }
+              }
+            },
+            {
+              "range": {
+                "@timestamp": {
+                  "gte": "2017-07-04T00:00:00",
+                  "lt": "2017-07-05T00:00:00"
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "ground_truth_query": {
+      "query": {
+        "bool": {
+          "filter": [
+            {
+              "range": {
+                "@timestamp": {
+                  "gte": "2017-07-04T00:00:00Z",
+                  "lte": "2017-07-04T23:59:59Z"
+                }
+              }
+            },
+            {
+              "term": {
+                "label": "malicious"
+              }
+            },
+            {
+              "term": {
+                "protocol": "TCP"
+              }
+            },
+            {
+              "range": {
+                "bytes_out": {
+                  "lt": 3000
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "execution_metrics": {
+      "traditional": {
+        "jaccard_similarity": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1_score": 1.0
+      },
+      "enhanced": {
+        "semantic_similarity": 1.0,
+        "comprehensiveness_score": 1.0,
+        "efficiency_score": 1.0,
+        "quality_level": "perfect"
+      },
+      "execution": {
+        "execution_time_ms": 4639.62984085083,
+        "result_count": 0
+      }
+    },
+    "ast_similarity": 0.0,
+    "generation_time": 4.63962984085083,
+    "success": true,
+    "error": null,
+    "timestamp": 1756139357.012001
+  }
+]

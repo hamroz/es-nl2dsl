@@ -191,28 +191,10 @@ def render_evaluation_dashboard():
             help=f"Choose which models to use for generation. Available: {len(local_models)} local, {len(external_llms)} external"
         )
         
-        # Convert model names for the evaluator (which expects raw model names)
-        # Note: The current evaluator only supports local Ollama models
-        cleaned_models = []
-        external_models_selected = []
-        
-        for model in selected_models:
-            if model.startswith("Local: "):
-                cleaned_models.append(model.replace("Local: ", ""))
-            elif model.startswith("External: "):
-                external_models_selected.append(model.replace("External: ", ""))
-        
-        # Show warning if external models were selected
-        if external_models_selected:
-            st.warning(f"""
-            ⚠️ **External LLMs not supported in evaluation**: {', '.join(external_models_selected)}
-            
-            The evaluation system currently only supports local Ollama models. 
-            External LLMs will be excluded from this evaluation.
-            """)
-        
-        if not cleaned_models:
-            st.error("No compatible models selected. Please select at least one local Ollama model.")
+        # Keep model names with prefixes for the evaluator
+        # Both local and external models are now supported
+        if not selected_models:
+            st.error("Please select at least one model for evaluation.")
         
         st.markdown("---")
         
@@ -318,8 +300,8 @@ def render_evaluation_dashboard():
         - Dataset: {dataset}
         - Scenarios: {len(selected_scenarios)}/{len(scenarios)}
         - Methods: {len(methods)}
-        - Compatible Models: {len(cleaned_models)}
-        - Total Evaluations: {len(selected_scenarios) * len(methods) * len(cleaned_models)}
+        - Selected Models: {len(selected_models)}
+        - Total Evaluations: {len(selected_scenarios) * len(methods) * len(selected_models)}
         """)
         
         # Run button
@@ -328,8 +310,8 @@ def render_evaluation_dashboard():
                 dataset=dataset,
                 scenario_count=len(selected_scenarios),
                 method_count=len(methods),
-                model_count=len(cleaned_models),
-                total_evaluations=len(selected_scenarios) * len(methods) * len(cleaned_models)
+                model_count=len(selected_models),
+                total_evaluations=len(selected_scenarios) * len(methods) * len(selected_models)
             )
             
             if not selected_scenarios:
@@ -338,24 +320,33 @@ def render_evaluation_dashboard():
             elif not methods:
                 st.error("Please select at least one method")
                 eval_logger.log_warning("Evaluation start failed", "No methods selected")
-            elif not cleaned_models:
-                st.error("Please select at least one compatible model")
-                eval_logger.log_warning("Evaluation start failed", "No compatible models selected")
+            elif not selected_models:
+                st.error("Please select at least one model")
+                eval_logger.log_warning("Evaluation start failed", "No models selected")
             else:
                 eval_logger.log_system_operation("Evaluation batch started",
                     dataset=dataset,
                     scenarios=selected_scenarios,
                     methods=methods,
-                    models=cleaned_models
+                    models=selected_models
                 )
                 
-                with st.spinner(f"Running {len(selected_scenarios) * len(methods) * len(cleaned_models)} evaluations..."):
+                # Log detailed model information
+                print(f"🚀 Starting evaluation batch:")
+                print(f"   📊 Dataset: {dataset}")
+                print(f"   📋 Scenarios: {len(selected_scenarios)} selected")
+                print(f"   🔧 Methods: {', '.join(methods)}")
+                print(f"   🤖 Models: {', '.join(selected_models)}")
+                print(f"   📈 Total evaluations: {len(selected_scenarios) * len(methods) * len(selected_models)}")
+                print(f"   🎯 Individual tasks will be logged below...")
+                
+                with st.spinner(f"Running {len(selected_scenarios) * len(methods) * len(selected_models)} evaluations..."):
                     # Run evaluation
                     summary = evaluator.run_evaluation(
                         dataset=dataset,
                         scenarios=selected_scenarios,
                         methods=methods,
-                        models=cleaned_models,
+                        models=selected_models,
                         save_results=save_results
                     )
                     
@@ -367,7 +358,7 @@ def render_evaluation_dashboard():
                     
                     eval_logger.log_success("Evaluation batch completed", 
                         dataset=dataset,
-                        total_evaluations=len(selected_scenarios) * len(methods) * len(cleaned_models),
+                        total_evaluations=len(selected_scenarios) * len(methods) * len(selected_models),
                         results_count=len(evaluator.results) if hasattr(evaluator, 'results') else 0
                     )
     

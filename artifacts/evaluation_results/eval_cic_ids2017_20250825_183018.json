@@ -1,0 +1,932 @@
+[
+  {
+    "scenario_id": "cic-ddos-001",
+    "method": "zeroshot",
+    "model": "External: gpt-4o-mini",
+    "prompt": "Find all DDoS attack events from July 3rd 2017",
+    "error": "External LLMs not supported with zeroshot method",
+    "success": false,
+    "generation_time": 1.1920928955078125e-05,
+    "timestamp": 1756139406.4019961
+  },
+  {
+    "scenario_id": "cic-ddos-002",
+    "method": "zeroshot",
+    "model": "External: gpt-4o-mini",
+    "prompt": "Show top 10 source IPs involved in DDoS attacks with packet counts",
+    "error": "External LLMs not supported with zeroshot method",
+    "success": false,
+    "generation_time": 0.00044417381286621094,
+    "timestamp": 1756139406.4097438
+  },
+  {
+    "scenario_id": "cic-portscan-001",
+    "method": "zeroshot",
+    "model": "External: gpt-4o-mini",
+    "prompt": "Detect port scan attempts where source IP contacted more than 50 different destination ports",
+    "error": "External LLMs not supported with zeroshot method",
+    "success": false,
+    "generation_time": 2.3126602172851562e-05,
+    "timestamp": 1756139406.410162
+  },
+  {
+    "scenario_id": "cic-ddos-001",
+    "method": "constrained",
+    "model": "External: gpt-4o-mini",
+    "prompt": "Find all DDoS attack events from July 3rd 2017",
+    "generated_query": {
+      "query": {
+        "bool": {
+          "filter": [
+            {
+              "term": {
+                "label": "malicious"
+              }
+            },
+            {
+              "range": {
+                "@timestamp": {
+                  "gte": "2017-07-03T00:00:00",
+                  "lte": "2017-07-03T23:59:59"
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "ground_truth_query": {
+      "query": {
+        "bool": {
+          "must": [
+            {
+              "range": {
+                "@timestamp": {
+                  "gte": "2017-07-03T00:00:00",
+                  "lte": "2017-07-03T23:59:59"
+                }
+              }
+            },
+            {
+              "match": {
+                "attack_type": "DDoS"
+              }
+            }
+          ]
+        }
+      }
+    },
+    "execution_metrics": {
+      "traditional": {
+        "jaccard_similarity": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1_score": 1.0
+      },
+      "enhanced": {
+        "semantic_similarity": 1.0,
+        "comprehensiveness_score": 1.0,
+        "efficiency_score": 1.0,
+        "quality_level": "perfect"
+      },
+      "execution": {
+        "execution_time_ms": 4094.1898822784424,
+        "result_count": 0
+      }
+    },
+    "ast_similarity": 0.0,
+    "generation_time": 4.094189882278442,
+    "success": true,
+    "error": null,
+    "timestamp": 1756139410.496405
+  },
+  {
+    "scenario_id": "cic-bruteforce-001",
+    "method": "zeroshot",
+    "model": "External: gpt-4o-mini",
+    "prompt": "Find SSH brute force attacks on port 22 from the last 24 hours",
+    "error": "External LLMs not supported with zeroshot method",
+    "success": false,
+    "generation_time": 1.1682510375976562e-05,
+    "timestamp": 1756139410.4965482
+  },
+  {
+    "scenario_id": "cic-bruteforce-001",
+    "method": "constrained",
+    "model": "External: gpt-4o-mini",
+    "prompt": "Find SSH brute force attacks on port 22 from the last 24 hours",
+    "generated_query": {
+      "query": {
+        "bool": {
+          "filter": [
+            {
+              "term": {
+                "dst_port": 22
+              }
+            },
+            {
+              "term": {
+                "protocol": "TCP"
+              }
+            },
+            {
+              "range": {
+                "@timestamp": {
+                  "gte": "now-24h",
+                  "lte": "now"
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "ground_truth_query": {
+      "query": {
+        "bool": {
+          "must": [
+            {
+              "range": {
+                "@timestamp": {
+                  "gte": "now-24h"
+                }
+              }
+            },
+            {
+              "term": {
+                "dst_port": 22
+              }
+            },
+            {
+              "match": {
+                "attack_type": "SSH-Patator"
+              }
+            }
+          ]
+        }
+      }
+    },
+    "execution_metrics": {
+      "traditional": {
+        "jaccard_similarity": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1_score": 1.0
+      },
+      "enhanced": {
+        "semantic_similarity": 1.0,
+        "comprehensiveness_score": 1.0,
+        "efficiency_score": 1.0,
+        "quality_level": "perfect"
+      },
+      "execution": {
+        "execution_time_ms": 4090.2929306030273,
+        "result_count": 0
+      }
+    },
+    "ast_similarity": 0.0,
+    "generation_time": 4.090292930603027,
+    "success": true,
+    "error": null,
+    "timestamp": 1756139410.500944
+  },
+  {
+    "scenario_id": "cic-web-001",
+    "method": "zeroshot",
+    "model": "External: gpt-4o-mini",
+    "prompt": "Identify web attacks on port 80 or 443 with high packet rates",
+    "error": "External LLMs not supported with zeroshot method",
+    "success": false,
+    "generation_time": 8.821487426757812e-06,
+    "timestamp": 1756139410.50122
+  },
+  {
+    "scenario_id": "cic-ddos-002",
+    "method": "constrained",
+    "model": "External: gpt-4o-mini",
+    "prompt": "Show top 10 source IPs involved in DDoS attacks with packet counts",
+    "generated_query": {
+      "query": {
+        "bool": {
+          "filter": [
+            {
+              "term": {
+                "label": "malicious"
+              }
+            },
+            {
+              "range": {
+                "@timestamp": {
+                  "gte": "2017-01-01",
+                  "lte": "2017-12-31"
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "ground_truth_query": {
+      "query": {
+        "match": {
+          "attack_type": "DDoS"
+        }
+      },
+      "aggs": {
+        "top_attackers": {
+          "terms": {
+            "field": "src_ip",
+            "size": 10
+          },
+          "aggs": {
+            "total_packets": {
+              "sum": {
+                "field": "total_packets"
+              }
+            }
+          }
+        }
+      },
+      "size": 0
+    },
+    "execution_metrics": {
+      "traditional": {
+        "jaccard_similarity": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1_score": 1.0
+      },
+      "enhanced": {
+        "semantic_similarity": 1.0,
+        "comprehensiveness_score": 0.0,
+        "efficiency_score": 1.0,
+        "quality_level": "perfect"
+      },
+      "execution": {
+        "execution_time_ms": 5029.342174530029,
+        "result_count": 0
+      }
+    },
+    "ast_similarity": 0.0,
+    "generation_time": 5.029342174530029,
+    "success": true,
+    "error": null,
+    "timestamp": 1756139411.4360619
+  },
+  {
+    "scenario_id": "cic-botnet-001",
+    "method": "zeroshot",
+    "model": "External: gpt-4o-mini",
+    "prompt": "Find botnet activity with abnormal flow durations",
+    "error": "External LLMs not supported with zeroshot method",
+    "success": false,
+    "generation_time": 1.3113021850585938e-05,
+    "timestamp": 1756139411.436207
+  },
+  {
+    "scenario_id": "cic-botnet-001",
+    "method": "constrained",
+    "model": "External: gpt-4o-mini",
+    "prompt": "Find botnet activity with abnormal flow durations",
+    "generated_query": {
+      "query": {
+        "bool": {
+          "filter": [
+            {
+              "term": {
+                "label": "malicious"
+              }
+            },
+            {
+              "range": {
+                "@timestamp": {
+                  "gte": "2017-01-01",
+                  "lte": "2017-12-31"
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "ground_truth_query": {
+      "query": {
+        "bool": {
+          "must": [
+            {
+              "match": {
+                "attack_type": "Bot"
+              }
+            },
+            {
+              "range": {
+                "flow_duration": {
+                  "gte": 10000000
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "execution_metrics": {
+      "traditional": {
+        "jaccard_similarity": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1_score": 1.0
+      },
+      "enhanced": {
+        "semantic_similarity": 1.0,
+        "comprehensiveness_score": 1.0,
+        "efficiency_score": 1.0,
+        "quality_level": "perfect"
+      },
+      "execution": {
+        "execution_time_ms": 3172.532081604004,
+        "result_count": 0
+      }
+    },
+    "ast_similarity": 0.0,
+    "generation_time": 3.172532081604004,
+    "success": true,
+    "error": null,
+    "timestamp": 1756139413.6740868
+  },
+  {
+    "scenario_id": "cic-infiltration-001",
+    "method": "zeroshot",
+    "model": "External: gpt-4o-mini",
+    "prompt": "Detect infiltration attempts with suspicious packet patterns",
+    "error": "External LLMs not supported with zeroshot method",
+    "success": false,
+    "generation_time": 1.5020370483398438e-05,
+    "timestamp": 1756139413.674277
+  },
+  {
+    "scenario_id": "cic-web-001",
+    "method": "constrained",
+    "model": "External: gpt-4o-mini",
+    "prompt": "Identify web attacks on port 80 or 443 with high packet rates",
+    "generated_query": {
+      "query": {
+        "bool": {
+          "filter": [
+            {
+              "terms": {
+                "dst_port": [
+                  80,
+                  443
+                ]
+              }
+            },
+            {
+              "range": {
+                "bytes_in": {
+                  "gte": 1000
+                }
+              }
+            },
+            {
+              "range": {
+                "@timestamp": {
+                  "gte": "2017-01-01",
+                  "lte": "2017-12-31"
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "ground_truth_query": {
+      "query": {
+        "bool": {
+          "must": [
+            {
+              "terms": {
+                "dst_port": [
+                  80,
+                  443
+                ]
+              }
+            },
+            {
+              "match": {
+                "attack_type": "Web Attack"
+              }
+            },
+            {
+              "range": {
+                "flow_packets_s": {
+                  "gte": 1000
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "execution_metrics": {
+      "traditional": {
+        "jaccard_similarity": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1_score": 1.0
+      },
+      "enhanced": {
+        "semantic_similarity": 1.0,
+        "comprehensiveness_score": 1.0,
+        "efficiency_score": 1.0,
+        "quality_level": "perfect"
+      },
+      "execution": {
+        "execution_time_ms": 3690.615177154541,
+        "result_count": 0
+      }
+    },
+    "ast_similarity": 0.0,
+    "generation_time": 3.690615177154541,
+    "success": true,
+    "error": null,
+    "timestamp": 1756139414.187465
+  },
+  {
+    "scenario_id": "cic-temporal-001",
+    "method": "zeroshot",
+    "model": "External: gpt-4o-mini",
+    "prompt": "Show attack distribution by hour of day",
+    "error": "External LLMs not supported with zeroshot method",
+    "success": false,
+    "generation_time": 1.0967254638671875e-05,
+    "timestamp": 1756139414.1875799
+  },
+  {
+    "scenario_id": "cic-infiltration-001",
+    "method": "constrained",
+    "model": "External: gpt-4o-mini",
+    "prompt": "Detect infiltration attempts with suspicious packet patterns",
+    "generated_query": {
+      "query": {
+        "bool": {
+          "filter": [
+            {
+              "term": {
+                "label": "malicious"
+              }
+            },
+            {
+              "range": {
+                "@timestamp": {
+                  "gte": "2017-01-01",
+                  "lte": "2017-12-31"
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "ground_truth_query": {
+      "query": {
+        "bool": {
+          "must": [
+            {
+              "match": {
+                "attack_type": "Infiltration"
+              }
+            },
+            {
+              "range": {
+                "packet_length_std": {
+                  "gte": 100
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "execution_metrics": {
+      "traditional": {
+        "jaccard_similarity": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1_score": 1.0
+      },
+      "enhanced": {
+        "semantic_similarity": 1.0,
+        "comprehensiveness_score": 1.0,
+        "efficiency_score": 1.0,
+        "quality_level": "perfect"
+      },
+      "execution": {
+        "execution_time_ms": 3128.1380653381348,
+        "result_count": 0
+      }
+    },
+    "ast_similarity": 0.0,
+    "generation_time": 3.1281380653381348,
+    "success": true,
+    "error": null,
+    "timestamp": 1756139414.5646532
+  },
+  {
+    "scenario_id": "cic-complex-001",
+    "method": "zeroshot",
+    "model": "External: gpt-4o-mini",
+    "prompt": "Find high-volume attacks with more than 1000 bytes per second from specific IP range 192.168.0.0/16",
+    "error": "External LLMs not supported with zeroshot method",
+    "success": false,
+    "generation_time": 1.0967254638671875e-05,
+    "timestamp": 1756139414.564797
+  },
+  {
+    "scenario_id": "cic-portscan-001",
+    "method": "constrained",
+    "model": "External: gpt-4o-mini",
+    "prompt": "Detect port scan attempts where source IP contacted more than 50 different destination ports",
+    "generated_query": {
+      "query": {
+        "bool": {
+          "filter": [
+            {
+              "range": {
+                "@timestamp": {
+                  "gte": "2017-01-01",
+                  "lte": "2017-12-31"
+                }
+              }
+            },
+            {
+              "terms": {
+                "dst_port": [
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9,
+                  10,
+                  11,
+                  12,
+                  13,
+                  14,
+                  15,
+                  16,
+                  17,
+                  18,
+                  19,
+                  20,
+                  21,
+                  22,
+                  23,
+                  24,
+                  25,
+                  26,
+                  27,
+                  28,
+                  29,
+                  30,
+                  31,
+                  32,
+                  33,
+                  34,
+                  35,
+                  36,
+                  37,
+                  38,
+                  39,
+                  40,
+                  41,
+                  42,
+                  43,
+                  44,
+                  45,
+                  46,
+                  47,
+                  48,
+                  49,
+                  50
+                ]
+              }
+            },
+            {
+              "range": {
+                "src_port": {
+                  "gte": 1,
+                  "lte": 65535
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "ground_truth_query": {
+      "aggs": {
+        "potential_scanners": {
+          "terms": {
+            "field": "src_ip",
+            "size": 100
+          },
+          "aggs": {
+            "unique_ports": {
+              "cardinality": {
+                "field": "dst_port"
+              }
+            },
+            "scanner_filter": {
+              "bucket_selector": {
+                "buckets_path": {
+                  "port_count": "unique_ports"
+                },
+                "script": "params.port_count > 50"
+              }
+            }
+          }
+        }
+      },
+      "size": 0
+    },
+    "execution_metrics": {
+      "traditional": {
+        "jaccard_similarity": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1_score": 1.0
+      },
+      "enhanced": {
+        "semantic_similarity": 1.0,
+        "comprehensiveness_score": 0.0,
+        "efficiency_score": 1.0,
+        "quality_level": "perfect"
+      },
+      "execution": {
+        "execution_time_ms": 9895.56097984314,
+        "result_count": 0
+      }
+    },
+    "ast_similarity": 0.0,
+    "generation_time": 9.89556097984314,
+    "success": true,
+    "error": null,
+    "timestamp": 1756139416.303091
+  },
+  {
+    "scenario_id": "cic-tcpflags-001",
+    "method": "zeroshot",
+    "model": "External: gpt-4o-mini",
+    "prompt": "Detect SYN flood attacks with high SYN flag count",
+    "error": "External LLMs not supported with zeroshot method",
+    "success": false,
+    "generation_time": 1.0967254638671875e-05,
+    "timestamp": 1756139416.303238
+  },
+  {
+    "scenario_id": "cic-temporal-001",
+    "method": "constrained",
+    "model": "External: gpt-4o-mini",
+    "prompt": "Show attack distribution by hour of day",
+    "generated_query": {
+      "query": {
+        "bool": {
+          "filter": [
+            {
+              "range": {
+                "@timestamp": {
+                  "gte": "2017-01-01",
+                  "lte": "2017-12-31"
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "ground_truth_query": {
+      "query": {
+        "bool": {
+          "must_not": {
+            "match": {
+              "label": "BENIGN"
+            }
+          }
+        }
+      },
+      "aggs": {
+        "attacks_by_hour": {
+          "terms": {
+            "field": "hour_of_day",
+            "size": 24,
+            "order": {
+              "_key": "asc"
+            }
+          }
+        }
+      },
+      "size": 0
+    },
+    "execution_metrics": {
+      "traditional": {
+        "jaccard_similarity": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1_score": 1.0
+      },
+      "enhanced": {
+        "semantic_similarity": 1.0,
+        "comprehensiveness_score": 0.0,
+        "efficiency_score": 1.0,
+        "quality_level": "perfect"
+      },
+      "execution": {
+        "execution_time_ms": 2643.109083175659,
+        "result_count": 0
+      }
+    },
+    "ast_similarity": 0.0,
+    "generation_time": 2.643109083175659,
+    "success": true,
+    "error": null,
+    "timestamp": 1756139416.317528
+  },
+  {
+    "scenario_id": "cic-complex-001",
+    "method": "constrained",
+    "model": "External: gpt-4o-mini",
+    "prompt": "Find high-volume attacks with more than 1000 bytes per second from specific IP range 192.168.0.0/16",
+    "generated_query": {
+      "query": {
+        "bool": {
+          "filter": [
+            {
+              "range": {
+                "bytes_in": {
+                  "gte": 1000
+                }
+              }
+            },
+            {
+              "range": {
+                "@timestamp": {
+                  "gte": "2017-01-01",
+                  "lte": "2017-12-31"
+                }
+              }
+            },
+            {
+              "terms": {
+                "src_ip": [
+                  "192.168.0.0/16"
+                ]
+              }
+            }
+          ]
+        }
+      }
+    },
+    "ground_truth_query": {
+      "query": {
+        "bool": {
+          "must": [
+            {
+              "range": {
+                "flow_bytes_s": {
+                  "gte": 1000
+                }
+              }
+            },
+            {
+              "prefix": {
+                "src_ip": "192.168."
+              }
+            },
+            {
+              "bool": {
+                "must_not": {
+                  "match": {
+                    "label": "BENIGN"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "execution_metrics": {
+      "traditional": {
+        "jaccard_similarity": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1_score": 1.0
+      },
+      "enhanced": {
+        "semantic_similarity": 1.0,
+        "comprehensiveness_score": 1.0,
+        "efficiency_score": 1.0,
+        "quality_level": "perfect"
+      },
+      "execution": {
+        "execution_time_ms": 3560.570001602173,
+        "result_count": 0
+      }
+    },
+    "ast_similarity": 0.0,
+    "generation_time": 3.560570001602173,
+    "success": true,
+    "error": null,
+    "timestamp": 1756139417.74829
+  },
+  {
+    "scenario_id": "cic-tcpflags-001",
+    "method": "constrained",
+    "model": "External: gpt-4o-mini",
+    "prompt": "Detect SYN flood attacks with high SYN flag count",
+    "generated_query": {
+      "query": {
+        "bool": {
+          "filter": [
+            {
+              "term": {
+                "protocol": "TCP"
+              }
+            },
+            {
+              "range": {
+                "@timestamp": {
+                  "gte": "2017-01-01",
+                  "lte": "2017-12-31"
+                }
+              }
+            },
+            {
+              "range": {
+                "src_port": {
+                  "gte": 1,
+                  "lte": 65535
+                }
+              }
+            },
+            {
+              "range": {
+                "bytes_in": {
+                  "gte": 1000
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "ground_truth_query": {
+      "query": {
+        "bool": {
+          "must": [
+            {
+              "range": {
+                "syn_flag_count": {
+                  "gte": 5
+                }
+              }
+            },
+            {
+              "range": {
+                "ack_flag_count": {
+                  "lte": 1
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "execution_metrics": {
+      "traditional": {
+        "jaccard_similarity": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1_score": 1.0
+      },
+      "enhanced": {
+        "semantic_similarity": 1.0,
+        "comprehensiveness_score": 1.0,
+        "efficiency_score": 1.0,
+        "quality_level": "perfect"
+      },
+      "execution": {
+        "execution_time_ms": 3852.996826171875,
+        "result_count": 0
+      }
+    },
+    "ast_similarity": 0.0,
+    "generation_time": 3.852996826171875,
+    "success": true,
+    "error": null,
+    "timestamp": 1756139418.417959
+  }
+]

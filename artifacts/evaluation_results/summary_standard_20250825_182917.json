@@ -1,0 +1,49 @@
+{
+  "overall": {
+    "total_evaluations": 36,
+    "successful_evaluations": 24,
+    "success_rate": 0.6666666666666666,
+    "avg_generation_time": 2.7643065750598907,
+    "avg_f1_score": 1.0,
+    "avg_precision": 1.0,
+    "avg_recall": 1.0,
+    "avg_ast_similarity": 0.0
+  },
+  "by_method": {
+    "rules": {
+      "count": 12,
+      "success_rate": 1.0,
+      "avg_generation_time": 0.3077569405237834,
+      "avg_f1_score": 1.0,
+      "avg_precision": 1.0,
+      "avg_recall": 1.0,
+      "avg_ast_similarity": 0.0
+    },
+    "constrained": {
+      "count": 12,
+      "success_rate": 1.0,
+      "avg_generation_time": 5.220856209595998,
+      "avg_f1_score": 1.0,
+      "avg_precision": 1.0,
+      "avg_recall": 1.0,
+      "avg_ast_similarity": 0.0
+    },
+    "zeroshot": {
+      "count": 12,
+      "success_rate": 0.0,
+      "avg_generation_time": 0.0
+    }
+  },
+  "by_model": {
+    "External: gpt-4o-mini": {
+      "count": 36,
+      "success_rate": 0.6666666666666666,
+      "avg_generation_time": 2.7643065750598907,
+      "avg_f1_score": 1.0,
+      "avg_precision": 1.0,
+      "avg_recall": 1.0,
+      "avg_ast_similarity": 0.0
+    }
+  },
+  "timestamp": 1756139357.012314
+}

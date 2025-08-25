@@ -383,12 +383,17 @@ class EnhancedEvaluator:
         
         # Prepare evaluation tasks
         tasks = []
+        print(f"📋 Preparing evaluation tasks:")
+        print(f"   Models to evaluate: {models}")
         for scenario_id in scenarios:
             if scenario_id not in scenario_dict:
+                print(f"   ⚠️  Skipping unknown scenario: {scenario_id}")
                 continue
             for method in methods:
                 for model in models:
                     tasks.append((scenario_id, method, model, dataset))
+        
+        print(f"📝 Total tasks prepared: {len(tasks)}")
         
         # Execute evaluations
         results_lock = threading.Lock()
@@ -434,6 +439,8 @@ class EnhancedEvaluator:
         import tempfile
         from pathlib import Path
         
+        print(f"🔍 Starting evaluation: {scenario_id} | Method: {method} | Model: {model}")
+        
         try:
             # Load scenario definition
             scenarios = self.load_scenarios(dataset_type)
@@ -460,12 +467,35 @@ class EnhancedEvaluator:
             if method == "constrained":
                 # Use constrained generation
                 task_id = f"eval_{scenario_id}_{int(time.time())}"
-                result = subprocess.run([
-                    "python", "src/generate_constrained.py",
-                    "--prompt", prompt,
-                    "--model", model,
-                    "--task-id", task_id
-                ], capture_output=True, text=True, cwd=Path.cwd())
+                
+                # Handle external LLMs differently
+                if model and model.startswith("External:"):
+                    external_llm_name = model.replace("External: ", "")
+                    cmd = [
+                        "python", "src/generators/external.py",
+                        "--prompt", prompt,
+                        "--llm", external_llm_name,
+                        "--task-id", task_id
+                    ]
+                    print(f"🌐 Using external LLM: {external_llm_name} for {scenario_id}")
+                else:
+                    cmd = [
+                        "python", "src/generators/constrained.py",
+                        "--prompt", prompt,
+                        "--task-id", task_id
+                    ]
+                    # Add model if it's a local model
+                    if model and model.startswith("Local:"):
+                        local_model = model.replace("Local: ", "")
+                        cmd.extend(["--model", local_model])
+                        print(f"🤖 Using local model: {local_model} for {scenario_id}")
+                    elif model and not model.startswith("External:"):
+                        # Legacy support for raw model names
+                        cmd.extend(["--model", model])
+                        print(f"🤖 Using model: {model} for {scenario_id}")
+                
+                print(f"⚡ Executing command: {' '.join(cmd)}")
+                result = subprocess.run(cmd, capture_output=True, text=True, cwd=Path.cwd())
                 
                 query_file = Path(f"artifacts/generated/{task_id}.json")
                 if result.returncode == 0 and query_file.exists():
@@ -477,11 +507,14 @@ class EnhancedEvaluator:
             elif method == "rules":
                 # Use rules baseline
                 task_id = f"eval_rules_{scenario_id}_{int(time.time())}"
-                result = subprocess.run([
-                    "python", "src/baseline_rules.py",
+                cmd = [
+                    "python", "src/generators/rules_based.py",
                     "--prompt", prompt,
                     "--task-id", task_id
-                ], capture_output=True, text=True, cwd=Path.cwd())
+                ]
+                print(f"📋 Using rules-based generation for {scenario_id} (model-independent)")
+                print(f"⚡ Executing command: {' '.join(cmd)}")
+                result = subprocess.run(cmd, capture_output=True, text=True, cwd=Path.cwd())
                 
                 query_file = Path(f"artifacts/generated/rules_{task_id}.json")
                 if result.returncode == 0 and query_file.exists():
@@ -491,23 +524,45 @@ class EnhancedEvaluator:
                     error = f"Rules generation failed: {result.stderr}"
             
             elif method == "zeroshot":
-                # Use zero-shot baseline
-                task_id = f"eval_zeroshot_{scenario_id}_{int(time.time())}"
-                result = subprocess.run([
-                    "python", "src/baseline_zeroshot.py",
-                    "--prompt", prompt,
-                    "--task-id", task_id,
-                    "--model", model
-                ], capture_output=True, text=True, cwd=Path.cwd())
-                
-                query_file = Path(f"artifacts/generated/zeroshot_{task_id}.json")
-                if result.returncode == 0 and query_file.exists():
-                    with open(query_file) as f:
-                        generated_query = json.load(f)
+                # Use zero-shot baseline (only supports local models)
+                if model and model.startswith("External:"):
+                    external_llm_name = model.replace("External: ", "")
+                    print(f"❌ External LLM {external_llm_name} not supported with zeroshot method for {scenario_id}")
+                    error = f"External LLMs not supported with zeroshot method"
                 else:
-                    error = f"Zero-shot generation failed: {result.stderr}"
+                    task_id = f"eval_zeroshot_{scenario_id}_{int(time.time())}"
+                    cmd = [
+                        "python", "src/generators/zero_shot.py",
+                        "--prompt", prompt,
+                        "--task-id", task_id
+                    ]
+                    # Add model parameter
+                    if model and model.startswith("Local:"):
+                        local_model = model.replace("Local: ", "")
+                        cmd.extend(["--model", local_model])
+                        print(f"🚀 Using local model: {local_model} for zeroshot {scenario_id}")
+                    elif model and not model.startswith("External:"):
+                        # Legacy support for raw model names
+                        cmd.extend(["--model", model])
+                        print(f"🚀 Using model: {model} for zeroshot {scenario_id}")
+                    
+                    print(f"⚡ Executing command: {' '.join(cmd)}")
+                    result = subprocess.run(cmd, capture_output=True, text=True, cwd=Path.cwd())
+                    
+                    query_file = Path(f"artifacts/generated/zeroshot_{task_id}.json")
+                    if result.returncode == 0 and query_file.exists():
+                        with open(query_file) as f:
+                            generated_query = json.load(f)
+                    else:
+                        error = f"Zero-shot generation failed: {result.stderr}"
             
             generation_time = time.time() - start_time
+            
+            # Log completion status
+            if error or not generated_query:
+                print(f"❌ Failed: {scenario_id} | {method} | {model} | Time: {generation_time:.2f}s | Error: {error}")
+            else:
+                print(f"✅ Success: {scenario_id} | {method} | {model} | Time: {generation_time:.2f}s")
             
             # If generation failed, return error result
             if error or not generated_query:
