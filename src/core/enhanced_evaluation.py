@@ -461,7 +461,7 @@ class EnhancedEvaluator:
                 # Use constrained generation
                 task_id = f"eval_{scenario_id}_{int(time.time())}"
                 result = subprocess.run([
-                    "python", "src/generators/constrained.py",
+                    "python", "src/generate_constrained.py",
                     "--prompt", prompt,
                     "--model", model,
                     "--task-id", task_id
@@ -478,7 +478,7 @@ class EnhancedEvaluator:
                 # Use rules baseline
                 task_id = f"eval_rules_{scenario_id}_{int(time.time())}"
                 result = subprocess.run([
-                    "python", "src/generators/rules_based.py",
+                    "python", "src/baseline_rules.py",
                     "--prompt", prompt,
                     "--task-id", task_id
                 ], capture_output=True, text=True, cwd=Path.cwd())
@@ -494,7 +494,7 @@ class EnhancedEvaluator:
                 # Use zero-shot baseline
                 task_id = f"eval_zeroshot_{scenario_id}_{int(time.time())}"
                 result = subprocess.run([
-                    "python", "src/generators/zero_shot.py",
+                    "python", "src/baseline_zeroshot.py",
                     "--prompt", prompt,
                     "--task-id", task_id,
                     "--model", model
@@ -525,9 +525,15 @@ class EnhancedEvaluator:
             # Load ground truth
             ground_truth_query = None
             if 'expert_dsl' in scenario:
-                ground_truth_query = json.loads(scenario['expert_dsl'])
+                if isinstance(scenario['expert_dsl'], str):
+                    ground_truth_query = json.loads(scenario['expert_dsl'])
+                else:
+                    ground_truth_query = scenario['expert_dsl']
             elif 'expected_query' in scenario:
-                ground_truth_query = json.loads(scenario['expected_query'])
+                if isinstance(scenario['expected_query'], str):
+                    ground_truth_query = json.loads(scenario['expected_query'])
+                else:
+                    ground_truth_query = scenario['expected_query']
             
             # Execute queries to get results (simplified - in real implementation would use Elasticsearch)
             generated_results = []

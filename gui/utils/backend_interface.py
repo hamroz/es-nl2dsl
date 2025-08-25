@@ -83,8 +83,10 @@ def run_query_generation(prompt: str, method: str = "constrained",
     if not task_id:
         task_id = f"gui_{int(time.time())}"
     
-    # Check if using external LLM
+    # Check if using external LLM (external LLMs can only be used with constrained method currently)
     if model and model.startswith("External:"):
+        if method != "constrained":
+            return False, f"External LLMs only supported with constrained method, not {method}", {}
         external_llm_name = model.replace("External: ", "")
         cmd = [
             sys.executable, "src/generators/external.py",
@@ -112,12 +114,19 @@ def run_query_generation(prompt: str, method: str = "constrained",
             "--prompt", prompt,
             "--task-id", task_id
         ]
+        # Rules-based method doesn't use models
     elif method == "zeroshot":
         cmd = [
             sys.executable, "src/generators/zero_shot.py",
             "--prompt", prompt,
             "--task-id", task_id
         ]
+        # Add model parameter for zeroshot
+        if model and model.startswith("Local:"):
+            local_model = model.replace("Local: ", "")
+            cmd.extend(["--model", local_model])
+        elif model and model.startswith("External:"):
+            return False, f"External LLMs not supported with zeroshot method", {}
     else:
         return False, f"Unknown method: {method}", {}
     

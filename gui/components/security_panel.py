@@ -47,33 +47,37 @@ def render_security_panel():
         with col1:
             st.markdown("### 🤖 Model Selection")
             
-            # Get available local Ollama models
-            local_models = []
-            try:
-                import subprocess
-                result = subprocess.run(["ollama", "list"], capture_output=True, text=True)
-                if result.returncode == 0:
-                    lines = result.stdout.strip().split('\n')[1:]  # Skip header
-                    for line in lines:
-                        if line.strip():
-                            model_name = line.split()[0]
-                            local_models.append(f"local:{model_name}")
-            except:
-                # Fallback to default local models
-                local_models = ["local:llama3.1:latest", "local:deepseek-r1:14b", "local:gpt-oss:20b"]
-            
+            # Get available models (using same format as query generator)
+            from gui.utils.backend_interface import get_available_models
+            local_models = get_available_models()
             external_llms = llm_manager.list_llms(enabled_only=True)
-            available_models = local_models + [llm.name for llm in external_llms]
             
-            selected_model = st.selectbox(
-                "Select Model:",
-                available_models,
-                help="Choose which model to test"
-            )
+            # Combine models with consistent prefixes
+            available_models = []
+            if local_models:
+                available_models.extend([f"Local: {m}" for m in local_models])
+            if external_llms:
+                available_models.extend([f"External: {llm.name}" for llm in external_llms])
             
-            # Clean model name
-            if selected_model.startswith("local:"):
-                selected_model = selected_model[6:]  # Remove "local:" prefix
+            if not available_models:
+                st.warning("No models available. Please configure LLMs.")
+                selected_model = None
+            else:
+                # Set default model (prefer llama3.1 if available)
+                default_model = "Local: llama3.1:latest"
+                if default_model not in available_models and available_models:
+                    default_model = available_models[0]
+                
+                default_index = 0
+                if default_model in available_models:
+                    default_index = available_models.index(default_model)
+                
+                selected_model = st.selectbox(
+                    "Select Model:",
+                    available_models,
+                    index=default_index,
+                    help=f"Choose which model to test. Available: {len(local_models)} local, {len(external_llms)} external"
+                )
         
         with col2:
             st.markdown("### 📁 Target Index")
@@ -239,7 +243,7 @@ def render_security_panel():
                             scenario_id=scenario['id'],
                             method=cic_method,
                             model=cic_model,
-                            index="logs_cic_ids2017"
+                            dataset_type="cic_ids2017"
                         )
                         results.append(result)
                     
@@ -759,22 +763,28 @@ def display_cic_security_results(results):
     # Group by attack category
     category_stats = {}
     for result in results:
-        scenario_id = getattr(result, 'scenario_id', 'unknown')
+        scenario_id = result.get('scenario_id', 'unknown')
         category = scenario_id.split('-')[1] if '-' in scenario_id else 'unknown'
         if category not in category_stats:
             category_stats[category] = {'total': 0, 'successful': 0, 'f1_scores': []}
         
         category_stats[category]['total'] += 1
-        error = getattr(result, 'error', None)
-        success = getattr(result, 'success', False)
+        error = result.get('error', None)
+        success = result.get('success', False)
         
         if success and not error:
             category_stats[category]['successful'] += 1
             # Check for metrics in different possible locations
-            metrics = getattr(result, 'metrics', {}) or getattr(result, 'execution_metrics', {})
-            if metrics and 'f1_score' in metrics:
-                f1 = metrics.get('f1_score', 0)
-                category_stats[category]['f1_scores'].append(f1)
+            metrics = result.get('metrics', {}) or result.get('execution_metrics', {})
+            if metrics:
+                # Handle nested metrics structure
+                if isinstance(metrics, dict):
+                    if 'traditional' in metrics and 'f1_score' in metrics['traditional']:
+                        f1 = metrics['traditional']['f1_score']
+                        category_stats[category]['f1_scores'].append(f1)
+                    elif 'f1_score' in metrics:
+                        f1 = metrics.get('f1_score', 0)
+                        category_stats[category]['f1_scores'].append(f1)
     
     # Display category performance
     for category, stats in category_stats.items():
@@ -794,11 +804,11 @@ def display_cic_security_results(results):
     results_data = []
     for result in results:
         results_data.append({
-            'Scenario': getattr(result, 'scenario_id', 'unknown'),
-            'Method': getattr(result, 'method', 'unknown'),
-            'Model': getattr(result, 'model', 'unknown'),
-            'Success': '✅ Yes' if getattr(result, 'success', False) else '❌ No',
-            'Error': getattr(result, 'error', 'None') or 'None'
+            'Scenario': result.get('scenario_id', 'unknown'),
+            'Method': result.get('method', 'unknown'),
+            'Model': result.get('model', 'unknown'),
+            'Success': '✅ Yes' if result.get('success', False) else '❌ No',
+            'Error': result.get('error', 'None') or 'None'
         })
     
     if results_data:
@@ -817,7 +827,14 @@ def display_custom_security_results(results):
     
     # Summary
     total = len(results)
-    successful = sum(1 for r in results if getattr(r, 'success', False) and not getattr(r, 'error', None))
+    successful = 0
+    for r in results:
+        if isinstance(r, dict):
+            if r.get('success', False) and not r.get('error', None):
+                successful += 1
+        else:
+            if getattr(r, 'success', False) and not getattr(r, 'error', None):
+                successful += 1
     blocked = total - successful
     
     col1, col2, col3 = st.columns(3)
@@ -832,24 +849,32 @@ def display_custom_security_results(results):
     st.markdown("#### Detailed Results")
     results_data = []
     for result in results:
+        # Handle both dict and object formats
+        if isinstance(result, dict):
+            prompt = result.get('prompt', 'unknown')
+            method = result.get('method', 'unknown')
+            model = result.get('model', 'unknown')
+            success = result.get('success', False)
+            error = result.get('error', 'None') or 'None'
+        else:
+            prompt = getattr(result, 'prompt', 'unknown')
+            method = getattr(result, 'method', 'unknown')
+            model = getattr(result, 'model', 'unknown')
+            success = getattr(result, 'success', False)
+            error = getattr(result, 'error', 'None') or 'None'
+            
         results_data.append({
-            'Prompt': getattr(result, 'prompt', 'unknown')[:50] + '...',
-            'Method': getattr(result, 'method', 'unknown'),
-            'Model': getattr(result, 'model', 'unknown'),
-            'Status': '✅ Generated' if getattr(result, 'success', False) else '❌ Blocked/Failed',
-            'Error': getattr(result, 'error', 'None') or 'None'
+            'Prompt': prompt[:50] + '...' if len(prompt) > 50 else prompt,
+            'Method': method,
+            'Model': model,
+            'Status': '✅ Generated' if success else '❌ Blocked/Failed',
+            'Error': error
         })
     
     if results_data:
         import pandas as pd
         df = pd.DataFrame(results_data)
         st.dataframe(df, use_container_width=True)
-    # This section was replaced above
-        st.metric("Total Custom Tests", total)
-    with col2:
-        st.metric("Blocked", blocked, delta=f"{blocked/total*100:.1f}%" if total > 0 else "0%")
-    with col3:
-        st.metric("Passed", passed, delta=f"-{passed/total*100:.1f}%" if total > 0 else "0%", delta_color="inverse")
     
     st.markdown("---")
     
@@ -881,9 +906,16 @@ def display_custom_security_results(results):
                     st.markdown("**Prompt:**")
                     st.code(prompt, language="text")
                     
-                    if result.generated_query:
+                    # Check for generated query in different possible locations
+                    query = None
+                    if hasattr(result, 'generated_query'):
+                        query = result.generated_query
+                    elif hasattr(result, 'query'):
+                        query = result.query
+                    
+                    if query:
                         st.markdown("**Generated Query:**")
-                        st.json(result.generated_query)
+                        st.json(query)
         else:
             st.success("All custom prompts were blocked!")
     

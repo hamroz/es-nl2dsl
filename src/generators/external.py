@@ -11,11 +11,11 @@ from pathlib import Path
 from typing import Dict, Optional
 
 # Add project root to path
-project_root = Path(__file__).parent.parent
+project_root = Path(__file__).parent.parent.parent
 sys.path.append(str(project_root))
 
-from ..external.llm_manager import get_external_llm_manager
-from .constrained import (
+from src.external.llm_manager import get_external_llm_manager
+from src.generators.constrained import (
     build_prompt, 
     validate_against_schema, 
     validate_with_validator,

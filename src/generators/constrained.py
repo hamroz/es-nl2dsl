@@ -7,16 +7,20 @@ import yaml
 import time
 from pathlib import Path
 from jsonschema import validate, ValidationError
+# Add project root to path for absolute imports
+project_root = Path(__file__).parent.parent.parent
+sys.path.append(str(project_root))
+
 # Import prompt enhancer if available
 try:
-    from ..external.prompt_enhancer import enhance_prompt, build_enhanced_prompt
+    from src.external.prompt_enhancer import enhance_prompt, build_enhanced_prompt
     ENHANCER_AVAILABLE = True
 except ImportError:
     ENHANCER_AVAILABLE = False
 
 # Import sophisticated security filter
 try:
-    from ..utils.security_filter import check_security_violations_advanced, SophisticatedSecurityFilter
+    from src.utils.security_filter import check_security_violations_advanced, SophisticatedSecurityFilter
     ADVANCED_SECURITY = True
 except ImportError:
     ADVANCED_SECURITY = False

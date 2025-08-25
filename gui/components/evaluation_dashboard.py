@@ -53,49 +53,55 @@ def render_evaluation_dashboard():
         # Model Selection
         st.markdown("### 🤖 Model Selection")
         
-        # Get available local Ollama models
-        local_models = []
-        try:
-            import subprocess
-            result = subprocess.run(["ollama", "list"], capture_output=True, text=True)
-            if result.returncode == 0:
-                lines = result.stdout.strip().split('\n')[1:]  # Skip header
-                for line in lines:
-                    if line.strip():
-                        model_name = line.split()[0]
-                        local_models.append(f"local:{model_name}")
-        except:
-            # Fallback to default local models
-            local_models = ["local:llama3.1:latest", "local:deepseek-r1:14b", "local:gpt-oss:20b"]
-        
-        # Get external LLMs
+        # Get available models (using same format as query generator)
+        from gui.utils.backend_interface import get_available_models
+        local_models = get_available_models()
         external_llms = llm_manager.list_llms(enabled_only=True)
         
-        # Combine all available models
-        available_models = local_models + [llm.name for llm in external_llms]
+        # Combine models with consistent prefixes
+        available_models = []
+        if local_models:
+            available_models.extend([f"Local: {m}" for m in local_models])
+        if external_llms:
+            available_models.extend([f"External: {llm.name}" for llm in external_llms])
         
         # Set default selection
         default_models = []
-        if "local:llama3.1:latest" in available_models:
-            default_models.append("local:llama3.1:latest")
-        elif local_models:
-            default_models.append(local_models[0])
+        default_model = "Local: llama3.1:latest"
+        if default_model in available_models:
+            default_models.append(default_model)
+        elif available_models:
+            default_models.append(available_models[0])
         
         selected_models = st.multiselect(
             "Select Models to Evaluate:",
             available_models,
             default=default_models,
-            help="Choose which models to use for generation (local:model_name for Ollama, or external LLM names)"
+            help=f"Choose which models to use for generation. Available: {len(local_models)} local, {len(external_llms)} external"
         )
         
-        # Clean model names - extract actual model name
+        # Convert model names for the evaluator (which expects raw model names)
+        # Note: The current evaluator only supports local Ollama models
         cleaned_models = []
-        for m in selected_models:
-            if m.startswith("local:"):
-                # Extract the model name after "local:"
-                cleaned_models.append(m[6:])  # Remove "local:" prefix
-            else:
-                cleaned_models.append(m)
+        external_models_selected = []
+        
+        for model in selected_models:
+            if model.startswith("Local: "):
+                cleaned_models.append(model.replace("Local: ", ""))
+            elif model.startswith("External: "):
+                external_models_selected.append(model.replace("External: ", ""))
+        
+        # Show warning if external models were selected
+        if external_models_selected:
+            st.warning(f"""
+            ⚠️ **External LLMs not supported in evaluation**: {', '.join(external_models_selected)}
+            
+            The evaluation system currently only supports local Ollama models. 
+            External LLMs will be excluded from this evaluation.
+            """)
+        
+        if not cleaned_models:
+            st.error("No compatible models selected. Please select at least one local Ollama model.")
         
         st.markdown("---")
         
@@ -199,8 +205,8 @@ def render_evaluation_dashboard():
         - Dataset: {dataset}
         - Scenarios: {len(selected_scenarios)}/{len(scenarios)}
         - Methods: {len(methods)}
-        - Models: {len(selected_models)}
-        - Total Evaluations: {len(selected_scenarios) * len(methods) * len(selected_models)}
+        - Compatible Models: {len(cleaned_models)}
+        - Total Evaluations: {len(selected_scenarios) * len(methods) * len(cleaned_models)}
         """)
         
         # Run button
@@ -209,10 +215,10 @@ def render_evaluation_dashboard():
                 st.error("Please select at least one scenario")
             elif not methods:
                 st.error("Please select at least one method")
-            elif not selected_models:
-                st.error("Please select at least one model")
+            elif not cleaned_models:
+                st.error("Please select at least one compatible model")
             else:
-                with st.spinner(f"Running {len(selected_scenarios) * len(methods) * len(selected_models)} evaluations..."):
+                with st.spinner(f"Running {len(selected_scenarios) * len(methods) * len(cleaned_models)} evaluations..."):
                     # Run evaluation
                     summary = evaluator.run_evaluation(
                         dataset=dataset,
@@ -391,7 +397,8 @@ def render_evaluation_dashboard():
                     error = result.get('error')
                 else:
                     scenario_id = result.scenario_id
-                    f1_score = result.execution_metrics.get('f1_score', 0) if result.execution_metrics else 0
+                    execution_metrics = getattr(result, 'execution_metrics', None)
+                    f1_score = execution_metrics.get('f1_score', 0) if execution_metrics else 0
                     ast_sim = result.ast_similarity
                     error = result.error
                 
@@ -481,10 +488,11 @@ def render_evaluation_dashboard():
                     scenario_id = result.scenario_id
                     method = result.method
                     model = result.model
-                    f1_score = result.execution_metrics.get('f1_score', 0) if result.execution_metrics else 0
+                    execution_metrics = getattr(result, 'execution_metrics', None)
+                    f1_score = execution_metrics.get('f1_score', 0) if execution_metrics else 0
                     error = result.error
                     prompt = result.prompt
-                    generated_query = result.generated_query
+                    generated_query = getattr(result, 'generated_query', None)
                 
                 status = "❌" if error else "✅"
                 
@@ -527,12 +535,12 @@ def render_evaluation_dashboard():
                 # Convert results to DataFrame
                 df_export = pd.DataFrame([
                     {
-                        'scenario_id': r.get('scenario_id') if isinstance(r, dict) else r.scenario_id,
-                        'method': r.get('method') if isinstance(r, dict) else r.method,
-                        'model': r.get('model') if isinstance(r, dict) else r.model,
-                        'f1_score': (r.get('execution_metrics', {}).get('f1_score', 0) if r.get('execution_metrics') else 0) if isinstance(r, dict) else (r.execution_metrics.get('f1_score', 0) if r.execution_metrics else 0),
-                        'ast_similarity': r.get('ast_similarity', 0) if isinstance(r, dict) else r.ast_similarity,
-                        'success': not (r.get('error') if isinstance(r, dict) else r.error)
+                        'scenario_id': r.get('scenario_id') if isinstance(r, dict) else getattr(r, 'scenario_id', 'unknown'),
+                        'method': r.get('method') if isinstance(r, dict) else getattr(r, 'method', 'unknown'),
+                        'model': r.get('model') if isinstance(r, dict) else getattr(r, 'model', 'unknown'),
+                        'f1_score': (r.get('execution_metrics', {}).get('f1_score', 0) if r.get('execution_metrics') else 0) if isinstance(r, dict) else (getattr(r, 'execution_metrics', {}).get('f1_score', 0) if getattr(r, 'execution_metrics', None) else 0),
+                        'ast_similarity': r.get('ast_similarity', 0) if isinstance(r, dict) else getattr(r, 'ast_similarity', 0),
+                        'success': not (r.get('error') if isinstance(r, dict) else getattr(r, 'error', None))
                     }
                     for r in results
                 ])
