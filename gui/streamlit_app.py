@@ -23,6 +23,7 @@ from gui.components.privacy_analysis import render_privacy_analysis
 from gui.components.admin_panel import render_admin_panel
 from gui.components.data_explorer import render_data_explorer
 from gui.components.performance_dashboard import render_performance_dashboard
+from gui.components.explainability_dashboard import render_explainability_dashboard
 
 # Page configuration
 st.set_page_config(
@@ -165,6 +166,7 @@ def main():
         "🔍 Data Explorer",
         "📊 Evaluation Dashboard",
         "🚀 Performance Dashboard",
+        "🧠 Explainability",
         "🛡️ Security Testing",
         "🔒 Privacy Analysis",
         "⚙️ System Administration"
@@ -210,6 +212,8 @@ def main():
         render_evaluation_dashboard()
     elif page == "🚀 Performance Dashboard":
         render_performance_dashboard()
+    elif page == "🧠 Explainability":
+        render_explainability_dashboard()
     elif page == "🛡️ Security Testing":
         render_security_panel()
     elif page == "🔒 Privacy Analysis":

@@ -1,0 +1,723 @@
+{
+  "research_question": "Does llama3.1:latest perform significantly better than deepseek-r1:14b?",
+  "data_summary": {
+    "shape": [
+      50,
+      6
+    ],
+    "columns": [
+      "model",
+      "method",
+      "f1_score",
+      "precision",
+      "recall",
+      "execution_time"
+    ],
+    "numeric_columns": [
+      "f1_score",
+      "precision",
+      "recall",
+      "execution_time"
+    ],
+    "categorical_columns": [
+      "model",
+      "method"
+    ],
+    "factors": {
+      "model": [
+        "llama3.1:latest",
+        "deepseek-r1:14b"
+      ],
+      "method": [
+        "constrained",
+        "zero_shot"
+      ]
+    },
+    "metrics": [
+      "f1_score",
+      "precision",
+      "recall",
+      "execution_time"
+    ],
+    "models": [
+      "llama3.1:latest",
+      "deepseek-r1:14b"
+    ],
+    "methods": [
+      "constrained",
+      "zero_shot"
+    ]
+  },
+  "generated_hypotheses": [
+    {
+      "hypothesis_id": "perf_model_f1_score",
+      "hypothesis_type": "performance_comparison",
+      "description": "Compare performance metrics between different model levels",
+      "null_hypothesis": "There is no significant difference in f1_score between different model levels",
+      "alternative_hypothesis": "model level 1 shows significantly different f1_score compared to model level 2",
+      "variables": {
+        "model": "f1_score"
+      },
+      "expected_outcome": "significant_difference",
+      "significance_level": 0.05,
+      "metadata": {
+        "factor": "model",
+        "metric": "f1_score"
+      }
+    },
+    {
+      "hypothesis_id": "perf_model_precision",
+      "hypothesis_type": "performance_comparison",
+      "description": "Compare performance metrics between different model levels",
+      "null_hypothesis": "There is no significant difference in precision between different model levels",
+      "alternative_hypothesis": "model level 1 shows significantly different precision compared to model level 2",
+      "variables": {
+        "model": "precision"
+      },
+      "expected_outcome": "significant_difference",
+      "significance_level": 0.05,
+      "metadata": {
+        "factor": "model",
+        "metric": "precision"
+      }
+    },
+    {
+      "hypothesis_id": "perf_method_f1_score",
+      "hypothesis_type": "performance_comparison",
+      "description": "Compare performance metrics between different method levels",
+      "null_hypothesis": "There is no significant difference in f1_score between different method levels",
+      "alternative_hypothesis": "method level 1 shows significantly different f1_score compared to method level 2",
+      "variables": {
+        "method": "f1_score"
+      },
+      "expected_outcome": "significant_difference",
+      "significance_level": 0.05,
+      "metadata": {
+        "factor": "method",
+        "metric": "f1_score"
+      }
+    },
+    {
+      "hypothesis_id": "perf_method_precision",
+      "hypothesis_type": "performance_comparison",
+      "description": "Compare performance metrics between different method levels",
+      "null_hypothesis": "There is no significant difference in precision between different method levels",
+      "alternative_hypothesis": "method level 1 shows significantly different precision compared to method level 2",
+      "variables": {
+        "method": "precision"
+      },
+      "expected_outcome": "significant_difference",
+      "significance_level": 0.05,
+      "metadata": {
+        "factor": "method",
+        "metric": "precision"
+      }
+    },
+    {
+      "hypothesis_id": "model_llama3.1:latest_f1_score",
+      "hypothesis_type": "model_effectiveness",
+      "description": "Evaluate effectiveness of llama3.1:latest for query generation",
+      "null_hypothesis": "llama3.1:latest performance is not significantly better than baseline",
+      "alternative_hypothesis": "llama3.1:latest demonstrates significantly superior performance",
+      "variables": {
+        "model": "f1_score"
+      },
+      "expected_outcome": "superior_performance",
+      "significance_level": 0.05,
+      "metadata": {
+        "model": "llama3.1:latest",
+        "metric": "f1_score"
+      }
+    },
+    {
+      "hypothesis_id": "model_deepseek-r1:14b_f1_score",
+      "hypothesis_type": "model_effectiveness",
+      "description": "Evaluate effectiveness of deepseek-r1:14b for query generation",
+      "null_hypothesis": "deepseek-r1:14b performance is not significantly better than baseline",
+      "alternative_hypothesis": "deepseek-r1:14b demonstrates significantly superior performance",
+      "variables": {
+        "model": "f1_score"
+      },
+      "expected_outcome": "superior_performance",
+      "significance_level": 0.05,
+      "metadata": {
+        "model": "deepseek-r1:14b",
+        "metric": "f1_score"
+      }
+    },
+    {
+      "hypothesis_id": "method_constrained_vs_zero_shot",
+      "hypothesis_type": "method_superiority",
+      "description": "Test superiority of constrained over zero_shot",
+      "null_hypothesis": "No significant difference between constrained and zero_shot",
+      "alternative_hypothesis": "constrained significantly outperforms zero_shot",
+      "variables": {
+        "method": "f1_score"
+      },
+      "expected_outcome": "method1_superior",
+      "significance_level": 0.05,
+      "metadata": {
+        "method1": "constrained",
+        "method2": "zero_shot",
+        "metric": "f1_score"
+      }
+    }
+  ],
+  "selected_hypothesis": {
+    "hypothesis_id": "perf_model_f1_score",
+    "hypothesis_type": "performance_comparison",
+    "description": "Compare performance metrics between different model levels",
+    "null_hypothesis": "There is no significant difference in f1_score between different model levels",
+    "alternative_hypothesis": "model level 1 shows significantly different f1_score compared to model level 2",
+    "variables": {
+      "model": "f1_score"
+    },
+    "expected_outcome": "significant_difference",
+    "significance_level": 0.05,
+    "metadata": {
+      "factor": "model",
+      "metric": "f1_score"
+    }
+  },
+  "experimental_design": {
+    "design_id": "design_perf_model_f1_score",
+    "hypothesis": {
+      "hypothesis_id": "perf_model_f1_score",
+      "hypothesis_type": "performance_comparison",
+      "description": "Compare performance metrics between different model levels",
+      "null_hypothesis": "There is no significant difference in f1_score between different model levels",
+      "alternative_hypothesis": "model level 1 shows significantly different f1_score compared to model level 2",
+      "variables": {
+        "model": "f1_score"
+      },
+      "expected_outcome": "significant_difference",
+      "significance_level": 0.05,
+      "metadata": {
+        "factor": "model",
+        "metric": "f1_score"
+      }
+    },
+    "factors": [
+      "model"
+    ],
+    "levels": {
+      "model": [
+        "llama3.1:latest",
+        "deepseek-r1:14b"
+      ]
+    },
+    "sample_size": 63,
+    "randomization": true,
+    "blocking_factors": null,
+    "statistical_tests": [
+      "t_test",
+      "mann_whitney",
+      "correlation"
+    ],
+    "power_analysis": {
+      "power_small": 0.20116512440279194,
+      "power_medium": 0.801301455473719,
+      "power_large": 0.9942972780583634
+    }
+  },
+  "results": {
+    "experiment_id": "exp_design_perf_model_f1_score",
+    "hypothesis": {
+      "hypothesis_id": "perf_model_f1_score",
+      "hypothesis_type": "performance_comparison",
+      "description": "Compare performance metrics between different model levels",
+      "null_hypothesis": "There is no significant difference in f1_score between different model levels",
+      "alternative_hypothesis": "model level 1 shows significantly different f1_score compared to model level 2",
+      "variables": {
+        "model": "f1_score"
+      },
+      "expected_outcome": "significant_difference",
+      "significance_level": 0.05,
+      "metadata": {
+        "factor": "model",
+        "metric": "f1_score"
+      }
+    },
+    "design": {
+      "design_id": "design_perf_model_f1_score",
+      "hypothesis": {
+        "hypothesis_id": "perf_model_f1_score",
+        "hypothesis_type": "performance_comparison",
+        "description": "Compare performance metrics between different model levels",
+        "null_hypothesis": "There is no significant difference in f1_score between different model levels",
+        "alternative_hypothesis": "model level 1 shows significantly different f1_score compared to model level 2",
+        "variables": {
+          "model": "f1_score"
+        },
+        "expected_outcome": "significant_difference",
+        "significance_level": 0.05,
+        "metadata": {
+          "factor": "model",
+          "metric": "f1_score"
+        }
+      },
+      "factors": [
+        "model"
+      ],
+      "levels": {
+        "model": [
+          "llama3.1:latest",
+          "deepseek-r1:14b"
+        ]
+      },
+      "sample_size": 63,
+      "randomization": true,
+      "blocking_factors": null,
+      "statistical_tests": [
+        "t_test",
+        "mann_whitney",
+        "correlation"
+      ],
+      "power_analysis": {
+        "power_small": 0.20116512440279194,
+        "power_medium": 0.801301455473719,
+        "power_large": 0.9942972780583634
+      }
+    },
+    "raw_data": {
+      "model": {
+        "0": "llama3.1:latest",
+        "1": "llama3.1:latest",
+        "2": "llama3.1:latest",
+        "3": "llama3.1:latest",
+        "4": "llama3.1:latest",
+        "5": "llama3.1:latest",
+        "6": "llama3.1:latest",
+        "7": "llama3.1:latest",
+        "8": "llama3.1:latest",
+        "9": "llama3.1:latest",
+        "10": "llama3.1:latest",
+        "11": "llama3.1:latest",
+        "12": "llama3.1:latest",
+        "13": "llama3.1:latest",
+        "14": "llama3.1:latest",
+        "15": "llama3.1:latest",
+        "16": "llama3.1:latest",
+        "17": "llama3.1:latest",
+        "18": "llama3.1:latest",
+        "19": "llama3.1:latest",
+        "20": "llama3.1:latest",
+        "21": "llama3.1:latest",
+        "22": "llama3.1:latest",
+        "23": "llama3.1:latest",
+        "24": "llama3.1:latest",
+        "25": "deepseek-r1:14b",
+        "26": "deepseek-r1:14b",
+        "27": "deepseek-r1:14b",
+        "28": "deepseek-r1:14b",
+        "29": "deepseek-r1:14b",
+        "30": "deepseek-r1:14b",
+        "31": "deepseek-r1:14b",
+        "32": "deepseek-r1:14b",
+        "33": "deepseek-r1:14b",
+        "34": "deepseek-r1:14b",
+        "35": "deepseek-r1:14b",
+        "36": "deepseek-r1:14b",
+        "37": "deepseek-r1:14b",
+        "38": "deepseek-r1:14b",
+        "39": "deepseek-r1:14b",
+        "40": "deepseek-r1:14b",
+        "41": "deepseek-r1:14b",
+        "42": "deepseek-r1:14b",
+        "43": "deepseek-r1:14b",
+        "44": "deepseek-r1:14b",
+        "45": "deepseek-r1:14b",
+        "46": "deepseek-r1:14b",
+        "47": "deepseek-r1:14b",
+        "48": "deepseek-r1:14b",
+        "49": "deepseek-r1:14b"
+      },
+      "method": {
+        "0": "constrained",
+        "1": "constrained",
+        "2": "constrained",
+        "3": "constrained",
+        "4": "constrained",
+        "5": "constrained",
+        "6": "constrained",
+        "7": "constrained",
+        "8": "constrained",
+        "9": "constrained",
+        "10": "constrained",
+        "11": "constrained",
+        "12": "zero_shot",
+        "13": "zero_shot",
+        "14": "zero_shot",
+        "15": "zero_shot",
+        "16": "zero_shot",
+        "17": "zero_shot",
+        "18": "zero_shot",
+        "19": "zero_shot",
+        "20": "zero_shot",
+        "21": "zero_shot",
+        "22": "zero_shot",
+        "23": "zero_shot",
+        "24": "zero_shot",
+        "25": "constrained",
+        "26": "constrained",
+        "27": "constrained",
+        "28": "constrained",
+        "29": "constrained",
+        "30": "constrained",
+        "31": "constrained",
+        "32": "constrained",
+        "33": "constrained",
+        "34": "constrained",
+        "35": "constrained",
+        "36": "constrained",
+        "37": "constrained",
+        "38": "zero_shot",
+        "39": "zero_shot",
+        "40": "zero_shot",
+        "41": "zero_shot",
+        "42": "zero_shot",
+        "43": "zero_shot",
+        "44": "zero_shot",
+        "45": "zero_shot",
+        "46": "zero_shot",
+        "47": "zero_shot",
+        "48": "zero_shot",
+        "49": "zero_shot"
+      },
+      "f1_score": {
+        "0": 0.8748357076505616,
+        "1": 0.8430867849414407,
+        "2": 0.8823844269050346,
+        "3": 0.9261514928204012,
+        "4": 0.8382923312638332,
+        "5": 0.838293152152541,
+        "6": 0.9289606407753696,
+        "7": 0.8883717364576454,
+        "8": 0.8265262807032524,
+        "9": 0.8771280021792982,
+        "10": 0.8268291153593769,
+        "11": 0.8267135123214872,
+        "12": 0.8620981135783017,
+        "13": 0.7543359877671101,
+        "14": 0.7637541083743483,
+        "15": 0.8218856235379514,
+        "16": 0.7993584439832788,
+        "17": 0.8657123666297637,
+        "18": 0.8045987962239394,
+        "19": 0.7793848149332354,
+        "20": 0.9232824384460776,
+        "21": 0.8387111849756732,
+        "22": 0.8533764102343961,
+        "23": 0.7787625906893272,
+        "24": 0.8227808637737408,
+        "25": 0.8088738071767894,
+        "26": 0.7079205138062158,
+        "27": 0.8300558414676538,
+        "28": 0.7519489048064957,
+        "29": 0.7766645000165379,
+        "30": 0.7518634710216483,
+        "31": 0.948182254760715,
+        "32": 0.7989202220209654,
+        "33": 0.715383125683528,
+        "34": 0.8658035929682552,
+        "35": 0.7023325080023183,
+        "36": 0.8167090876003805,
+        "37": 0.643226390089618,
+        "38": 0.6937451160881256,
+        "39": 0.81574889886953,
+        "40": 0.8590773263996329,
+        "41": 0.8137094624951977,
+        "42": 0.7907481374089408,
+        "43": 0.775911704352857,
+        "44": 0.6817182407706058,
+        "45": 0.7424124633284234,
+        "46": 0.7631488983232171,
+        "47": 0.8845697780975132,
+        "48": 0.827489463165477,
+        "49": 0.6589567875709813
+      },
+      "precision": {
+        "0": 0.8894450381636877,
+        "1": 0.8468950631750211,
+        "2": 0.8293846799816424,
+        "3": 0.906700577330452,
+        "4": 0.9318599713497572,
+        "5": 0.925876807146972,
+        "6": 0.8196469486066417,
+        "7": 0.8514472574489271,
+        "8": 0.8898758058842138,
+        "9": 0.9285327076273416,
+        "10": 0.8412495457292826,
+        "11": 0.8588604614001709,
+        "12": 0.8036199015596384,
+        "13": 0.7982276025551598,
+        "14": 0.918751549343652,
+        "15": 0.9513744017142494,
+        "16": 0.86567939270518,
+        "17": 0.9302119738735214,
+        "18": 0.8916981615028581,
+        "19": 0.8312928147236925,
+        "20": 0.8916837363305048,
+        "21": 0.962282193987958,
+        "22": 0.8678504376534029,
+        "23": 0.9638786193488404,
+        "24": 0.7128152937546153,
+        "25": 0.9193141502625134,
+        "26": 0.8752228240942903,
+        "27": 0.852059558972048,
+        "28": 0.8755056465921301,
+        "29": 0.7507458651239465,
+        "30": 0.8568196867297493,
+        "31": 0.8914267542907047,
+        "32": 0.958673642684491,
+        "33": 0.8389037869035811,
+        "34": 0.8214903838264087,
+        "35": 0.8398945773849278,
+        "36": 0.9249241270621243,
+        "37": 0.8897250665795811,
+        "38": 0.8382143877739776,
+        "39": 0.9007960459868014,
+        "40": 0.8758246529608824,
+        "41": 0.9281186994319732,
+        "42": 0.8278768143673588,
+        "43": 0.8503402712041339,
+        "44": 0.8464735108120706,
+        "45": 0.7821891031120729,
+        "46": 0.8877672166238746,
+        "47": 0.8856633163307933,
+        "48": 0.8703068073985476,
+        "49": 0.8559247719974912
+      },
+      "recall": {
+        "0": 0.7309240480564709,
+        "1": 0.8005548274064248,
+        "2": 0.806009983843126,
+        "3": 0.7738405911544867,
+        "4": 0.8187100001833794,
+        "5": 0.8582835599770177,
+        "6": 0.9620330130847372,
+        "7": 0.8422204468982287,
+        "8": 0.8480285273505934,
+        "9": 0.8247887858963683,
+        "10": 0.695686014929067,
+        "11": 0.8281440287185547,
+        "12": 0.8342161146958718,
+        "13": 1.00242694787397,
+        "14": 0.8165347324653214,
+        "15": 0.8511083139633528,
+        "16": 0.8275701761206329,
+        "17": 0.7481925373666327,
+        "18": 0.9099975970160514,
+        "19": 0.8826353122880741,
+        "20": 0.8853722362930132,
+        "21": 0.7663428781643682,
+        "22": 0.928195601765527,
+        "23": 0.7318704256045403,
+        "24": 0.8710799965660189,
+        "25": 0.9833318938066984,
+        "26": 0.7606624572408518,
+        "27": 0.790359158927806,
+        "28": 0.8369755955561349,
+        "29": 0.7947567042118661,
+        "30": 0.7214535598253706,
+        "31": 0.8347994082364218,
+        "32": 0.7556387400391726,
+        "33": 0.8631514701444627,
+        "34": 0.7656403036036338,
+        "35": 0.9384954083512276,
+        "36": 0.7751722695364633,
+        "37": 0.8074556938656027,
+        "38": 0.8869462052158769,
+        "39": 0.7438394978496231,
+        "40": 0.845922195422289,
+        "41": 0.92149999279977,
+        "42": 0.717476173580714,
+        "43": 0.8429243700972613,
+        "44": 0.8481917955973897,
+        "45": 0.8847276010244117,
+        "46": 0.7434134502385342,
+        "47": 0.7375680370841006,
+        "48": 0.8665359095931828,
+        "49": 0.850788927126323
+      },
+      "execution_time": {
+        "0": 2.700394280276701,
+        "1": 2.7771585675975805,
+        "2": 1.9559802227372072,
+        "3": 2.6858029577288027,
+        "4": 2.734457978638945,
+        "5": 1.9285188655789056,
+        "6": 3.9926196089158057,
+        "7": 2.87906633672943,
+        "8": 1.546957202237881,
+        "9": 3.025242886907064,
+        "10": 1.7202546638181428,
+        "11": 3.129667682993962,
+        "12": 3.426876463205923,
+        "13": 1.8434541453186315,
+        "14": 3.2707009033954577,
+        "15": 2.830224741549199,
+        "16": 3.157648127995592,
+        "17": 4.017434386123158,
+        "18": 2.3036895071977037,
+        "19": 1.897011068514008,
+        "20": 1.788388456299581,
+        "21": 1.847351772027649,
+        "22": 2.4383186324687167,
+        "23": 2.772921579853315,
+        "24": 2.721352639464015,
+        "25": 3.161746599228819,
+        "26": 2.5104015135023254,
+        "27": 3.6628272617258535,
+        "28": 2.288274533409635,
+        "29": 4.676135333271695,
+        "30": 3.0005338782120052,
+        "31": 1.814273954866974,
+        "32": 1.6432860015511102,
+        "33": 2.885977932194548,
+        "34": 2.3212297717393193,
+        "35": 3.0712003952736735,
+        "36": 2.878590099658836,
+        "37": 2.441736869874502,
+        "38": 1.822565025545276,
+        "39": 1.2881222202513083,
+        "40": 2.1427880383463833,
+        "41": 3.185119035458778,
+        "42": 2.671274995304163,
+        "43": 1.5034089770304095,
+        "44": 2.6385447406809455,
+        "45": 2.8082539037830694,
+        "46": 1.7929140510390935,
+        "47": 2.6229800847564224,
+        "48": 2.5465669747568,
+        "49": 1.5856237617355011
+      }
+    },
+    "statistical_results": {
+      "t_test": {
+        "test_name": "Independent t-test",
+        "statistic": 3.67653124045808,
+        "p_value": 0.000595986960851519,
+        "effect_size": 1.039880068548839,
+        "confidence_interval": [
+          0.029370902032048216,
+          0.1002686523988124
+        ],
+        "group1_mean": 0.8418245970670953,
+        "group2_mean": 0.777004819851665,
+        "group1_std": 0.04782765271474522,
+        "group2_std": 0.07405096283923941,
+        "degrees_freedom": 48
+      },
+      "mann_whitney": {
+        "test_name": "Mann-Whitney U test",
+        "statistic": 486.0,
+        "p_value": 0.0007888063134956533,
+        "effect_size": 0.5551999999999999,
+        "group1_median": 0.838293152152541,
+        "group2_median": 0.7766645000165379,
+        "group1_size": 25,
+        "group2_size": 25
+      },
+      "correlation": {
+        "test_name": "Correlation analysis",
+        "correlations": [
+          {
+            "variable1": "precision",
+            "variable2": "recall",
+            "correlation": -0.23106075023095526,
+            "p_value": 0.1064292548657253,
+            "sample_size": 50
+          },
+          {
+            "variable1": "precision",
+            "variable2": "execution_time",
+            "correlation": -0.17269306890743344,
+            "p_value": 0.2304213817019265,
+            "sample_size": 50
+          },
+          {
+            "variable1": "f1_score",
+            "variable2": "precision",
+            "correlation": 0.15816706726945756,
+            "p_value": 0.2726215139804711,
+            "sample_size": 50
+          },
+          {
+            "variable1": "f1_score",
+            "variable2": "execution_time",
+            "correlation": 0.09999912113173201,
+            "p_value": 0.4895963873587936,
+            "sample_size": 50
+          },
+          {
+            "variable1": "f1_score",
+            "variable2": "recall",
+            "correlation": -0.08098414416609692,
+            "p_value": 0.5761069904161946,
+            "sample_size": 50
+          },
+          {
+            "variable1": "recall",
+            "variable2": "execution_time",
+            "correlation": 0.05417458663851602,
+            "p_value": 0.7086589338362139,
+            "sample_size": 50
+          }
+        ],
+        "correlation_matrix": {
+          "f1_score": {
+            "f1_score": 1.0,
+            "precision": 0.15816706726945756,
+            "recall": -0.08098414416609692,
+            "execution_time": 0.09999912113173201
+          },
+          "precision": {
+            "f1_score": 0.15816706726945756,
+            "precision": 1.0,
+            "recall": -0.23106075023095526,
+            "execution_time": -0.17269306890743344
+          },
+          "recall": {
+            "f1_score": -0.08098414416609692,
+            "precision": -0.23106075023095526,
+            "recall": 1.0,
+            "execution_time": 0.05417458663851602
+          },
+          "execution_time": {
+            "f1_score": 0.09999912113173201,
+            "precision": -0.17269306890743344,
+            "recall": 0.05417458663851602,
+            "execution_time": 1.0
+          }
+        }
+      }
+    },
+    "effect_sizes": {
+      "t_test": 1.039880068548839,
+      "mann_whitney": 0.5551999999999999,
+      "correlation": 0.0
+    },
+    "confidence_intervals": {
+      "t_test": [
+        0.029370902032048216,
+        0.1002686523988124
+      ]
+    },
+    "conclusion": "REJECT null hypothesis. Found significant evidence for: model level 1 shows significantly different f1_score compared to model level 2 (Significant tests: t_test, mann_whitney)",
+    "p_values": {
+      "t_test": 0.000595986960851519,
+      "mann_whitney": 0.0007888063134956533,
+      "correlation": 1.0
+    },
+    "practical_significance": {
+      "t_test": "True",
+      "mann_whitney": "True",
+      "correlation": false
+    },
+    "visualizations": [
+      "artifacts/research_visualizations/boxplot_design_perf_model_f1_score.png",
+      "artifacts/research_visualizations/correlation_design_perf_model_f1_score.png"
+    ]
+  }
+}
