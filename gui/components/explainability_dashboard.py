@@ -18,8 +18,8 @@ sys.path.append(str(project_root))
 def render_explainability_dashboard():
     """Render the explainability and research tools dashboard"""
     
-    st.header("🔍 Explainability & Research Tools")
-    st.markdown("Deep analysis and interpretation of query generation processes")
+    st.header("🔬 Interpretability & Research Tools")
+    st.markdown("Deep analysis and interpretation of query generation processes with advanced research methodologies")
     
     # Main tabs for different explainability features
     tab1, tab2, tab3, tab4 = st.tabs([
@@ -100,10 +100,15 @@ def render_query_explanation():
         
         col1, col2 = st.columns(2)
         with col1:
+            # Get all available models (local + external)
+            from gui.utils.backend_interface import get_all_available_models
+            all_models = get_all_available_models()
+            
             model = st.selectbox(
                 "Model",
-                ["llama3.1:latest", "deepseek-r1:14b", "gpt-oss:20b"],
-                index=0
+                all_models,
+                index=0,
+                help="🖥️=Local models, ☁️=External models"
             )
         
         with col2:
@@ -115,18 +120,29 @@ def render_query_explanation():
         
         if st.button("🚀 Generate & Explain", type="primary"):
             if prompt_text:
-                with st.spinner("Generating query and explanation..."):
+                # Show which model is being used
+                st.info(f"🤖 Using model: **{model}** with method: **{method}**")
+                
+                with st.spinner(f"Generating query with {model} and creating explanation..."):
                     result = generate_and_explain_query(prompt_text, model, method, explanation_level)
                     
                     if result["success"]:
+                        # Show generation details
+                        st.success(f"✅ Query generated successfully using {model}")
+                        
                         # Show the generated query first
                         st.subheader("Generated Query")
                         st.json(result["query"])
                         
+                        # Show generation output if available
+                        if "generation_output" in result and result["generation_output"]:
+                            with st.expander("📋 Generation Log"):
+                                st.text(result["generation_output"])
+                        
                         # Then show the explanation
                         display_query_explanation(result["explanation"])
                     else:
-                        st.error(f"Generation failed: {result['error']}")
+                        st.error(f"Generation failed with {model}: {result['error']}")
             else:
                 st.warning("Please enter a prompt")
 
@@ -352,45 +368,32 @@ def explain_uploaded_query(query_data: Dict[str, Any], prompt: str, level: str) 
 def generate_and_explain_query(prompt: str, model: str, method: str, level: str) -> Dict[str, Any]:
     """Generate a new query and explain it"""
     try:
-        import subprocess
         import uuid
+        from gui.utils.backend_interface import run_query_generation
         
         # Generate unique task ID
         task_id = f"explain_{uuid.uuid4().hex[:8]}"
         
-        # Generate query
-        cmd = [
-            "python", "src/generators/constrained.py",
-            "--prompt", prompt,
-            "--task-id", task_id,
-            "--model", model
-        ]
+        # Use the proper backend interface that handles both local and external models
+        success, output, query_data = run_query_generation(
+            prompt=prompt,
+            method=method,
+            task_id=task_id,
+            model=model  # Pass model with emoji prefix - backend will handle it
+        )
         
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
-        
-        if result.returncode == 0:
-            # Load generated query
-            query_file = Path(f"artifacts/generated/{task_id}.json")
+        if success and query_data:
+            # Generate explanation
+            explanation = explain_uploaded_query(query_data, prompt, level)
             
-            if query_file.exists():
-                with open(query_file) as f:
-                    query_data = json.load(f)
-                
-                # Generate explanation
-                explanation = explain_uploaded_query(query_data, prompt, level)
-                
-                # Clean up
-                query_file.unlink(missing_ok=True)
-                
-                return {
-                    "success": True,
-                    "query": query_data,
-                    "explanation": explanation
-                }
-            else:
-                return {"success": False, "error": "Query file not found"}
+            return {
+                "success": True,
+                "query": query_data,
+                "explanation": explanation,
+                "generation_output": output
+            }
         else:
-            return {"success": False, "error": result.stderr}
+            return {"success": False, "error": output or "Query generation failed"}
     
     except Exception as e:
         return {"success": False, "error": str(e)}

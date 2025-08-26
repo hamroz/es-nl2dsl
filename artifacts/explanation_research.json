@@ -1,0 +1,292 @@
+{
+  "original_prompt": "Find events labeled malicious on 2017-07-04",
+  "generated_query": {
+    "query": {
+      "bool": {
+        "filter": [
+          {
+            "range": {
+              "@timestamp": {
+                "gte": "2017-01-01",
+                "lte": "2017-12-31"
+              }
+            }
+          },
+          {
+            "term": {
+              "label": "malicious"
+            }
+          }
+        ]
+      }
+    }
+  },
+  "query_summary": "This query searches for malicious events from 2017-07-04 filtering by @timestamp, label.",
+  "complexity_score": 0.4125,
+  "confidence_score": 0.6142857142857143,
+  "decisions": [
+    {
+      "decision_type": "field_selection",
+      "component": "field",
+      "field_name": "@timestamp",
+      "value": "@timestamp",
+      "confidence": 0.5,
+      "rationale": "Selected field '@timestamp' as it's commonly used for this type of query. Event timestamp for temporal filtering",
+      "alternatives": [
+        {
+          "field": "src_ip",
+          "confidence": 0.3
+        },
+        {
+          "field": "dst_ip",
+          "confidence": 0.3
+        }
+      ],
+      "prompt_evidence": [],
+      "technical_details": {
+        "field_type": "keyword",
+        "indexed": true
+      }
+    },
+    {
+      "decision_type": "field_selection",
+      "component": "field",
+      "field_name": "label",
+      "value": "label",
+      "confidence": 0.5,
+      "rationale": "Selected field 'label' as it's commonly used for this type of query. Event classification (malicious, benign)",
+      "alternatives": [
+        {
+          "field": "src_ip",
+          "confidence": 0.3
+        },
+        {
+          "field": "dst_ip",
+          "confidence": 0.3
+        }
+      ],
+      "prompt_evidence": [],
+      "technical_details": {
+        "field_type": "keyword",
+        "indexed": true
+      }
+    },
+    {
+      "decision_type": "time_filtering",
+      "component": "range",
+      "field_name": "@timestamp",
+      "value": {
+        "gte": "2017-01-01",
+        "lte": "2017-12-31"
+      },
+      "confidence": 0.9,
+      "rationale": "Applied temporal filter on @timestamp based on time references in prompt: 2017-07-04 (range: 2017-01-01 to 2017-12-31)",
+      "alternatives": [
+        {
+          "type": "match_all",
+          "rationale": "No time filtering"
+        }
+      ],
+      "prompt_evidence": [
+        "2017-07-04"
+      ],
+      "technical_details": {
+        "filter_type": "range",
+        "performance_impact": "positive"
+      }
+    },
+    {
+      "decision_type": "logical_structure",
+      "component": "bool",
+      "field_name": null,
+      "value": {
+        "primary_operator": "filter",
+        "clause_counts": {
+          "filter": 2
+        }
+      },
+      "confidence": 0.7,
+      "rationale": "Used boolean query with primary operator 'filter' as it allows combining multiple conditions effectively",
+      "alternatives": [
+        {
+          "operator": "term",
+          "rationale": "Single condition query"
+        }
+      ],
+      "prompt_evidence": [],
+      "technical_details": {
+        "query_efficiency": "high",
+        "flexibility": "high"
+      }
+    },
+    {
+      "decision_type": "operator_choice",
+      "component": "range",
+      "field_name": "@timestamp",
+      "value": {
+        "gte": "2017-01-01",
+        "lte": "2017-12-31"
+      },
+      "confidence": 0.6,
+      "rationale": "Chose 'range' operator for numeric or date range filtering",
+      "alternatives": [
+        {
+          "operator": "term",
+          "confidence": 0.4
+        },
+        {
+          "operator": "match",
+          "confidence": 0.4
+        }
+      ],
+      "prompt_evidence": [],
+      "technical_details": {
+        "operator_performance": "medium"
+      }
+    },
+    {
+      "decision_type": "operator_choice",
+      "component": "term",
+      "field_name": "label",
+      "value": "malicious",
+      "confidence": 0.6,
+      "rationale": "Chose 'term' operator for exact match for precise filtering",
+      "alternatives": [
+        {
+          "operator": "match",
+          "confidence": 0.4
+        },
+        {
+          "operator": "range",
+          "confidence": 0.4
+        }
+      ],
+      "prompt_evidence": [],
+      "technical_details": {
+        "operator_performance": "fast"
+      }
+    }
+  ],
+  "attention_weights": {
+    "Find": 0.23076923076923075,
+    "events": 0.038461538461538464,
+    "labeled": 0.038461538461538464,
+    "malicious": 0.34615384615384615,
+    "on": 0.038461538461538464,
+    "2017-07-04": 0.3076923076923077
+  },
+  "risk_assessment": {
+    "performance_risks": [
+      "No size limit - may return excessive results"
+    ],
+    "security_risks": [],
+    "accuracy_risks": [
+      "Low confidence in 2 decisions"
+    ],
+    "overall_risk_level": "medium"
+  },
+  "optimization_suggestions": [
+    "Add size limit to prevent excessive results: e.g., 'size': 1000",
+    "Ensure filtered fields are properly indexed for optimal performance",
+    "Review 2 low-confidence decisions for accuracy"
+  ],
+  "metadata": {
+    "explanation_level": "research",
+    "prompt_analysis": {
+      "temporal_components": [
+        {
+          "type": "date",
+          "text": "2017-07-04",
+          "position": [
+            33,
+            43
+          ],
+          "confidence": 0.9
+        }
+      ],
+      "field_references": [
+        {
+          "type": "label_value",
+          "text": "malicious",
+          "position": [
+            20,
+            29
+          ],
+          "confidence": 0.6
+        }
+      ],
+      "operator_hints": [],
+      "security_context": [
+        {
+          "type": "security_event",
+          "text": "malicious",
+          "position": [
+            20,
+            29
+          ],
+          "confidence": 0.8
+        }
+      ],
+      "complexity_indicators": {
+        "word_count": 6,
+        "unique_words": 6,
+        "logical_connectors": 0,
+        "conditionals": 0,
+        "temporal_refs": 0,
+        "complexity_score": 0.09
+      },
+      "attention_tokens": {
+        "Find": 0.23076923076923075,
+        "events": 0.038461538461538464,
+        "labeled": 0.038461538461538464,
+        "malicious": 0.34615384615384615,
+        "on": 0.038461538461538464,
+        "2017-07-04": 0.3076923076923077
+      }
+    },
+    "query_analysis": {
+      "has_query": true,
+      "has_aggregations": false,
+      "has_sorting": false,
+      "has_size_limit": false,
+      "query_type": "boolean",
+      "filters": [
+        {
+          "type": "range",
+          "content": {
+            "@timestamp": {
+              "gte": "2017-01-01",
+              "lte": "2017-12-31"
+            }
+          },
+          "path": "bool.filter[0]"
+        },
+        {
+          "type": "term",
+          "content": {
+            "label": "malicious"
+          },
+          "path": "bool.filter[1]"
+        }
+      ],
+      "logical_structure": {
+        "has_must": false,
+        "has_should": false,
+        "has_must_not": false,
+        "has_filter": true,
+        "clause_counts": {
+          "filter": 2
+        }
+      },
+      "field_count": 2,
+      "temporal_filters": [
+        {
+          "gte": "2017-01-01",
+          "lte": "2017-12-31"
+        }
+      ],
+      "complexity_indicators": {}
+    },
+    "generation_timestamp": "es-nl2dsl"
+  }
+}

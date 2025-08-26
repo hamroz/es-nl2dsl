@@ -405,7 +405,7 @@ def correct_field_mappings(query_json):
     else:
         return query_json
 
-def generate_with_retries(task_prompt, schema_path, rules_path, max_retries=2, index=None):
+def generate_with_retries(task_prompt, schema_path, rules_path, max_retries=2, index=None, model="llama3.1:latest"):
     """Generate query with validation and retries"""
     start_time = time.time()
     metrics = {
@@ -436,7 +436,7 @@ def generate_with_retries(task_prompt, schema_path, rules_path, max_retries=2, i
         
         try:
             # Call model
-            response = call_local_model(prompt)
+            response = call_local_model(prompt, model)
             
             # Extract JSON (handle markdown code blocks)
             if "```json" in response:
@@ -532,7 +532,7 @@ def main():
             print(f"Using CIC-IDS2017 validator rules for index: {args.index}")
     
     # Generate query
-    result = generate_with_retries(args.prompt, args.schema, rules_file, index=args.index)
+    result = generate_with_retries(args.prompt, args.schema, rules_file, index=args.index, model=args.model)
     
     # Save result
     if args.task_id:

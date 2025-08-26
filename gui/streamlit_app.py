@@ -166,7 +166,7 @@ def main():
         "🔍 Data Explorer",
         "📊 Evaluation Dashboard",
         "🚀 Performance Dashboard",
-        "🧠 Explainability",
+        "🔬 Interpretability & Research",
         "🛡️ Security Testing",
         "🔒 Privacy Analysis",
         "⚙️ System Administration"
@@ -212,7 +212,7 @@ def main():
         render_evaluation_dashboard()
     elif page == "🚀 Performance Dashboard":
         render_performance_dashboard()
-    elif page == "🧠 Explainability":
+    elif page == "🔬 Interpretability & Research":
         render_explainability_dashboard()
     elif page == "🛡️ Security Testing":
         render_security_panel()

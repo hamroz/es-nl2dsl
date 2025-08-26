@@ -127,11 +127,17 @@ def run_query_generation(prompt: str, method: str = "constrained",
                                       index=index, task_id=task_id)
     
     # Check if using external LLM (external LLMs can only be used with constrained method currently)
-    if model and model.startswith("External:"):
+    if model and (model.startswith("External:") or model.startswith("☁️")):
         if method != "constrained":
             logger.warning(f"❌ External LLM {model} not supported with {method} method")
             return False, f"External LLMs only supported with constrained method, not {method}", {}
-        external_llm_name = model.replace("External: ", "")
+        
+        # Handle both formats: "External: name" and "☁️ name"
+        if model.startswith("External:"):
+            external_llm_name = model.replace("External: ", "")
+        else:
+            external_llm_name = model.replace("☁️ ", "")
+            
         logger.info(f"🌐 Using external LLM: {external_llm_name}")
         cmd = [
             sys.executable, "src/generators/external.py",
@@ -150,9 +156,12 @@ def run_query_generation(prompt: str, method: str = "constrained",
         ]
         if index:
             cmd.extend(["--index", index])
-        # Add model if it's a local model
-        if model and model.startswith("Local:"):
-            local_model = model.replace("Local: ", "")
+        # Add model if it's a local model (handle both formats)
+        if model and (model.startswith("Local:") or model.startswith("🖥️")):
+            if model.startswith("Local:"):
+                local_model = model.replace("Local: ", "")
+            else:
+                local_model = model.replace("🖥️ ", "")
             logger.info(f"🤖 Using local model: {local_model}")
             cmd.extend(["--model", local_model])
     elif method == "rules":
@@ -168,9 +177,12 @@ def run_query_generation(prompt: str, method: str = "constrained",
             "--prompt", prompt,
             "--task-id", task_id
         ]
-        # Add model parameter for zeroshot
-        if model and model.startswith("Local:"):
-            local_model = model.replace("Local: ", "")
+        # Add model parameter for zeroshot (handle both formats)
+        if model and (model.startswith("Local:") or model.startswith("🖥️")):
+            if model.startswith("Local:"):
+                local_model = model.replace("Local: ", "")
+            else:
+                local_model = model.replace("🖥️ ", "")
             cmd.extend(["--model", local_model])
         elif model and model.startswith("External:"):
             return False, f"External LLMs not supported with zeroshot method", {}
@@ -371,6 +383,30 @@ def get_available_models() -> List[str]:
             return ["llama3.1:latest"]  # Fallback
     except Exception as e:
         return ["llama3.1:latest"]  # Fallback
+
+def get_external_llm_models() -> List[str]:
+    """Get list of enabled external LLM models"""
+    try:
+        from src.external.llm_manager import get_external_llm_manager
+        manager = get_external_llm_manager()
+        llms = manager.list_llms(enabled_only=True)
+        return [llm.name for llm in llms]
+    except:
+        return []
+
+def get_all_available_models() -> List[str]:
+    """Get combined list of all available models (local + external) with prefixes"""
+    all_models = []
+    
+    # Get local models with emoji prefix
+    local_models = get_available_models()
+    all_models.extend([f"🖥️ {m}" for m in local_models])
+    
+    # Get external models with emoji prefix
+    external_models = get_external_llm_models()
+    all_models.extend([f"☁️ {m}" for m in external_models])
+    
+    return all_models if all_models else ["🖥️ llama3.1:latest"]
 
 def get_recent_results() -> List[Dict]:
     """Get recent evaluation results"""
