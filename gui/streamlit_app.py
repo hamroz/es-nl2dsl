@@ -25,6 +25,10 @@ from gui.components.data_explorer import render_data_explorer
 from gui.components.performance_dashboard import render_performance_dashboard
 from gui.components.explainability_dashboard import render_explainability_dashboard
 
+# Import Phase 5 advanced dashboards
+from gui.components.meta_learning_dashboard import render_meta_learning_dashboard
+from gui.components.multimodal_dashboard import render_multimodal_dashboard
+
 # Page configuration
 st.set_page_config(
     page_title="ES-NL2DSL: Natural Language to Elasticsearch DSL",
@@ -169,7 +173,10 @@ def main():
         "🔬 Interpretability & Research",
         "🛡️ Security Testing",
         "🔒 Privacy Analysis",
-        "⚙️ System Administration"
+        "⚙️ System Administration",
+        # Phase 5 Advanced Features
+        "🧬 Meta-Learning",
+        "🎭 Multi-Modal Queries"
     ]
     
     # Create navigation buttons
@@ -220,6 +227,11 @@ def main():
         render_privacy_analysis()
     elif page == "⚙️ System Administration":
         render_admin_panel()
+    # Phase 5 Advanced Features
+    elif page == "🧬 Meta-Learning":
+        render_meta_learning_dashboard()
+    elif page == "🎭 Multi-Modal Queries":
+        render_multimodal_dashboard()
     
     # Footer
     st.markdown("---")

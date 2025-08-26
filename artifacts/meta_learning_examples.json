@@ -1,0 +1,198 @@
+[
+  {
+    "prompt": "Find all SSH login attempts from external IP addresses in the last hour",
+    "expected_query": {
+      "query": {
+        "bool": {
+          "must": [
+            {
+              "match": {
+                "service": "ssh"
+              }
+            },
+            {
+              "match": {
+                "event_type": "login"
+            }
+            }
+          ],
+          "filter": [
+            {
+              "range": {
+                "@timestamp": {
+                  "gte": "now-1h",
+                  "lte": "now"
+                }
+              }
+            },
+            {
+              "bool": {
+                "must_not": {
+                  "terms": {
+                    "source_ip": ["10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "size": 1000
+    },
+    "domain": "security",
+    "difficulty": "medium",
+    "explanation": "Security query focusing on SSH access from external sources with time constraints"
+  },
+  {
+    "prompt": "Show network traffic with high bandwidth usage above 100MB",
+    "expected_query": {
+      "query": {
+        "range": {
+          "bytes": {
+            "gte": 104857600
+          }
+        }
+      },
+      "size": 1000
+    },
+    "domain": "networking",
+    "difficulty": "easy",
+    "explanation": "Simple network monitoring query for high bandwidth usage"
+  },
+  {
+    "prompt": "Find processes consuming more than 80% CPU in the system monitoring data",
+    "expected_query": {
+      "query": {
+        "range": {
+          "cpu_usage": {
+            "gte": 80
+          }
+        }
+      },
+      "size": 1000
+    },
+    "domain": "system",
+    "difficulty": "easy",
+    "explanation": "System monitoring query for high CPU usage processes"
+  },
+  {
+    "prompt": "Detect potential brute force attacks with multiple failed login attempts from same IP",
+    "expected_query": {
+      "query": {
+        "bool": {
+          "must": [
+            {
+              "match": {
+                "event_type": "login_failed"
+              }
+            }
+          ],
+          "filter": [
+            {
+              "range": {
+                "@timestamp": {
+                  "gte": "now-15m",
+                  "lte": "now"
+                }
+              }
+            }
+          ]
+        }
+      },
+      "aggs": {
+        "by_source_ip": {
+          "terms": {
+            "field": "source_ip.keyword",
+            "min_doc_count": 5
+          }
+        }
+      },
+      "size": 0
+    },
+    "domain": "security",
+    "difficulty": "hard",
+    "explanation": "Complex security query with aggregations to detect brute force patterns"
+  },
+  {
+    "prompt": "Monitor network latency spikes above 100ms for critical applications",
+    "expected_query": {
+      "query": {
+        "bool": {
+          "must": [
+            {
+              "range": {
+                "latency": {
+                  "gte": 100
+                }
+              }
+            },
+            {
+              "terms": {
+                "application.keyword": ["database", "web-server", "api-gateway"]
+              }
+            }
+          ],
+          "filter": [
+            {
+              "range": {
+                "@timestamp": {
+                  "gte": "now-30m",
+                  "lte": "now"
+                }
+              }
+            }
+          ]
+        }
+      },
+      "size": 1000
+    },
+    "domain": "networking",
+    "difficulty": "medium",
+    "explanation": "Network performance monitoring for critical applications"
+  },
+  {
+    "prompt": "Find memory leaks by tracking processes with constantly increasing memory usage",
+    "expected_query": {
+      "query": {
+        "bool": {
+          "filter": [
+            {
+              "range": {
+                "@timestamp": {
+                  "gte": "now-2h",
+                  "lte": "now"
+                }
+              }
+            }
+          ]
+        }
+      },
+      "aggs": {
+        "by_process": {
+          "terms": {
+            "field": "process_name.keyword"
+          },
+          "aggs": {
+            "memory_trend": {
+              "date_histogram": {
+                "field": "@timestamp",
+                "interval": "5m"
+              },
+              "aggs": {
+                "avg_memory": {
+                  "avg": {
+                    "field": "memory_usage"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "size": 0
+    },
+    "domain": "system",
+    "difficulty": "hard",
+    "explanation": "Complex system monitoring query with time-series analysis for memory trends"
+  }
+]

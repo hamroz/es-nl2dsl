@@ -99,12 +99,11 @@ The ES-NL2DSL system currently excels in:
 **Improvements Needed**:
 
 #### 3.1 Advanced Privacy Mechanisms
-- **What**: Implement local differential privacy, federated learning, and homomorphic encryption
+- **What**: Implement local differential privacy and homomorphic encryption
 - **Why**: Current DP approach only covers data-level privacy, not query-level
 - **Implementation Direction**:
   - Create `src/privacy/advanced_mechanisms.py`
   - Implement local differential privacy for query generation
-  - Add federated query learning capabilities
   - Implement homomorphic query execution on encrypted data
 
 #### 3.2 Privacy-Utility Optimization
@@ -189,14 +188,7 @@ The ES-NL2DSL system currently excels in:
   - Create interactive threat landscape dashboard in security panel
   - Implement comprehensive model comparison matrix with filtering
 
-#### 6.2 Interactive Research Tools
-- **What**: Interfaces for hypothesis testing and custom experiment design
-- **Why**: Researchers need tools to test specific hypotheses beyond predefined scenarios
-- **Implementation Direction**:
-  - Add hypothesis testing interface to evaluation dashboard
-  - Create ablation study designer for custom experiments
-  - Implement parameter sweep tools for sensitivity analysis
-  - Add experiment comparison and analysis tools
+
 
 ### 7. Reproducibility & Research Standards (Academic Excellence)
 
@@ -246,40 +238,9 @@ The ES-NL2DSL system currently excels in:
   - Implement multi-modal fusion for query generation
   - Create interactive example-based query builder
 
-#### 8.3 Federated Query Learning
-- **What**: Learn query patterns across organizations without sharing sensitive data
-- **Why**: Privacy concerns prevent data sharing but collective learning could improve performance
-- **Implementation Direction**:
-  - Create `src/federated/` module for distributed learning
-  - Implement federated averaging for query models
-  - Add privacy-preserving model updates
-  - Create federated evaluation framework
 
-### 9. Experimental Design Excellence (Methodological Rigor)
 
-**Current Approach**: Basic experimental setup with single-run evaluations and limited ablation studies.
-
-**Improvements Needed**:
-
-#### 9.1 Systematic Ablation Studies
-- **What**: Comprehensive factorial design covering all important system components
-- **Why**: Current approach doesn't isolate contribution of individual components
-- **Implementation Direction**:
-  - Design full factorial experiment matrix
-  - Implement automated ablation study runner
-  - Add interaction effect analysis between factors
-  - Create systematic ablation reporting
-
-#### 9.2 Cross-Validation Framework
-- **What**: Proper statistical validation methodology for all experiments
-- **Why**: Current evaluation may overfit to specific test scenarios
-- **Implementation Direction**:
-  - Implement k-fold cross-validation for scenario evaluation
-  - Add stratified sampling for balanced evaluation
-  - Create temporal validation for time-series data
-  - Implement domain-aware validation splits
-
-### 10. Thesis Presentation Excellence (Defense Preparation)
+### 9. Thesis Presentation Excellence (Defense Preparation)
 
 **Current Approach**: Working system with basic documentation.
 
@@ -357,7 +318,7 @@ The ES-NL2DSL system currently excels in:
 
 **Tasks**:
 1. **Advanced Privacy Mechanisms**
-   - Create `src/privacy/advanced_mechanisms.py` with LDP and federated learning
+   - Create `src/privacy/advanced_mechanisms.py` with LDP
    - Implement privacy-utility optimization with Pareto analysis
    - Add homomorphic encryption for query execution
    - Create privacy budget allocation algorithms
@@ -373,9 +334,9 @@ The ES-NL2DSL system currently excels in:
 - Production-ready scalable architecture
 - Comprehensive performance analysis and optimization
 
-### Phase 4: Explainability & Research Tools (Weeks 7-8)
+### Phase 4: Explainability (Weeks 7-8)
 **Priority**: Medium Impact, High Research Value
-**Goals**: Transform black-box system into explainable AI with research tools
+**Goals**: Transform black-box system into explainable AI
 
 **Tasks**:
 1. **Explainability Framework**
@@ -384,16 +345,9 @@ The ES-NL2DSL system currently excels in:
    - Integrate explanations into GUI components
    - Create user studies for explanation effectiveness
 
-2. **Advanced Research Tools**
-   - Add hypothesis testing interface to evaluation dashboard
-   - Create ablation study designer for custom experiments
-   - Implement interactive research visualization tools
-   - Add automated experiment comparison capabilities
-
 **Deliverables**:
 - Comprehensive query explanation framework
-- Interactive research tools for hypothesis testing
-- Advanced visualizations for research insights
+- Advanced visualizations for explainability insights
 
 ### Phase 5: Novel Contributions & Meta-Learning (Weeks 9-10)
 **Priority**: High Research Impact, Long Term
@@ -406,16 +360,14 @@ The ES-NL2DSL system currently excels in:
    - Add meta-learning training and evaluation pipeline
    - Create rapid adaptation demonstrations
 
-2. **Multi-Modal & Federated Learning**
+2. **Multi-Modal Learning**
    - Implement multi-modal query understanding with data examples
-   - Create federated learning framework for privacy-preserving collaboration
-   - Add cross-organizational learning without data sharing
-   - Implement federated evaluation and benchmarking
+   - Add support for combining text prompts with data examples
+   - Create visual data pattern recognition capabilities
 
 **Deliverables**:
 - Novel meta-learning approach for query generation
 - Multi-modal query understanding system
-- Federated learning framework for collaborative AI
 
 ### Phase 6: Reproducibility & Thesis Preparation (Weeks 11-12)
 **Priority**: Essential for Defense
@@ -458,13 +410,11 @@ The ES-NL2DSL system currently excels in:
 
 ### Phase 4 Success Criteria:
 - Explainability framework provides actionable insights for query improvement
-- Research tools enable hypothesis testing not possible with current system
 - User studies validate explanation effectiveness
 
 ### Phase 5 Success Criteria:
 - Meta-learning achieves rapid adaptation to new domains with <10 examples
 - Multi-modal understanding improves query generation accuracy by >15%
-- Federated learning maintains privacy while improving collective performance
 
 ### Phase 6 Success Criteria:
 - Reproducibility package enables complete thesis result reproduction
