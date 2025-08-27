@@ -83,14 +83,21 @@ class SemanticQueryAnalyzer:
             "logical_structure": ["bool", "filter", "must", "should"]
         }
         
-        # Initialize embedding model for enhanced semantic analysis
+        # Lazy loading for embedding model to avoid torch initialization issues
         self.embedding_model = None
-        if SENTENCE_TRANSFORMERS_AVAILABLE:
-            try:
-                self.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
-            except Exception as e:
-                print(f"Warning: Could not load sentence transformer model: {e}")
-                self.embedding_model = None
+        self._embedding_model_attempted = False
+    
+    def _get_embedding_model(self):
+        """Lazy load the embedding model only when needed"""
+        if not self._embedding_model_attempted:
+            self._embedding_model_attempted = True
+            if SENTENCE_TRANSFORMERS_AVAILABLE:
+                try:
+                    self.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
+                except Exception as e:
+                    print(f"Warning: Could not load sentence transformer model: {e}")
+                    self.embedding_model = None
+        return self.embedding_model
     
     def extract_semantic_components(self, query: Dict) -> Dict[str, Any]:
         """Extract semantic components from a query"""
@@ -223,7 +230,8 @@ class SemanticQueryAnalyzer:
     
     def calculate_embedding_similarity(self, generated: Dict, ground_truth: Dict) -> float:
         """Calculate semantic similarity using sentence embeddings"""
-        if not self.embedding_model or not SKLEARN_AVAILABLE:
+        embedding_model = self._get_embedding_model()
+        if not embedding_model or not SKLEARN_AVAILABLE:
             # Fallback to structural similarity
             return self.calculate_semantic_similarity(generated, ground_truth)
         
@@ -233,7 +241,7 @@ class SemanticQueryAnalyzer:
             truth_description = self.query_to_semantic_description(ground_truth)
             
             # Generate embeddings
-            embeddings = self.embedding_model.encode([gen_description, truth_description])
+            embeddings = embedding_model.encode([gen_description, truth_description])
             
             # Calculate cosine similarity
             similarity_matrix = cosine_similarity([embeddings[0]], [embeddings[1]])

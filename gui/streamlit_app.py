@@ -171,9 +171,9 @@ def main():
         "🚀 Performance Dashboard",
         "🛡️ Security Testing",
         "🔒 Privacy Analysis",
-        "⚙️ System Administration",
         # Data Adaptation
-        "🎭 Multi-Modal Data Adaptation"
+        "🎭 Multi-Modal Data Adaptation",
+        "⚙️ System Administration"
     ]
     
     # Create navigation buttons
@@ -220,11 +220,11 @@ def main():
         render_security_panel()
     elif page == "🔒 Privacy Analysis":
         render_privacy_analysis()
-    elif page == "⚙️ System Administration":
-        render_admin_panel()
     # Data Adaptation
     elif page == "🎭 Multi-Modal Data Adaptation":
         render_multimodal_dashboard()
+    elif page == "⚙️ System Administration":
+        render_admin_panel()
     
     # Footer
     st.markdown("---")
