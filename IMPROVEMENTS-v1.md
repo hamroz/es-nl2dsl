@@ -189,29 +189,29 @@ The ES-NL2DSL system currently excels in:
   - Add publication-quality figure generation
   - Create thesis appendix data export functionality
 
-### 7. Novel Research Contributions (Thesis Uniqueness)
+### 7. Data Adaptation & Flexibility (Core Innovation)
 
-**Current Approach**: Solid implementation of existing techniques with good engineering practices.
+**Current Approach**: System works well with CIC dataset but lacks flexibility for other log types.
 
 **Improvements Needed**:
 
-#### 8.1 Meta-Learning for Query Generation
-- **What**: Learn to quickly adapt to new schemas with minimal examples
-- **Why**: Current approach requires retraining for each new domain
+#### 7.1 AI-Assisted Data Adaptation
+- **What**: Use AI to automatically analyze and adapt to new log data sources
+- **Why**: Enable system to work with logs from any system, not just cybersecurity
 - **Implementation Direction**:
-  - Create `src/meta_learning/` module
-  - Implement few-shot adaptation for new schemas
-  - Add meta-learning training pipeline
-  - Create rapid domain adaptation evaluation
+  - Create `src/data_adaptation/` module for schema analysis
+  - Implement AI-powered field pattern detection
+  - Add automatic Elasticsearch mapping generation
+  - Create guided data ingestion workflow
 
-#### 8.2 Multi-Modal Query Understanding
-- **What**: Generate queries from both text descriptions and data examples
-- **Why**: Users often have example data but struggle with text descriptions
+#### 7.2 Multi-Modal Data Understanding
+- **What**: Support multiple data formats (CSV, JSON, JSONL) with AI-guided adaptation
+- **Why**: Different systems export logs in different formats
 - **Implementation Direction**:
-  - Enhance prompt processing in `src/generators/constrained.py`
-  - Add data example analysis and pattern extraction
-  - Implement multi-modal fusion for query generation
-  - Create interactive example-based query builder
+  - Build unified data parser for multiple formats
+  - Add AI analysis for field semantics and relationships
+  - Create intelligent query suggestions based on detected patterns
+  - Implement interactive data exploration and validation
 
 
 
@@ -309,25 +309,27 @@ The ES-NL2DSL system currently excels in:
 - Production-ready scalable architecture
 - Comprehensive performance analysis and optimization
 
-### Phase 4: Novel Contributions & Meta-Learning (Weeks 7-8)
-**Priority**: High Research Impact, Long Term
-**Goals**: Unique research contributions that differentiate the thesis
+### Phase 4: Data Adaptation & Flexibility (Weeks 7-8)
+**Priority**: High Impact, Core Innovation
+**Goals**: Enable system to work with any log data source
 
 **Tasks**:
-1. **Meta-Learning Implementation**
-   - Create `src/meta_learning/` module for rapid domain adaptation
-   - Implement few-shot learning for new schemas
-   - Add meta-learning training and evaluation pipeline
-   - Create rapid adaptation demonstrations
+1. **Data Adaptation Framework**
+   - Create `src/data_adaptation/` module with schema analysis
+   - Implement AI-assisted field pattern detection
+   - Add automatic Elasticsearch mapping generation
+   - Create multi-format data parser (CSV, JSON, JSONL)
 
-2. **Multi-Modal Learning**
-   - Implement multi-modal query understanding with data examples
-   - Add support for combining text prompts with data examples
-   - Create visual data pattern recognition capabilities
+2. **Multi-Modal Data Interface**
+   - Build streamlined data analysis and ingestion GUI
+   - Add AI-powered data insights and recommendations
+   - Implement guided workflow for new data sources
+   - Create intelligent query generation for detected patterns
 
 **Deliverables**:
-- Novel meta-learning approach for query generation
-- Multi-modal query understanding system
+- Flexible data adaptation system
+- Multi-format data ingestion pipeline
+- AI-assisted schema analysis and query generation
 
 ### Phase 5: Reproducibility & Thesis Preparation (Weeks 9-10)
 **Priority**: Essential for Defense
@@ -369,8 +371,9 @@ The ES-NL2DSL system currently excels in:
 - System handles 10x current load with maintained accuracy
 
 ### Phase 4 Success Criteria:
-- Meta-learning achieves rapid adaptation to new domains with <10 examples
-- Multi-modal understanding improves query generation accuracy by >15%
+- System successfully ingests and adapts to at least 3 different log formats
+- AI analysis correctly identifies field patterns with >80% accuracy
+- Generated queries work effectively on newly ingested data sources
 
 ### Phase 5 Success Criteria:
 - Reproducibility package enables complete thesis result reproduction
