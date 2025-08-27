@@ -148,32 +148,7 @@ The ES-NL2DSL system currently excels in:
   - Add memory usage profiling and optimization
   - Create load testing framework for throughput analysis
 
-### 5. Explainability & Interpretability (Research Depth)
-
-**Current Approach**: Basic query generation with minimal explanation, some metrics tracking in generation process.
-
-**Improvements Needed**:
-
-#### 5.1 Query Explanation Framework
-- **What**: Comprehensive explanation of why specific DSL elements were chosen
-- **Why**: Black-box query generation reduces user trust and debugging capability
-- **Implementation Direction**:
-  - Create `src/explainability/query_explainer.py`
-  - Implement field selection rationale extraction
-  - Add operator choice explanation based on prompt analysis
-  - Create confidence scoring for each decision
-  - Integrate explanations into GUI query generator
-
-#### 5.2 Attention Visualization
-- **What**: Visual representation of model attention and decision process
-- **Why**: Provides insight into model behavior and potential biases
-- **Implementation Direction**:
-  - Add attention extraction to model inference in `src/generators/`
-  - Create visualization components in `gui/components/`
-  - Implement token-level influence analysis
-  - Add interactive attention heatmaps
-
-### 6. Advanced GUI & User Experience (Professional Polish)
+### 5. Advanced GUI & User Experience (Professional Polish)
 
 **Current Approach**: Functional Streamlit interface in `gui/` with basic components for query generation, evaluation, security, privacy, and administration.
 
@@ -190,7 +165,7 @@ The ES-NL2DSL system currently excels in:
 
 
 
-### 7. Reproducibility & Research Standards (Academic Excellence)
+### 6. Reproducibility & Research Standards (Academic Excellence)
 
 **Current Approach**: Good documentation in `README.md` and setup scripts like `setup.sh`, but lacks comprehensive reproducibility package.
 
@@ -214,7 +189,7 @@ The ES-NL2DSL system currently excels in:
   - Add publication-quality figure generation
   - Create thesis appendix data export functionality
 
-### 8. Novel Research Contributions (Thesis Uniqueness)
+### 7. Novel Research Contributions (Thesis Uniqueness)
 
 **Current Approach**: Solid implementation of existing techniques with good engineering practices.
 
@@ -240,7 +215,7 @@ The ES-NL2DSL system currently excels in:
 
 
 
-### 9. Thesis Presentation Excellence (Defense Preparation)
+### 8. Thesis Presentation Excellence (Defense Preparation)
 
 **Current Approach**: Working system with basic documentation.
 
@@ -334,22 +309,7 @@ The ES-NL2DSL system currently excels in:
 - Production-ready scalable architecture
 - Comprehensive performance analysis and optimization
 
-### Phase 4: Explainability (Weeks 7-8)
-**Priority**: Medium Impact, High Research Value
-**Goals**: Transform black-box system into explainable AI
-
-**Tasks**:
-1. **Explainability Framework**
-   - Create `src/explainability/query_explainer.py` with comprehensive explanations
-   - Add attention visualization and decision rationale
-   - Integrate explanations into GUI components
-   - Create user studies for explanation effectiveness
-
-**Deliverables**:
-- Comprehensive query explanation framework
-- Advanced visualizations for explainability insights
-
-### Phase 5: Novel Contributions & Meta-Learning (Weeks 9-10)
+### Phase 4: Novel Contributions & Meta-Learning (Weeks 7-8)
 **Priority**: High Research Impact, Long Term
 **Goals**: Unique research contributions that differentiate the thesis
 
@@ -369,7 +329,7 @@ The ES-NL2DSL system currently excels in:
 - Novel meta-learning approach for query generation
 - Multi-modal query understanding system
 
-### Phase 6: Reproducibility & Thesis Preparation (Weeks 11-12)
+### Phase 5: Reproducibility & Thesis Preparation (Weeks 9-10)
 **Priority**: Essential for Defense
 **Goals**: Comprehensive reproducibility and thesis defense preparation
 
@@ -409,14 +369,10 @@ The ES-NL2DSL system currently excels in:
 - System handles 10x current load with maintained accuracy
 
 ### Phase 4 Success Criteria:
-- Explainability framework provides actionable insights for query improvement
-- User studies validate explanation effectiveness
-
-### Phase 5 Success Criteria:
 - Meta-learning achieves rapid adaptation to new domains with <10 examples
 - Multi-modal understanding improves query generation accuracy by >15%
 
-### Phase 6 Success Criteria:
+### Phase 5 Success Criteria:
 - Reproducibility package enables complete thesis result reproduction
 - Defense materials demonstrate clear problem-solution-innovation-impact narrative
 - All experimental claims supported by rigorous statistical analysis

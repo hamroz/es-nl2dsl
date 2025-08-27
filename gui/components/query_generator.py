@@ -708,3 +708,282 @@ def render_query_generator():
             st.info("No recent generations found. Generate a query to see results here.")
     else:
         st.info("Generated queries directory not found.")
+    
+    # Query Explanation Section (moved from interpretability dashboard)
+    st.markdown("---")
+    st.subheader("🧠 Query Generation Explanation")
+    st.markdown("Understand how and why specific DSL queries were generated")
+    
+    # Query explanation section
+    col1, col2 = st.columns([2, 1])
+    
+    with col1:
+        # Option to load existing query or create new one
+        explanation_mode = st.radio(
+            "Explanation Mode",
+            ["Load Existing Query", "Generate & Explain New Query"],
+            horizontal=True
+        )
+    
+    with col2:
+        explanation_level = st.selectbox(
+            "Detail Level",
+            ["Basic", "Detailed", "Technical", "Research"],
+            index=1
+        )
+    
+    if explanation_mode == "Load Existing Query":
+        # File upload for existing query
+        uploaded_file = st.file_uploader(
+            "Upload Query JSON",
+            type=['json'],
+            help="Upload a generated query file to analyze",
+            key="explanation_uploader"
+        )
+        
+        prompt_text = st.text_area(
+            "Original Prompt",
+            placeholder="Enter the original natural language prompt...",
+            help="The natural language prompt that generated this query",
+            key="explanation_prompt"
+        )
+        
+        if uploaded_file and prompt_text:
+            try:
+                query_data = json.load(uploaded_file)
+                
+                if st.button("🔍 Explain Query", type="primary", key="explain_uploaded"):
+                    with st.spinner("Generating explanation..."):
+                        explanation = explain_uploaded_query(query_data, prompt_text, explanation_level)
+                        display_query_explanation(explanation)
+                        
+            except Exception as e:
+                st.error(f"Error loading query file: {e}")
+    
+    else:
+        # Generate new query and explain
+        prompt_text = st.text_area(
+            "Natural Language Prompt",
+            placeholder="Enter your query description...",
+            help="Describe what you want to find in natural language",
+            key="explanation_new_prompt"
+        )
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            # Get all available models (local + external)
+            from gui.utils.backend_interface import get_all_available_models
+            all_models = get_all_available_models()
+            
+            model = st.selectbox(
+                "Model",
+                all_models,
+                index=0,
+                help="🖥️=Local models, ☁️=External models",
+                key="explanation_model"
+            )
+        
+        with col2:
+            method = st.selectbox(
+                "Method",
+                ["constrained", "zero_shot"],
+                index=0,
+                key="explanation_method"
+            )
+        
+        if st.button("🚀 Generate & Explain", type="primary", key="generate_and_explain"):
+            if prompt_text:
+                # Show which model is being used
+                st.info(f"🤖 Using model: **{model}** with method: **{method}**")
+                
+                with st.spinner(f"Generating query with {model} and creating explanation..."):
+                    result = generate_and_explain_query(prompt_text, model, method, explanation_level)
+                    
+                    if result["success"]:
+                        # Show generation details
+                        st.success(f"✅ Query generated successfully using {model}")
+                        
+                        # Show the generated query first
+                        st.subheader("Generated Query")
+                        st.json(result["query"])
+                        
+                        # Show generation output if available
+                        if "generation_output" in result and result["generation_output"]:
+                            with st.expander("📋 Generation Log"):
+                                st.text(result["generation_output"])
+                        
+                        # Then show the explanation
+                        display_query_explanation(result["explanation"])
+                    else:
+                        st.error(f"Generation failed with {model}: {result['error']}")
+            else:
+                st.warning("Please enter a prompt")
+
+
+def explain_uploaded_query(query_data: dict, prompt: str, level: str) -> dict:
+    """Explain an uploaded query"""
+    try:
+        from src.explainability.query_explainer import QueryExplainer, ExplanationLevel
+        
+        explainer = QueryExplainer()
+        explanation_level = ExplanationLevel(level.lower())
+        
+        explanation = explainer.explain_query(prompt, query_data, explanation_level)
+        return explanation.to_dict()
+    
+    except Exception as e:
+        return {"error": str(e)}
+
+
+def generate_and_explain_query(prompt: str, model: str, method: str, level: str) -> dict:
+    """Generate a new query and explain it"""
+    try:
+        import uuid
+        from gui.utils.backend_interface import run_query_generation
+        
+        # Generate unique task ID
+        task_id = f"explain_{uuid.uuid4().hex[:8]}"
+        
+        # Use the proper backend interface that handles both local and external models
+        success, output, query_data = run_query_generation(
+            prompt=prompt,
+            method=method,
+            task_id=task_id,
+            model=model  # Pass model with emoji prefix - backend will handle it
+        )
+        
+        if success and query_data:
+            # Generate explanation
+            explanation = explain_uploaded_query(query_data, prompt, level)
+            
+            return {
+                "success": True,
+                "query": query_data,
+                "explanation": explanation,
+                "generation_output": output
+            }
+        else:
+            return {"success": False, "error": output or "Query generation failed"}
+    
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+def display_query_explanation(explanation: dict) -> None:
+    """Display comprehensive query explanation"""
+    
+    if "error" in explanation:
+        st.error(f"Explanation error: {explanation['error']}")
+        return
+    
+    # Overview metrics
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        confidence = explanation.get("confidence_score", 0)
+        st.metric("Confidence", f"{confidence:.2f}", help="Overall confidence in the explanation")
+    
+    with col2:
+        complexity = explanation.get("complexity_score", 0)
+        st.metric("Complexity", f"{complexity:.2f}", help="Query complexity score")
+    
+    with col3:
+        decision_count = len(explanation.get("decisions", []))
+        st.metric("Decisions", decision_count, help="Number of decisions analyzed")
+    
+    with col4:
+        risk_level = explanation.get("risk_assessment", {}).get("overall_risk_level", "unknown")
+        risk_color = {"low": "🟢", "medium": "🟡", "high": "🔴"}.get(risk_level, "⚪")
+        st.metric("Risk Level", f"{risk_color} {risk_level.title()}")
+    
+    # Query summary
+    st.markdown("### 📋 Query Summary")
+    st.info(explanation.get("query_summary", "No summary available"))
+    
+    # Decision explanations
+    st.markdown("### 🧠 Decision Analysis")
+    
+    decisions = explanation.get("decisions", [])
+    if decisions:
+        for i, decision in enumerate(decisions, 1):
+            with st.expander(f"Decision {i}: {decision.get('decision_type', 'Unknown').replace('_', ' ').title()}"):
+                col1, col2 = st.columns([3, 1])
+                
+                with col1:
+                    st.markdown(f"**Rationale:** {decision.get('rationale', 'No rationale provided')}")
+                    
+                    if decision.get("prompt_evidence"):
+                        st.markdown(f"**Evidence from prompt:** {', '.join(decision['prompt_evidence'])}")
+                    
+                    if decision.get("alternatives"):
+                        alternatives_text = ", ".join([alt.get("field", alt.get("operator", str(alt))) for alt in decision["alternatives"][:3]])
+                        st.markdown(f"**Alternatives considered:** {alternatives_text}")
+                
+                with col2:
+                    confidence = decision.get("confidence", 0)
+                    st.metric("Confidence", f"{confidence:.2f}")
+                    
+                    if decision.get("field_name"):
+                        st.markdown(f"**Field:** `{decision['field_name']}`")
+    
+    # Attention weights visualization
+    st.markdown("### 🎯 Attention Analysis")
+    attention_weights = explanation.get("attention_weights", {})
+    
+    if attention_weights:
+        import plotly.express as px
+        # Create attention visualization
+        tokens = list(attention_weights.keys())
+        weights = list(attention_weights.values())
+        
+        fig = px.bar(
+            x=tokens,
+            y=weights,
+            title="Token Attention Weights",
+            labels={"x": "Tokens", "y": "Attention Weight"}
+        )
+        fig.update_layout(height=400)
+        st.plotly_chart(fig, use_container_width=True)
+    
+    # Risk assessment
+    st.markdown("### ⚠️ Risk Assessment")
+    risk_assessment = explanation.get("risk_assessment", {})
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        perf_risks = risk_assessment.get("performance_risks", [])
+        if perf_risks:
+            st.markdown("**Performance Risks:**")
+            for risk in perf_risks:
+                st.warning(f"• {risk}")
+        else:
+            st.success("✅ No performance risks identified")
+    
+    with col2:
+        security_risks = risk_assessment.get("security_risks", [])
+        if security_risks:
+            st.markdown("**Security Risks:**")
+            for risk in security_risks:
+                st.error(f"• {risk}")
+        else:
+            st.success("✅ No security risks identified")
+    
+    with col3:
+        accuracy_risks = risk_assessment.get("accuracy_risks", [])
+        if accuracy_risks:
+            st.markdown("**Accuracy Risks:**")
+            for risk in accuracy_risks:
+                st.warning(f"• {risk}")
+        else:
+            st.success("✅ No accuracy risks identified")
+    
+    # Optimization suggestions
+    st.markdown("### 💡 Optimization Suggestions")
+    optimizations = explanation.get("optimization_suggestions", [])
+    
+    if optimizations:
+        for i, suggestion in enumerate(optimizations, 1):
+            st.info(f"{i}. {suggestion}")
+    else:
+        st.success("No optimizations suggested - query looks good!")
