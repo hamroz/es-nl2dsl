@@ -12,7 +12,7 @@ curl -X PUT "localhost:9200/_security/role/logs_net_reader" \
     "cluster": ["monitor"],
     "indices": [
       {
-        "names": ["logs_net*"],
+        "names": ["logs_*"],
         "privileges": ["read", "view_index_metadata"]
       }
     ]

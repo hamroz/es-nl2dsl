@@ -5,6 +5,7 @@ import json
 import sys
 from pathlib import Path
 import tempfile
+from datetime import datetime
 
 # Add project root to path
 project_root = Path(__file__).parent.parent.parent
@@ -17,10 +18,11 @@ def render_multimodal_dashboard():
     st.markdown("Adapt the system to new log data from any source with AI assistance")
     
     # Main workflow tabs
-    tab1, tab2, tab3 = st.tabs([
+    tab1, tab2, tab3, tab4 = st.tabs([
         "📁 Data Analysis", 
         "🔄 Data Ingestion", 
-        "🎯 Query Generation"
+        "🎯 Query Generation",
+        "📚 History"
     ])
     
     with tab1:
@@ -31,6 +33,9 @@ def render_multimodal_dashboard():
     
     with tab3:
         render_query_generation_tab()
+    
+    with tab4:
+        render_history_tab()
 
 
 def render_data_analysis_tab():
@@ -38,18 +43,69 @@ def render_data_analysis_tab():
     st.subheader("📊 Analyze New Log Data")
     st.markdown("Upload and analyze new log files to understand their structure")
     
-    # File upload
-    uploaded_file = st.file_uploader(
-        "Upload Log Data File",
-        type=['csv', 'json', 'jsonl', 'ndjson'],
-        help="Upload CSV, JSON, or JSONL log files"
+    # Show current session status if available
+    if hasattr(st.session_state, 'current_adaptation_id'):
+        from src.data_adaptation.adaptation_history import get_adaptation_history
+        history = get_adaptation_history()
+        record = history.get_record(st.session_state.current_adaptation_id)
+        if record:
+            st.info(f"📋 Current session: {record.get_status_emoji()} {record.get_display_name()} ({record.status})")
+    
+    # File upload options
+    upload_method = st.radio(
+        "Choose upload method:",
+        ["Upload File", "Use Local File Path"],
+        help="Choose how to provide your data file"
     )
     
-    if uploaded_file:
-        # Save uploaded file temporarily
-        with tempfile.NamedTemporaryFile(delete=False, suffix=f".{uploaded_file.name.split('.')[-1]}") as tmp_file:
-            tmp_file.write(uploaded_file.getvalue())
-            temp_path = tmp_file.name
+    uploaded_file = None
+    local_file_path = None
+    
+    if upload_method == "Upload File":
+        uploaded_file = st.file_uploader(
+            "Upload Log Data File",
+            type=['csv', 'json', 'jsonl', 'ndjson'],
+            help="Upload CSV, JSON, or JSONL log files"
+        )
+    else:
+        local_file_path = st.text_input(
+            "Enter file path:",
+            placeholder="e.g., data_raw/sample_cybersecurity_logs.csv",
+            help="Enter the path to your local file"
+        )
+        
+        if local_file_path and not Path(local_file_path).exists():
+            st.error(f"❌ File not found: {local_file_path}")
+            local_file_path = None
+    
+    if uploaded_file or local_file_path:
+        # Handle file path based on upload method
+        if uploaded_file:
+            # Save uploaded file temporarily with better error handling
+            try:
+                # Create a unique temp file
+                import uuid
+                temp_dir = Path("/tmp")
+                temp_dir.mkdir(exist_ok=True)
+                
+                file_extension = uploaded_file.name.split('.')[-1] if '.' in uploaded_file.name else 'csv'
+                temp_filename = f"uploaded_data_{uuid.uuid4().hex[:8]}.{file_extension}"
+                temp_path = temp_dir / temp_filename
+                
+                # Write file content
+                with open(temp_path, 'wb') as tmp_file:
+                    tmp_file.write(uploaded_file.getvalue())
+                
+                temp_path = str(temp_path)
+                file_name = uploaded_file.name
+                
+            except Exception as upload_error:
+                st.error(f"❌ File upload failed: {upload_error}")
+                return
+        else:
+            # Use local file path directly
+            temp_path = local_file_path
+            file_name = Path(local_file_path).name
         
         col1, col2 = st.columns([2, 1])
         
@@ -77,15 +133,21 @@ def render_data_analysis_tab():
                     
                     if "error" not in schema:
                         st.session_state.analyzed_schema = schema
-                        st.session_state.uploaded_file_name = uploaded_file.name
+                        st.session_state.uploaded_file_name = file_name
+                        
+                        # Create history record
+                        from src.data_adaptation.adaptation_history import get_adaptation_history
+                        history = get_adaptation_history()
+                        record_id = history.create_record(file_name, schema, ai_model)
+                        st.session_state.current_adaptation_id = record_id
                         
                         # Display schema analysis
                         display_schema_analysis(schema)
                         
                         # AI Analysis if enabled
                         if analyze_with_ai:
-                            # Extract model name (remove emoji prefix)
-                            model_name = ai_model.replace("🖥️ ", "").replace("☁️ ", "")
+                            # Pass the full model name with emoji prefix so AI assistant can determine type
+                            model_name = ai_model
                             
                             with st.spinner("Getting AI insights..."):
                                 from src.data_adaptation.ai_assistant import AIAssistant
@@ -95,6 +157,14 @@ def render_data_analysis_tab():
                                 if ai_analysis["success"]:
                                     st.session_state.ai_analysis = ai_analysis
                                     display_ai_analysis(ai_analysis)
+                                    
+                                    # Update history record with AI analysis
+                                    if hasattr(st.session_state, 'current_adaptation_id'):
+                                        history.update_record(
+                                            st.session_state.current_adaptation_id,
+                                            ai_analysis=ai_analysis,
+                                            model_used=ai_model
+                                        )
                                 else:
                                     st.error(f"AI analysis failed: {ai_analysis.get('error', 'Unknown error')}")
                     else:
@@ -127,6 +197,14 @@ def render_data_ingestion_tab():
     """Render data ingestion tab"""
     st.subheader("🔄 Ingest Data into Elasticsearch")
     st.markdown("Load analyzed data into Elasticsearch for querying")
+    
+    # Show current session status if available
+    if hasattr(st.session_state, 'current_adaptation_id'):
+        from src.data_adaptation.adaptation_history import get_adaptation_history
+        history = get_adaptation_history()
+        record = history.get_record(st.session_state.current_adaptation_id)
+        if record:
+            st.info(f"📋 Current session: {record.get_status_emoji()} {record.get_display_name()} ({record.status})")
     
     # Check if schema has been analyzed
     if not hasattr(st.session_state, 'analyzed_schema'):
@@ -180,19 +258,61 @@ def render_data_ingestion_tab():
     # Ingestion
     st.markdown("### 📤 Data Ingestion")
     
-    # File re-upload for ingestion
-    ingest_file = st.file_uploader(
-        "Re-upload Data File for Ingestion",
-        type=['csv', 'json', 'jsonl', 'ndjson'],
-        key="ingest_file",
-        help="Upload the same file again for ingestion"
+    # File input for ingestion
+    ingest_method = st.radio(
+        "Choose ingestion method:",
+        ["Upload File", "Use Local File Path"],
+        key="ingest_method",
+        help="Choose how to provide your data file for ingestion"
     )
     
-    if st.button("🚀 Ingest Data", type="primary") and ingest_file:
-        # Save file temporarily
-        with tempfile.NamedTemporaryFile(delete=False, suffix=f".{ingest_file.name.split('.')[-1]}") as tmp_file:
-            tmp_file.write(ingest_file.getvalue())
-            temp_path = tmp_file.name
+    ingest_file = None
+    ingest_local_path = None
+    
+    if ingest_method == "Upload File":
+        ingest_file = st.file_uploader(
+            "Upload Data File for Ingestion",
+            type=['csv', 'json', 'jsonl', 'ndjson'],
+            key="ingest_file",
+            help="Upload your data file for ingestion"
+        )
+    else:
+        ingest_local_path = st.text_input(
+            "Enter file path for ingestion:",
+            placeholder="e.g., data_raw/sample_cybersecurity_logs.csv",
+            key="ingest_local_path",
+            help="Enter the path to your local file for ingestion"
+        )
+        
+        if ingest_local_path and not Path(ingest_local_path).exists():
+            st.error(f"❌ File not found: {ingest_local_path}")
+            ingest_local_path = None
+    
+    if st.button("🚀 Ingest Data", type="primary") and (ingest_file or ingest_local_path):
+        # Handle file path based on ingestion method
+        if ingest_file:
+            # Save uploaded file temporarily with better error handling
+            try:
+                import uuid
+                temp_dir = Path("/tmp")
+                temp_dir.mkdir(exist_ok=True)
+                
+                file_extension = ingest_file.name.split('.')[-1] if '.' in ingest_file.name else 'csv'
+                temp_filename = f"ingest_data_{uuid.uuid4().hex[:8]}.{file_extension}"
+                temp_path = temp_dir / temp_filename
+                
+                # Write file content
+                with open(temp_path, 'wb') as tmp_file:
+                    tmp_file.write(ingest_file.getvalue())
+                
+                temp_path = str(temp_path)
+                
+            except Exception as upload_error:
+                st.error(f"❌ File upload failed: {upload_error}")
+                return
+        else:
+            # Use local file path directly
+            temp_path = ingest_local_path
         
         with st.spinner(f"Ingesting data into index '{index_name}'..."):
             from src.data_adaptation.data_adapter import DataAdapter
@@ -209,6 +329,33 @@ def render_data_ingestion_tab():
                 st.session_state.ingested_index = index_name
                 st.session_state.ingestion_result = result
                 
+                # Store mapping information for future query generation
+                from src.data_adaptation.mapping_storage import MappingStorage
+                mapping_storage = MappingStorage()
+                
+                mapping_info = {
+                    "schema": schema,
+                    "field_patterns": schema.get('detected_patterns', {}),
+                    "ai_analysis": getattr(st.session_state, 'ai_analysis', {}),
+                    "elasticsearch_mapping": es_mapping,
+                    "query_suggestions": []
+                }
+                
+                mapping_storage.store_index_mapping(index_name, mapping_info)
+                st.info(f"📝 Stored field mapping for {index_name} - it will now appear in Query Generator!")
+                
+                # Update history record with ingestion results
+                if hasattr(st.session_state, 'current_adaptation_id'):
+                    from src.data_adaptation.adaptation_history import get_adaptation_history
+                    history = get_adaptation_history()
+                    history.update_record(
+                        st.session_state.current_adaptation_id,
+                        index_name=index_name,
+                        status="ingested",
+                        elasticsearch_mapping=es_mapping,
+                        document_count=result.get('successful', 0)
+                    )
+                
             else:
                 st.error(f"❌ Ingestion failed: {result.get('error', 'Unknown error')}")
         
@@ -220,6 +367,14 @@ def render_query_generation_tab():
     """Render AI-assisted query generation tab"""
     st.subheader("🎯 Generate Queries for New Data")
     st.markdown("Use AI to generate useful queries for your newly ingested data")
+    
+    # Show current session status if available
+    if hasattr(st.session_state, 'current_adaptation_id'):
+        from src.data_adaptation.adaptation_history import get_adaptation_history
+        history = get_adaptation_history()
+        record = history.get_record(st.session_state.current_adaptation_id)
+        if record:
+            st.info(f"📋 Current session: {record.get_status_emoji()} {record.get_display_name()} ({record.status})")
     
     # Check if data has been ingested
     if not hasattr(st.session_state, 'ingested_index'):
@@ -259,7 +414,7 @@ def render_query_generation_tab():
     )
     
     if st.button("🚀 Generate Queries", type="primary") and user_request:
-        model_name = ai_model.replace("🖥️ ", "").replace("☁️ ", "")
+        model_name = ai_model  # Keep the full model name with emoji prefix
         
         with st.spinner("Generating queries with AI..."):
             from src.data_adaptation.ai_assistant import AIAssistant
@@ -269,6 +424,16 @@ def render_query_generation_tab():
             if query_result["success"]:
                 st.session_state.generated_queries = query_result["generated_queries"]
                 st.success(f"✅ Generated {len(query_result['generated_queries'])} queries!")
+                
+                # Update history record with generated queries
+                if hasattr(st.session_state, 'current_adaptation_id'):
+                    from src.data_adaptation.adaptation_history import get_adaptation_history
+                    history = get_adaptation_history()
+                    history.update_record(
+                        st.session_state.current_adaptation_id,
+                        generated_queries=query_result["generated_queries"],
+                        status="completed"
+                    )
             else:
                 st.error(f"Query generation failed: {query_result.get('error', 'Unknown error')}")
     
@@ -284,6 +449,129 @@ def render_query_generation_tab():
                 
                 if st.button(f"🧪 Test Query {i+1}", key=f"test_{i}"):
                     test_query_on_index(query.get('dsl', {}), index_name)
+
+
+def render_history_tab():
+    """Render the adaptation history tab"""
+    st.subheader("📚 Adaptation History")
+    st.markdown("View and manage your data adaptation sessions")
+    
+    from src.data_adaptation.adaptation_history import get_adaptation_history
+    history = get_adaptation_history()
+    
+    # Get summary stats
+    stats = history.get_summary_stats()
+    
+    # Display summary
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        st.metric("Total Sessions", stats["total_records"])
+    with col2:
+        st.metric("Total Documents", f"{stats['total_documents']:,}")
+    with col3:
+        completed_count = stats["status_counts"].get("completed", 0)
+        st.metric("Completed", completed_count)
+    with col4:
+        failed_count = stats["status_counts"].get("failed", 0)
+        st.metric("Failed", failed_count)
+    
+    # Search and filter
+    col1, col2 = st.columns([2, 1])
+    with col1:
+        search_query = st.text_input("🔍 Search by file or index name", placeholder="e.g., cybersecurity")
+    with col2:
+        status_filter = st.selectbox("Filter by status", ["All", "analyzed", "ingested", "completed", "failed"])
+    
+    # Get records
+    if search_query:
+        records = history.search_records(search_query)
+    elif status_filter != "All":
+        records = history.get_records_by_status(status_filter)
+    else:
+        records = history.list_records()
+    
+    if not records:
+        st.info("No adaptation sessions found. Start by analyzing new data in the 'Data Analysis' tab!")
+        return
+    
+    # Display records
+    st.markdown(f"### 📋 Sessions ({len(records)} found)")
+    
+    for record in records:
+        with st.expander(f"{record.get_status_emoji()} {record.get_display_name()} - {record.get_time_ago()}"):
+            col1, col2 = st.columns([2, 1])
+            
+            with col1:
+                st.markdown(f"**File:** {record.file_name}")
+                st.markdown(f"**Format:** {record.file_format}")
+                st.markdown(f"**Status:** {record.status}")
+                st.markdown(f"**Model Used:** {record.model_used}")
+                
+                if record.index_name:
+                    st.markdown(f"**Index:** `{record.index_name}`")
+                if record.document_count > 0:
+                    st.markdown(f"**Documents:** {record.document_count:,}")
+                
+                # Show AI analysis summary
+                if record.ai_analysis and record.ai_analysis.get("success"):
+                    analysis = record.ai_analysis.get("analysis", {})
+                    if analysis.get("system_type"):
+                        st.markdown(f"**System Type:** {analysis['system_type']}")
+            
+            with col2:
+                st.markdown(f"**Created:** {datetime.fromtimestamp(record.timestamp).strftime('%Y-%m-%d %H:%M')}")
+                
+                # Action buttons
+                if record.status == "completed" and record.index_name:
+                    if st.button(f"🔄 Load Session", key=f"load_{record.id}"):
+                        load_session_to_current(record)
+                        st.success("Session loaded! You can now work with this data.")
+                        st.rerun()
+                
+                if st.button(f"🗑️ Delete", key=f"delete_{record.id}"):
+                    if history.delete_record(record.id):
+                        st.success("Session deleted!")
+                        st.rerun()
+                    else:
+                        st.error("Failed to delete session")
+            
+            # Show field details
+            if record.schema.get("fields"):
+                st.markdown("**📋 Fields:**")
+                fields = record.schema["fields"]
+                field_list = []
+                for field_name, field_info in list(fields.items())[:10]:  # Show first 10
+                    field_list.append(f"• {field_name} ({field_info.get('type', 'unknown')})")
+                if len(fields) > 10:
+                    field_list.append(f"• ... and {len(fields) - 10} more fields")
+                st.markdown("\n".join(field_list))
+            
+            # Show generated queries
+            if record.generated_queries:
+                st.markdown(f"**🎯 Generated Queries ({len(record.generated_queries)}):**")
+                for i, query in enumerate(record.generated_queries):
+                    st.markdown(f"  {i+1}. **{query.get('name', 'Unnamed')}** - *{query.get('description', 'No description')}*")
+                    if st.button(f"Test Query {i+1}", key=f"test_{record.id}_{i}"):
+                        if record.index_name:
+                            test_query_on_index(query.get('dsl', {}), record.index_name)
+
+
+def load_session_to_current(record):
+    """Load a historical session into current session state"""
+    st.session_state.analyzed_schema = record.schema
+    st.session_state.uploaded_file_name = record.file_name
+    st.session_state.ai_analysis = record.ai_analysis
+    st.session_state.ingested_index = record.index_name
+    st.session_state.generated_queries = record.generated_queries
+    st.session_state.current_adaptation_id = record.id
+    
+    # Simulate ingestion result for consistency
+    st.session_state.ingestion_result = {
+        "success": True,
+        "successful": record.document_count,
+        "total_docs": record.document_count,
+        "errors": 0
+    }
 
 
 def display_schema_analysis(schema):

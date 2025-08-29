@@ -47,7 +47,7 @@ class SchemaAnalyzer:
         schema = {
             'format': 'csv',
             'total_columns': len(df.columns),
-            'sample_rows': len(df),
+            'sample_records': len(df),
             'fields': {},
             'detected_patterns': {}
         }

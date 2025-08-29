@@ -149,11 +149,27 @@ def run_query_generation(prompt: str, method: str = "constrained",
             cmd.extend(["--index", index])
     elif method == "constrained":
         logger.info(f"🔄 Using constrained generation method")
-        cmd = [
-            sys.executable, "src/generators/constrained.py",
-            "--prompt", prompt,
-            "--task-id", task_id
-        ]
+        
+        # Check if this index has adaptive mapping
+        from src.data_adaptation.mapping_storage import MappingStorage
+        mapping_storage = MappingStorage()
+        field_mapping = mapping_storage.get_field_mapping_for_query_generation(index or "logs_net")
+        
+        if field_mapping and field_mapping.get("all_fields"):
+            logger.info(f"🎯 Using adaptive constrained generation for adapted index: {index}")
+            cmd = [
+                sys.executable, "src/generators/adaptive_constrained.py",
+                "--prompt", prompt,
+                "--task-id", task_id
+            ]
+        else:
+            logger.info(f"🔄 Using standard constrained generation")
+            cmd = [
+                sys.executable, "src/generators/constrained.py",
+                "--prompt", prompt,
+                "--task-id", task_id
+            ]
+        
         if index:
             cmd.extend(["--index", index])
         # Add model if it's a local model (handle both formats)
@@ -211,10 +227,16 @@ def run_query_generation(prompt: str, method: str = "constrained",
                 execution_time=execution_time
             )
         
-        # Load generated query
+        # Load generated query - handle adaptive_constrained files
         if method == "constrained":
-            query_file = Path(f"artifacts/generated/{task_id}.json")
-            metrics_file = Path(f"artifacts/generated/{task_id}.metrics.json")
+            # Check for adaptive constrained files first
+            adaptive_query_file = Path(f"artifacts/generated/adaptive_constrained_{task_id}.json")
+            if adaptive_query_file.exists():
+                query_file = adaptive_query_file
+                metrics_file = Path(f"artifacts/generated/adaptive_constrained_{task_id}.metrics.json")
+            else:
+                query_file = Path(f"artifacts/generated/{task_id}.json")
+                metrics_file = Path(f"artifacts/generated/{task_id}.metrics.json")
         else:
             query_file = Path(f"artifacts/generated/{method}_{task_id}.json")
             metrics_file = Path(f"artifacts/generated/{method}_{task_id}.metrics.json")

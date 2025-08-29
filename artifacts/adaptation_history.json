@@ -1,0 +1,31 @@
+{
+  "adapt_1756427658_e427f267": {
+    "id": "adapt_1756427658_e427f267",
+    "timestamp": 1756427658.567776,
+    "file_name": "test-security-logs.csv",
+    "file_format": "csv",
+    "index_name": "logs_test_security",
+    "status": "completed",
+    "schema": {
+      "format": "csv",
+      "sample_records": 100,
+      "fields": {
+        "timestamp": {
+          "type": "datetime"
+        },
+        "source_ip": {
+          "type": "ip"
+        },
+        "action": {
+          "type": "text"
+        }
+      }
+    },
+    "ai_analysis": {},
+    "elasticsearch_mapping": {},
+    "document_count": 100,
+    "generated_queries": [],
+    "model_used": "\u2601\ufe0f gpt-4o-mini",
+    "notes": ""
+  }
+}

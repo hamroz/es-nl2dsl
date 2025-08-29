@@ -21,7 +21,10 @@ class DataAdapter:
         try:
             # Create index with mapping if provided
             if mapping:
-                self._create_index_with_mapping(index_name, mapping)
+                created = self._create_index_with_mapping(index_name, mapping)
+                if created:
+                    # Ensure reader user has access to the new index
+                    self._grant_reader_access_to_logs_indices()
             
             path = Path(file_path)
             
@@ -42,7 +45,10 @@ class DataAdapter:
         """Create Elasticsearch index with mapping"""
         try:
             url = f"{self.es_url}/{index_name}"
-            response = requests.put(url, json=mapping, headers={'Content-Type': 'application/json'})
+            headers = {'Content-Type': 'application/json'}
+            auth = ('elastic', 'ChangeMe_123')  # Use admin credentials
+            
+            response = requests.put(url, json=mapping, headers=headers, auth=auth)
             
             if response.status_code in [200, 201]:
                 logger.info(f"Created index {index_name} with mapping")
@@ -129,12 +135,15 @@ class DataAdapter:
         """Upload JSONL file to Elasticsearch using bulk API"""
         try:
             url = f"{self.es_url}/_bulk"
+            headers = {'Content-Type': 'application/x-ndjson'}
+            auth = ('elastic', 'ChangeMe_123')  # Use admin credentials
             
             with open(jsonl_file, 'rb') as f:
                 response = requests.post(
                     url,
                     data=f,
-                    headers={'Content-Type': 'application/x-ndjson'}
+                    headers=headers,
+                    auth=auth
                 )
             
             if response.status_code == 200:
@@ -168,7 +177,8 @@ class DataAdapter:
     def test_elasticsearch_connection(self) -> Dict[str, Any]:
         """Test connection to Elasticsearch"""
         try:
-            response = requests.get(self.es_url)
+            auth = ('elastic', 'ChangeMe_123')  # Use admin credentials
+            response = requests.get(self.es_url, auth=auth)
             if response.status_code == 200:
                 info = response.json()
                 return {
@@ -185,7 +195,8 @@ class DataAdapter:
     def list_indices(self) -> List[str]:
         """List all Elasticsearch indices"""
         try:
-            response = requests.get(f"{self.es_url}/_cat/indices?format=json")
+            auth = ('elastic', 'ChangeMe_123')  # Use admin credentials
+            response = requests.get(f"{self.es_url}/_cat/indices?format=json", auth=auth)
             if response.status_code == 200:
                 indices = response.json()
                 return [idx.get("index", "") for idx in indices if not idx.get("index", "").startswith(".")]
@@ -198,9 +209,10 @@ class DataAdapter:
     def get_index_info(self, index_name: str) -> Dict[str, Any]:
         """Get information about a specific index"""
         try:
+            auth = ('elastic', 'ChangeMe_123')  # Use admin credentials
             # Get index stats
-            stats_response = requests.get(f"{self.es_url}/{index_name}/_stats")
-            mapping_response = requests.get(f"{self.es_url}/{index_name}/_mapping")
+            stats_response = requests.get(f"{self.es_url}/{index_name}/_stats", auth=auth)
+            mapping_response = requests.get(f"{self.es_url}/{index_name}/_mapping", auth=auth)
             
             info = {"index": index_name}
             
@@ -302,3 +314,32 @@ class DataAdapter:
             })
         
         return queries
+    
+    def _grant_reader_access_to_logs_indices(self) -> bool:
+        """Ensure reader user has access to all logs_* indices"""
+        try:
+            auth = ('elastic', 'ChangeMe_123')
+            url = f"{self.es_url}/_security/role/logs_net_reader"
+            
+            role_config = {
+                "cluster": ["monitor"],
+                "indices": [
+                    {
+                        "names": ["logs_*"],
+                        "privileges": ["read", "view_index_metadata"]
+                    }
+                ]
+            }
+            
+            response = requests.put(url, json=role_config, auth=auth)
+            
+            if response.status_code in [200, 201]:
+                logger.info("Updated reader role to access all logs_* indices")
+                return True
+            else:
+                logger.warning(f"Failed to update reader role: {response.text}")
+                return False
+                
+        except Exception as e:
+            logger.error(f"Error updating reader role: {e}")
+            return False

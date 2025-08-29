@@ -15,13 +15,17 @@ class AIAssistant:
     def analyze_data_with_ai(self, schema: Dict[str, Any], model: str = "llama3.1:latest") -> Dict[str, Any]:
         """Use AI to analyze data schema and provide insights"""
         try:
-            from src.generators.constrained import call_local_model
-            
             # Prepare analysis prompt
             prompt = self._create_analysis_prompt(schema)
             
-            # Call the AI model
-            response = call_local_model(prompt, model)
+            # Call the AI model (handle both local and external)
+            response = self._call_ai_model(prompt, model)
+            
+            if response is None:
+                return {
+                    "success": False,
+                    "error": f"Failed to get response from model: {model}"
+                }
             
             # Parse AI response
             analysis = self._parse_analysis_response(response)
@@ -43,10 +47,14 @@ class AIAssistant:
     def suggest_field_mappings(self, schema: Dict[str, Any], model: str = "llama3.1:latest") -> Dict[str, Any]:
         """Use AI to suggest field mappings for common log patterns"""
         try:
-            from src.generators.constrained import call_local_model
-            
             prompt = self._create_mapping_prompt(schema)
-            response = call_local_model(prompt, model)
+            response = self._call_ai_model(prompt, model)
+            
+            if response is None:
+                return {
+                    "success": False,
+                    "error": f"Failed to get response from model: {model}"
+                }
             
             mappings = self._parse_mapping_response(response)
             
@@ -67,10 +75,14 @@ class AIAssistant:
     def generate_sample_queries(self, schema: Dict[str, Any], user_request: str, model: str = "llama3.1:latest") -> Dict[str, Any]:
         """Use AI to generate sample queries based on schema and user request"""
         try:
-            from src.generators.constrained import call_local_model
-            
             prompt = self._create_query_generation_prompt(schema, user_request)
-            response = call_local_model(prompt, model)
+            response = self._call_ai_model(prompt, model)
+            
+            if response is None:
+                return {
+                    "success": False,
+                    "error": f"Failed to get response from model: {model}"
+                }
             
             queries = self._parse_query_response(response)
             
@@ -87,6 +99,70 @@ class AIAssistant:
                 "success": False,
                 "error": str(e)
             }
+    
+    def _call_ai_model(self, prompt: str, model: str) -> Optional[str]:
+        """Call AI model (local or external) with prompt"""
+        try:
+            # Check if it's an external model (has emoji prefix)
+            if model.startswith("☁️ ") or model.startswith("External:"):
+                # Extract model name
+                if model.startswith("☁️ "):
+                    external_model_name = model.replace("☁️ ", "")
+                else:
+                    external_model_name = model.replace("External: ", "")
+                
+                logger.info(f"Attempting to use external LLM: {external_model_name}")
+                
+                # Use external LLM manager
+                from src.external.llm_manager import get_external_llm_manager
+                manager = get_external_llm_manager()
+                
+                # Debug: Check if LLM exists and is enabled
+                llm_config = manager.get_llm(external_model_name)
+                if not llm_config:
+                    logger.error(f"External LLM {external_model_name} not found in configuration")
+                    available_llms = [llm.name for llm in manager.list_llms()]
+                    logger.error(f"Available LLMs: {available_llms}")
+                    return None
+                
+                if not llm_config.enabled:
+                    logger.error(f"External LLM {external_model_name} is disabled")
+                    return None
+                
+                if not llm_config.api_key:
+                    logger.error(f"External LLM {external_model_name} has no API key")
+                    return None
+                
+                logger.info(f"Calling external LLM {external_model_name} (provider: {llm_config.provider})")
+                response = manager.call_llm(external_model_name, prompt)
+                
+                if response is None:
+                    logger.error(f"External LLM {external_model_name} returned None")
+                    if manager.last_error:
+                        logger.error(f"Manager error: {manager.last_error}")
+                else:
+                    logger.info(f"External LLM {external_model_name} returned response of length {len(response)}")
+                
+                return response
+                
+            else:
+                # Use local model
+                from src.generators.constrained import call_local_model
+                
+                # Remove local prefix if present
+                if model.startswith("🖥️ "):
+                    local_model_name = model.replace("🖥️ ", "")
+                else:
+                    local_model_name = model
+                
+                logger.info(f"Calling local model: {local_model_name}")
+                return call_local_model(prompt, local_model_name)
+                
+        except Exception as e:
+            logger.error(f"Error calling AI model {model}: {e}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
+            return None
     
     def _create_analysis_prompt(self, schema: Dict[str, Any]) -> str:
         """Create prompt for data analysis"""
