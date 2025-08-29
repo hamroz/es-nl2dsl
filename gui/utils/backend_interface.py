@@ -148,27 +148,15 @@ def run_query_generation(prompt: str, method: str = "constrained",
         if index:
             cmd.extend(["--index", index])
     elif method == "constrained":
-        logger.info(f"🔄 Using constrained generation method")
+        logger.info(f"🔄 Using enhanced constrained generation method")
         
-        # Check if this index has adaptive mapping
-        from src.data_adaptation.mapping_storage import MappingStorage
-        mapping_storage = MappingStorage()
-        field_mapping = mapping_storage.get_field_mapping_for_query_generation(index or "logs_net")
-        
-        if field_mapping and field_mapping.get("all_fields"):
-            logger.info(f"🎯 Using adaptive constrained generation for adapted index: {index}")
-            cmd = [
-                sys.executable, "src/generators/adaptive_constrained.py",
-                "--prompt", prompt,
-                "--task-id", task_id
-            ]
-        else:
-            logger.info(f"🔄 Using standard constrained generation")
-            cmd = [
-                sys.executable, "src/generators/constrained.py",
-                "--prompt", prompt,
-                "--task-id", task_id
-            ]
+        # Always use the enhanced constrained generator which includes dynamic index profiling
+        logger.info(f"🎯 Using enhanced constrained generation with automatic index profiling")
+        cmd = [
+            sys.executable, "src/generators/constrained.py",
+            "--prompt", prompt,
+            "--task-id", task_id
+        ]
         
         if index:
             cmd.extend(["--index", index])
@@ -585,3 +573,87 @@ def export_results_as_json(results_data: Dict[str, Any]) -> str:
     except Exception as e:
         backend_logger.log_error("JSON export failed", str(e))
         return f"Error exporting to JSON: {e}"
+
+def get_index_profile_info(index_name: str) -> Dict[str, Any]:
+    """Get comprehensive index profile information for the GUI"""
+    try:
+        from src.index_profiler import IndexProfiler
+        from src.data_adaptation.mapping_storage import MappingStorage
+        
+        profiler = IndexProfiler()
+        storage = MappingStorage()
+        
+        # Get index profile
+        profile = profiler.analyze_index(index_name)
+        
+        # Get unified field mapping
+        field_mapping = storage.get_field_mapping_for_query_generation(index_name)
+        
+        return {
+            "index_name": index_name,
+            "document_count": profile.document_count,
+            "field_count": len(profile.fields),
+            "date_range": profile.date_range,
+            "primary_timestamp": profile.primary_timestamp_field,
+            "system_type": field_mapping.get("system_type", "Auto-detected"),
+            "key_fields": {
+                "timestamp_fields": field_mapping.get("timestamp_fields", []),
+                "ip_fields": field_mapping.get("ip_fields", []),
+                "label_fields": field_mapping.get("status_fields", []),
+                "user_fields": field_mapping.get("user_fields", [])
+            },
+            "sample_fields": list(profile.fields.keys())[:10],
+            "suggested_mappings": profile.suggested_field_mappings,
+            "has_profile": True
+        }
+        
+    except Exception as e:
+        logger.warning(f"Could not get profile for {index_name}: {e}")
+        return {
+            "index_name": index_name,
+            "error": str(e),
+            "has_profile": False
+        }
+
+def refresh_index_profile(index_name: str) -> bool:
+    """Force refresh of index profile"""
+    try:
+        from src.index_profiler import IndexProfiler
+        profiler = IndexProfiler()
+        profiler.analyze_index(index_name, force_refresh=True)
+        logger.info(f"Refreshed profile for {index_name}")
+        return True
+    except Exception as e:
+        logger.error(f"Failed to refresh profile for {index_name}: {e}")
+        return False
+
+def validate_query_with_feedback(query: Dict[str, Any], index: str) -> Dict[str, Any]:
+    """Validate a query and return detailed feedback"""
+    try:
+        from src.validation.query_validator import QueryValidator
+        
+        validator = QueryValidator()
+        result = validator.validate_query(query, index)
+        
+        return {
+            "is_valid": result.is_valid,
+            "score": result.score,
+            "status_emoji": result.get_status_emoji(),
+            "issues": result.issues,
+            "warnings": result.warnings,
+            "suggestions": result.suggestions,
+            "execution_time_ms": result.execution_time_ms,
+            "result_count": result.result_count,
+            "sample_results": result.sample_results[:3] if result.sample_results else []
+        }
+        
+    except Exception as e:
+        logger.error(f"Validation error: {e}")
+        return {
+            "is_valid": False,
+            "score": 0,
+            "status_emoji": "❌",
+            "issues": [f"Validation failed: {str(e)}"],
+            "warnings": [],
+            "suggestions": []
+        }

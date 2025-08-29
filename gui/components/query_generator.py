@@ -111,15 +111,76 @@ def render_query_generator():
                 query_logger.log_selection_change("index", st.session_state.last_selected_index, selected_index)
                 st.session_state.last_selected_index = selected_index
         
+        # Index Information Panel
+        if selected_index:
+            with st.expander(f"📊 Index Information: {selected_index}", expanded=False):
+                try:
+                    from gui.utils.backend_interface import get_index_profile_info, refresh_index_profile
+                    
+                    # Refresh button at the top
+                    if st.button("🔄 Refresh Profile", help="Refresh index profile", key=f"refresh_{selected_index}"):
+                        with st.spinner("Refreshing index profile..."):
+                            success = refresh_index_profile(selected_index)
+                            if success:
+                                st.success("Profile refreshed!")
+                                st.rerun()
+                            else:
+                                st.error("Failed to refresh profile")
+                    
+                    # Get index profile
+                    profile_info = get_index_profile_info(selected_index)
+                    
+                    if profile_info.get("has_profile"):
+                        # Display key metrics in a simple row
+                        info_col1, info_col2, info_col3 = st.columns(3)
+                        
+                        with info_col1:
+                            st.metric("Documents", f"{profile_info.get('document_count', 0):,}")
+                        
+                        with info_col2:
+                            st.metric("Fields", profile_info.get('field_count', 0))
+                        
+                        with info_col3:
+                            system_type = profile_info.get('system_type', 'Unknown')
+                            st.metric("System Type", system_type)
+                        
+                        # Date range information
+                        date_range = profile_info.get('date_range', {})
+                        if date_range.get('min_date') and date_range.get('max_date'):
+                            st.info(f"📅 **Data Range:** {date_range['min_date'][:10]} to {date_range['max_date'][:10]}")
+                        
+                        # Key fields
+                        key_fields = profile_info.get('key_fields', {})
+                        if any(key_fields.values()):
+                            st.write("**Key Fields:**")
+                            for field_type, fields in key_fields.items():
+                                if fields:
+                                    field_type_display = field_type.replace('_', ' ').title()
+                                    st.write(f"• **{field_type_display}:** {', '.join(fields[:3])}")
+                        
+                        # Sample fields
+                        sample_fields = profile_info.get('sample_fields', [])
+                        if sample_fields:
+                            st.write(f"**Available Fields:** {', '.join(sample_fields)}")
+                            if len(sample_fields) >= 10:
+                                st.write("*...and more*")
+                    else:
+                        st.warning(f"⚠️ Could not load profile for {selected_index}")
+                        if profile_info.get('error'):
+                            st.error(f"Error: {profile_info['error']}")
+                
+                except Exception as e:
+                    st.error(f"Error loading index information: {e}")
+        
         # Advanced options in expandable section
         with st.expander("⚙️ Advanced Options"):
-            col1a, col1b = st.columns(2)
+            adv_col1, adv_col2 = st.columns(2)
             
-            with col1a:
+            with adv_col1:
                 schema_validation = st.checkbox("Schema Validation", value=True)
                 few_shot = st.checkbox("Few-shot Examples", value=True)
             
-            with col1b:
+            with adv_col2:
                 # Get available models dynamically (both local and external)
                 available_models = get_available_models()
                 external_models = get_external_llm_models()
@@ -250,6 +311,51 @@ def render_query_generator():
                         
                         # Create editable text area for query
                         st.subheader("📝 Generated Query (Editable)")
+                        
+                        # Add query validation
+                        try:
+                            from gui.utils.backend_interface import validate_query_with_feedback
+                            validation_result = validate_query_with_feedback(full_query_data, selected_index)
+                            
+                            # Show validation status and score (simple layout to avoid column nesting)
+                            if validation_result["is_valid"]:
+                                st.success(f"{validation_result['status_emoji']} Query is valid")
+                            else:
+                                st.error(f"{validation_result['status_emoji']} Query has issues")
+                            
+                            score = validation_result.get("score", 0)
+                            st.info(f"📊 **Quality Score:** {score:.0f}/100")
+                            
+                            # Show execution info if available (no nested columns)
+                            if validation_result.get("result_count") is not None:
+                                result_count = validation_result["result_count"]
+                                exec_info = f"📊 **Results:** {result_count:,} documents"
+                                
+                                if validation_result.get("execution_time_ms"):
+                                    exec_time = validation_result["execution_time_ms"]
+                                    exec_info += f" | ⏱️ **Speed:** {exec_time:.0f}ms"
+                                
+                                st.info(exec_info)
+                            
+                            # Show validation feedback
+                            if validation_result.get("issues"):
+                                with st.expander("❌ Issues Found", expanded=True):
+                                    for issue in validation_result["issues"]:
+                                        st.error(f"• {issue}")
+                            
+                            if validation_result.get("warnings"):
+                                with st.expander("⚠️ Warnings"):
+                                    for warning in validation_result["warnings"]:
+                                        st.warning(f"• {warning}")
+                            
+                            if validation_result.get("suggestions"):
+                                with st.expander("💡 Optimization Suggestions"):
+                                    for suggestion in validation_result["suggestions"]:
+                                        st.info(f"• {suggestion}")
+                        
+                        except Exception as e:
+                            st.warning(f"⚠️ Could not validate query: {e}")
+                        
                         st.info("💡 You can edit the query below before executing")
                         
                         # Initialize edited query in session state if not exists
@@ -274,24 +380,20 @@ def render_query_generator():
                             parsed_query = json.loads(edited_query_str)
                             st.success("✅ Valid JSON")
                             
-                            # Buttons row
-                            button_col1, button_col2, button_col3 = st.columns(3)
+                            # Action buttons (stacked to avoid column nesting)
+                            st.download_button(
+                                "📥 Download Query",
+                                data=edited_query_str,
+                                file_name=f"query_{int(time.time())}.json",
+                                mime="application/json",
+                                key="download_query_btn"
+                            )
                             
-                            with button_col1:
-                                st.download_button(
-                                    "📥 Download Query",
-                                    data=edited_query_str,
-                                    file_name=f"query_{int(time.time())}.json",
-                                    mime="application/json"
-                                )
+                            if st.button("🔄 Reset to Original", type="secondary", key="reset_query_btn"):
+                                st.session_state.edited_query = formatted_query
+                                st.rerun()
                             
-                            with button_col2:
-                                if st.button("🔄 Reset to Original", type="secondary"):
-                                    st.session_state.edited_query = formatted_query
-                                    st.rerun()
-                            
-                            with button_col3:
-                                execute_button = st.button("🚀 Execute Query", type="primary")
+                            execute_button = st.button("🚀 Execute Query", type="primary", key="execute_query_btn")
                             
                             # Execute query if button pressed
                             if execute_button:
@@ -307,24 +409,18 @@ def render_query_generator():
                     except Exception as e:
                         st.error(f"Error formatting query: {e}")
                 
-                # Display metrics
+                # Display metrics (using simple layout to avoid column nesting)
                 metrics = results["data"].get("metrics", {})
                 if metrics:
                     st.subheader("📊 Generation Metrics")
                     
-                    metric_cols = st.columns(3)
+                    latency = metrics.get("latency_seconds", 0)
+                    attempts = metrics.get("attempts", 0)
+                    success_rate = 100 if results["success"] else 0
                     
-                    with metric_cols[0]:
-                        latency = metrics.get("latency_seconds", 0)
-                        st.metric("Latency", f"{latency:.2f}s")
-                    
-                    with metric_cols[1]:
-                        attempts = metrics.get("attempts", 0)
-                        st.metric("Attempts", attempts)
-                    
-                    with metric_cols[2]:
-                        success_rate = 100 if results["success"] else 0
-                        st.metric("Success", f"{success_rate}%")
+                    # Display metrics in a single info box to avoid nested columns
+                    metrics_text = f"⏱️ **Latency:** {latency:.2f}s | 🔄 **Attempts:** {attempts} | ✅ **Success:** {success_rate}%"
+                    st.info(metrics_text)
                     
                     # Show retry reasons if any
                     retry_reasons = metrics.get("retry_reasons", [])
@@ -358,50 +454,48 @@ def render_query_generator():
             st.session_state.execute_query = False
         
         if query_to_execute or "last_execution_results" in st.session_state:
-            # Execution controls
-            exec_col1, exec_col2 = st.columns([3, 1])
+            # Execution controls (simplified to avoid column nesting)
+            st.write("**Execution Options:**")
             
-            with exec_col1:
-                # Define slider constraints
-                min_val, max_val, step_val = 10, 10000, 50
-                default_val = 1000
-                
-                # Initialize and validate size limit in session state
-                if "execution_size_limit" not in st.session_state:
-                    st.session_state.execution_size_limit = default_val
-                
-                # Validate current session state value against slider constraints
-                current_val = st.session_state.execution_size_limit
-                
-                # Ensure value is within bounds
-                current_val = max(min_val, min(max_val, current_val))
-                
-                # Ensure value is compatible with step (round to nearest valid step)
-                # Example: if current_val=1075, step=50, min=10, result=1060 (valid step)
-                current_val = round((current_val - min_val) / step_val) * step_val + min_val
-                
-                # Update session state with validated value
-                st.session_state.execution_size_limit = current_val
-                
-                size_limit = st.slider(
-                    "Max Results to Return:", 
-                    min_value=min_val, 
-                    max_value=max_val, 
-                    value=current_val, 
-                    step=step_val,
-                    key="size_limit_slider",
-                    help="Limit the number of results returned to avoid overwhelming the interface"
-                )
-                
-                # Update session state only when value actually changes
-                if size_limit != st.session_state.execution_size_limit:
-                    st.session_state.execution_size_limit = size_limit
+            # Define slider constraints
+            min_val, max_val, step_val = 10, 10000, 50
+            default_val = 1000
             
-            with exec_col2:
-                # Re-execute button
-                if st.button("🔄 Re-execute Query", type="secondary"):
-                    need_execution = True
-                    st.session_state.execute_query = True
+            # Initialize and validate size limit in session state
+            if "execution_size_limit" not in st.session_state:
+                st.session_state.execution_size_limit = default_val
+            
+            # Validate current session state value against slider constraints
+            current_val = st.session_state.execution_size_limit
+            
+            # Ensure value is within bounds
+            current_val = max(min_val, min(max_val, current_val))
+            
+            # Ensure value is compatible with step (round to nearest valid step)
+            # Example: if current_val=1075, step=50, min=10, result=1060 (valid step)
+            current_val = round((current_val - min_val) / step_val) * step_val + min_val
+            
+            # Update session state with validated value
+            st.session_state.execution_size_limit = current_val
+            
+            size_limit = st.slider(
+                "Max Results to Return:", 
+                min_value=min_val, 
+                max_value=max_val, 
+                value=current_val, 
+                step=step_val,
+                key="size_limit_slider",
+                help="Limit the number of results returned to avoid overwhelming the interface"
+            )
+            
+            # Update session state only when value actually changes
+            if size_limit != st.session_state.execution_size_limit:
+                st.session_state.execution_size_limit = size_limit
+            
+            # Re-execute button
+            if st.button("🔄 Re-execute Query", type="secondary", key="re_execute_query_btn"):
+                need_execution = True
+                st.session_state.execute_query = True
             
             # Execute query if needed (first time or re-execute)
             if need_execution and query_to_execute:
@@ -433,75 +527,73 @@ def render_query_generator():
                 # Display query info
                 st.info(f"📋 **Query executed on:** `{execution_results['index']}` | **Max results:** {st.session_state.get('execution_size_limit', 1000)}")
                 
-                # Display summary metrics
-                col1, col2, col3, col4 = st.columns(4)
+                # Display summary metrics (using simple layout to avoid column nesting)
+                total_hits = execution_results['total_hits']
+                returned_hits = execution_results['returned_hits']
+                query_time = execution_results['took']
+                index_name = execution_results['index']
                 
-                with col1:
-                    st.metric("Total Hits", f"{execution_results['total_hits']:,}")
-                with col2:
-                    st.metric("Returned", f"{execution_results['returned_hits']:,}")
-                with col3:
-                    st.metric("Query Time", f"{execution_results['took']} ms")
-                with col4:
-                    st.metric("Index", execution_results['index'])
+                metrics_summary = f"📊 **Total Hits:** {total_hits:,} | 📄 **Returned:** {returned_hits:,} | ⏱️ **Query Time:** {query_time} ms | 🗂️ **Index:** {index_name}"
+                st.info(metrics_summary)
                 
                 # Display results
                 if execution_results['results']:
                     st.subheader("📄 Query Results")
                     
-                    # Results display options
-                    display_cols = st.columns([3, 1, 1])
+                    # Results display options (simplified layout to avoid column nesting)
+                    st.write("**Display Options:**")
                     
-                    with display_cols[0]:
-                        format_options = ["Table", "JSON", "Raw Data"]
-                        
-                        # Initialize display format if not set
-                        if "execution_display_format" not in st.session_state:
-                            st.session_state.execution_display_format = "Table"
-                        
-                        # Ensure current selection is valid
-                        current_selection = st.session_state.execution_display_format
-                        if current_selection not in format_options:
-                            current_selection = "Table"
-                            st.session_state.execution_display_format = current_selection
-                        
-                        # Use a stable key for the selectbox
-                        display_format = st.selectbox(
-                            "Display Format:",
-                            format_options,
-                            index=format_options.index(current_selection),
-                            key="query_results_display_format",
-                            help="Choose how to display the results"
-                        )
-                        
-                        # Update session state when selection changes
-                        if display_format != st.session_state.execution_display_format:
-                            st.session_state.execution_display_format = display_format
+                    # Display format selection
+                    format_options = ["Table", "JSON", "Raw Data"]
                     
-                    with display_cols[1]:
-                        # Export buttons
-                        if execution_results['results']:
-                            csv_data = export_results_as_csv(execution_results)
-                            if st.download_button(
-                                "📊 Export CSV",
-                                data=csv_data,
-                                file_name=f"query_results_{int(time.time())}.csv",
-                                mime="text/csv"
-                            ):
-                                query_logger.log_download(f"query_results_{int(time.time())}.csv", "CSV",
-                                                        record_count=len(execution_results['results']))
+                    # Initialize display format if not set
+                    if "execution_display_format" not in st.session_state:
+                        st.session_state.execution_display_format = "Table"
                     
-                    with display_cols[2]:
-                        if execution_results['results']:
-                            json_data = export_results_as_json(execution_results)
-                            if st.download_button(
-                                "📋 Export JSON",
-                                data=json_data,
-                                file_name=f"query_results_{int(time.time())}.json",
-                                mime="application/json"
-                            ):
-                                query_logger.log_download(f"query_results_{int(time.time())}.json", "JSON",
-                                                        record_count=len(execution_results['results']))
+                    # Ensure current selection is valid
+                    current_selection = st.session_state.execution_display_format
+                    if current_selection not in format_options:
+                        current_selection = "Table"
+                        st.session_state.execution_display_format = current_selection
+                    
+                    # Use a stable key for the selectbox
+                    display_format = st.selectbox(
+                        "Display Format:",
+                        format_options,
+                        index=format_options.index(current_selection),
+                        key="query_results_display_format",
+                        help="Choose how to display the results"
+                    )
+                    
+                    # Update session state when selection changes
+                    if display_format != st.session_state.execution_display_format:
+                        st.session_state.execution_display_format = display_format
+                    
+                    # Export buttons (stacked to avoid column nesting)
+                    if execution_results['results']:
+                        st.write("**Export Options:**")
+                        
+                        csv_data = export_results_as_csv(execution_results)
+                        if st.download_button(
+                            "📊 Export CSV",
+                            data=csv_data,
+                            file_name=f"query_results_{int(time.time())}.csv",
+                            mime="text/csv",
+                            key="export_csv_btn"
+                        ):
+                            query_logger.log_download(f"query_results_{int(time.time())}.csv", "CSV",
+                                                    record_count=len(execution_results['results']))
+                        
+                        json_data = export_results_as_json(execution_results)
+                        if st.download_button(
+                            "📋 Export JSON",
+                            data=json_data,
+                            file_name=f"query_results_{int(time.time())}.json",
+                            mime="application/json",
+                            key="export_json_btn"
+                        ):
+                            query_logger.log_download(f"query_results_{int(time.time())}.json", "JSON",
+                                                    record_count=len(execution_results['results']))
                     
                     # Display results based on format selection
                     if display_format == "Table":
