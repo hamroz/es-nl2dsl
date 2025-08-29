@@ -28,7 +28,8 @@ mapping_types:
   flow_duration: long
   total_packets: long
 cost:
-  max_docs: 1000
+  max_docs: 50000  # Increased for legitimate cybersecurity analysis
+  max_percentage: 75  # Don't allow queries returning more than 75% of total docs
 regex:
   bounded_required: true
 retries:

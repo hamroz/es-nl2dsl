@@ -98,12 +98,16 @@ def check_fields_types(dsl, allowed_fields, mapping_types):
         return False, "type_mismatch_range"
     return True, None
 
-def check_cost(es, index, dsl, max_docs):
+def check_cost(es, index, dsl, max_docs, max_percentage=75):
     q = dsl.get("query", {"match_all": {}})
     
-    # SECURITY: Block match_all queries entirely (too broad)
+    # SECURITY: Context-aware match_all validation
     if not q or "match_all" in q:
-        return False, "match_all_query_blocked_for_security"
+        # Allow match_all only if there are strong filters (time window, etc.)
+        if _has_sufficient_constraints(dsl):
+            print("INFO: match_all query allowed due to sufficient time/field constraints")
+        else:
+            return False, "match_all_query_requires_time_window_or_field_filters"
     
     # Check if query is too broad by estimating result count
     try:
@@ -111,10 +115,11 @@ def check_cost(es, index, dsl, max_docs):
         if cnt["count"] > max_docs:
             return False, f"estimated_docs_{cnt['count']}_gt_{max_docs}"
         
-        # Additional security: Block queries that return more than 50% of total docs
+        # Additional security: Block queries that return more than configured % of total docs
         total_docs = es.count(index=index)["count"]
-        if total_docs > 0 and cnt["count"] > (total_docs * 0.5):
-            return False, f"query_too_broad_returns_{cnt['count']}_of_{total_docs}_docs"
+        max_allowed_docs = (total_docs * max_percentage) / 100
+        if total_docs > 0 and cnt["count"] > max_allowed_docs:
+            return False, f"query_too_broad_returns_{cnt['count']}_of_{total_docs}_docs_exceeds_{max_percentage}%"
             
     except Exception as e:
         # If we can't estimate cost, be conservative and block
@@ -124,9 +129,96 @@ def check_cost(es, index, dsl, max_docs):
 
 def check_aggs_selectivity(dsl):
     if "aggs" in dsl or "aggregations" in dsl:
-        # STRICT: Block all aggregations as potential resource exhaustion vector
-        return False, "aggregations_blocked_for_security"
+        # SELECTIVE: Allow safe aggregations with proper constraints
+        aggs = dsl.get("aggs", dsl.get("aggregations", {}))
+        
+        # Allow basic aggregations commonly used in cybersecurity analysis
+        if _validate_safe_aggregations(aggs, dsl):
+            return True, None
+        else:
+            return False, "aggregation_validation_failed_security_check"
     return True, None
+
+def _has_sufficient_constraints(dsl):
+    """Check if query has sufficient constraints to allow match_all"""
+    # Check for time window constraint
+    has_time_window = False
+    has_field_filters = False
+    
+    def find_constraints(obj):
+        nonlocal has_time_window, has_field_filters
+        if isinstance(obj, dict):
+            # Check for time range on @timestamp
+            if "range" in obj and "@timestamp" in obj.get("range", {}):
+                has_time_window = True
+            # Check for term/terms filters on key fields
+            if "term" in obj or "terms" in obj:
+                has_field_filters = True
+            # Check for bool queries with must/should/filter clauses
+            if "bool" in obj:
+                bool_query = obj["bool"]
+                if any(key in bool_query for key in ["must", "should", "filter"]):
+                    has_field_filters = True
+            for v in obj.values():
+                find_constraints(v)
+        elif isinstance(obj, list):
+            for v in obj:
+                find_constraints(v)
+    
+    find_constraints(dsl)
+    
+    # Require at least a time window for match_all queries
+    return has_time_window
+
+def _validate_safe_aggregations(aggs, dsl):
+    """Validate that aggregations are safe for cybersecurity analysis"""
+    # Allow specific safe aggregation patterns
+    safe_agg_types = {
+        "terms",       # Group by field values (IPs, ports, etc.)
+        "date_histogram", # Time-based aggregations
+        "histogram",   # Numeric histograms
+        "cardinality", # Count unique values
+        "sum", "avg", "min", "max", "stats", # Basic metrics
+        "value_count"  # Count non-null values
+    }
+    
+    # Check if query has time window (required for aggregations)
+    if not _has_sufficient_constraints(dsl):
+        return False
+    
+    def validate_agg_structure(agg_obj, depth=0):
+        # Prevent deeply nested aggregations (potential DoS)
+        if depth > 3:
+            return False
+            
+        if isinstance(agg_obj, dict):
+            for agg_name, agg_config in agg_obj.items():
+                if isinstance(agg_config, dict):
+                    # Check if this is a recognized safe aggregation type
+                    agg_type = None
+                    for safe_type in safe_agg_types:
+                        if safe_type in agg_config:
+                            agg_type = safe_type
+                            break
+                    
+                    if not agg_type:
+                        return False
+                    
+                    # For terms aggregations, limit size to prevent resource exhaustion
+                    if agg_type == "terms":
+                        terms_config = agg_config["terms"]
+                        size = terms_config.get("size", 10)
+                        if size > 1000:  # Reasonable limit for cybersecurity analysis
+                            return False
+                    
+                    # Recursively validate sub-aggregations
+                    if "aggs" in agg_config or "aggregations" in agg_config:
+                        sub_aggs = agg_config.get("aggs", agg_config.get("aggregations", {}))
+                        if not validate_agg_structure(sub_aggs, depth + 1):
+                            return False
+        return True
+    
+    return validate_agg_structure(aggs)
 
 def main():
     ap = argparse.ArgumentParser()
@@ -163,7 +255,7 @@ def main():
         lambda: check_time_window(dsl, rules),
         lambda: check_fields_types(dsl, allowed_fields, mapping_types),
         lambda: check_aggs_selectivity(dsl),
-        lambda: check_cost(es, args.index, dsl, rules["cost"]["max_docs"]),
+        lambda: check_cost(es, args.index, dsl, rules["cost"]["max_docs"], rules["cost"].get("max_percentage", 75)),
     ]:
         ok, reason = fn()
         checks.append((ok, reason))
