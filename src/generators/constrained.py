@@ -6,6 +6,7 @@ import subprocess
 import yaml
 import time
 import logging
+import asyncio
 from pathlib import Path
 from jsonschema import validate, ValidationError
 
@@ -517,6 +518,171 @@ def correct_field_mappings(query_json):
     """Original field mapping correction function for backward compatibility"""
     return correct_field_mappings_with_index_awareness(query_json, None)
 
+# Import optimized field mapping and async LLM
+try:
+    from .optimized_field_mapping import correct_field_mappings_with_index_awareness_optimized
+    from .async_llm import call_local_model_async, get_async_llm_manager
+    OPTIMIZATIONS_AVAILABLE = True
+    print("✅ Phase 2 optimizations available: async LLM + optimized field mapping")
+except ImportError as e:
+    OPTIMIZATIONS_AVAILABLE = False
+    print(f"⚠️ Phase 2 optimizations not available: {e}")
+
+async def generate_with_retries_async(task_prompt, schema_path, rules_path, max_retries=2, index=None, model="llama3.1:latest"):
+    """Async version of generate_with_retries for improved performance"""
+    start_time = time.time()
+    metrics = {
+        "attempts": 0,
+        "latency_seconds": 0,
+        "retry_reasons": [],
+        "async_enabled": True
+    }
+    
+    # Use new comprehensive security layer if available, fallback to old system
+    if NEW_SECURITY_AVAILABLE:
+        secure_gen = get_secure_generator()
+        security_validation = secure_gen.validate_input_security(task_prompt, index)
+        if not security_validation["is_secure"]:
+            metrics["latency_seconds"] = time.time() - start_time
+            return {
+                "abstain": True, 
+                "reason": f"Security validation failed: {security_validation['reason']}", 
+                "metrics": metrics,
+                "security_metrics": security_validation["metrics"]
+            }
+        task_prompt = security_validation["sanitized_prompt"]
+    else:
+        is_violation, violation_reason = check_security_violations(task_prompt)
+        if is_violation:
+            metrics["latency_seconds"] = time.time() - start_time
+            return {"abstain": True, "reason": f"Security violation: {violation_reason}", "metrics": metrics}
+    
+    # Enhance prompt if CIC index and enhancer available
+    enhanced_task_prompt = task_prompt
+    if ENHANCER_AVAILABLE and index and "cic" in index.lower():
+        enhancements = enhance_prompt(task_prompt)
+        if enhancements['field_constraints'] or enhancements['time_constraints']:
+            enhanced_task_prompt = build_enhanced_prompt(task_prompt, enhancements)
+            print(f"Enhanced prompt with extracted constraints")
+    
+    prompt = build_prompt(enhanced_task_prompt, index)
+    
+    for attempt in range(max_retries + 1):
+        metrics["attempts"] = attempt + 1
+        print(f"Generation attempt {attempt + 1}/{max_retries + 1} (async)")
+        
+        try:
+            # Call model asynchronously
+            if OPTIMIZATIONS_AVAILABLE:
+                response = await call_local_model_async(prompt, model, method="constrained")
+            else:
+                # Fallback to sync call
+                response = call_local_model(prompt, model)
+            
+            # Extract JSON (handle markdown code blocks)
+            if "```json" in response:
+                response = response.split("```json")[1].split("```")[0]
+            elif "```" in response:
+                response = response.split("```")[1].split("```")[0]
+            
+            # Parse JSON
+            query_json = json.loads(response)
+            
+            # Apply optimized field corrections BEFORE validation
+            if OPTIMIZATIONS_AVAILABLE:
+                query_json = correct_field_mappings_with_index_awareness_optimized(query_json, index)
+            else:
+                query_json = correct_field_mappings_with_index_awareness(query_json, index)
+            
+            # Validate against schema
+            schema_valid, schema_error = validate_against_schema(query_json, schema_path)
+            if not schema_valid:
+                if attempt < max_retries:
+                    prompt = build_prompt(task_prompt)
+                    prompt += f"\n\nPrevious attempt failed schema validation: {schema_error}\n"
+                    prompt += "Please fix the schema issues and try again.\n"
+                    continue
+                else:
+                    metrics["retry_reasons"].append(f"schema: {schema_error}")
+                    metrics["latency_seconds"] = time.time() - start_time
+                    return {"abstain": True, "reason": f"Schema validation failed: {schema_error}", "metrics": metrics}
+            
+            # Validate with validator.py
+            validator_valid, validator_error = validate_with_validator(query_json, rules_path)
+            if not validator_valid:
+                if attempt < max_retries:
+                    prompt = build_prompt(task_prompt)
+                    prompt += f"\n\nPrevious attempt failed validation: {validator_error}\n"
+                    prompt += "Please fix the validation issues and try again.\n"
+                    continue
+                else:
+                    metrics["retry_reasons"].append(f"validator: {validator_error}")
+                    metrics["latency_seconds"] = time.time() - start_time
+                    return {"abstain": True, "reason": f"Validation failed: {validator_error}", "metrics": metrics}
+            
+            # Success!
+            metrics["latency_seconds"] = time.time() - start_time
+            return {"query": query_json, "metrics": metrics}
+            
+        except json.JSONDecodeError as e:
+            if attempt < max_retries:
+                prompt = build_prompt(task_prompt)
+                prompt += f"\n\nPrevious attempt produced invalid JSON: {str(e)}\n"
+                prompt += "Please return valid JSON only.\n"
+                continue
+            else:
+                metrics["retry_reasons"].append(f"json: {str(e)}")
+                metrics["latency_seconds"] = time.time() - start_time
+                return {"abstain": True, "reason": f"JSON parsing failed: {str(e)}", "metrics": metrics}
+        
+        except Exception as e:
+            if attempt < max_retries:
+                print(f"Attempt {attempt + 1} failed: {e}")
+                continue
+            else:
+                metrics["retry_reasons"].append(f"error: {str(e)}")
+                metrics["latency_seconds"] = time.time() - start_time
+                return {"abstain": True, "reason": f"Generation failed: {str(e)}", "metrics": metrics}
+    
+    # Should not reach here
+    metrics["latency_seconds"] = time.time() - start_time
+    return {"abstain": True, "reason": "Max retries exceeded", "metrics": metrics}
+
+def generate_with_retries_smart(task_prompt, schema_path, rules_path, max_retries=2, index=None, model="llama3.1:latest", prefer_async=True):
+    """
+    Smart wrapper that automatically chooses between async and sync generation.
+    Uses async when possible for better performance, falls back to sync.
+    """
+    if prefer_async and OPTIMIZATIONS_AVAILABLE:
+        try:
+            # Try to use async if we're in an async context or can create one
+            try:
+                loop = asyncio.get_running_loop()
+                # We're in an async context, but we need to return a sync result
+                # Create a task and run it in a thread pool
+                import concurrent.futures
+                with concurrent.futures.ThreadPoolExecutor() as executor:
+                    future = executor.submit(
+                        lambda: asyncio.run(generate_with_retries_async(
+                            task_prompt, schema_path, rules_path, max_retries, index, model
+                        ))
+                    )
+                    return future.result(timeout=300)  # 5 minute timeout
+                    
+            except RuntimeError:
+                # No running loop, we can use asyncio.run directly
+                return asyncio.run(generate_with_retries_async(
+                    task_prompt, schema_path, rules_path, max_retries, index, model
+                ))
+                
+        except Exception as e:
+            print(f"⚠️ Async generation failed, falling back to sync: {e}")
+            # Fall back to sync
+            return generate_with_retries(task_prompt, schema_path, rules_path, max_retries, index, model)
+    else:
+        # Use sync generation
+        return generate_with_retries(task_prompt, schema_path, rules_path, max_retries, index, model)
+
 def generate_with_retries(task_prompt, schema_path, rules_path, max_retries=2, index=None, model="llama3.1:latest"):
     """Generate query with validation and retries"""
     start_time = time.time()
@@ -574,8 +740,11 @@ def generate_with_retries(task_prompt, schema_path, rules_path, max_retries=2, i
             # Parse JSON
             query_json = json.loads(response)
             
-            # Apply field corrections BEFORE validation
-            query_json = correct_field_mappings_with_index_awareness(query_json, index)
+            # Apply optimized field corrections BEFORE validation
+            if OPTIMIZATIONS_AVAILABLE:
+                query_json = correct_field_mappings_with_index_awareness_optimized(query_json, index)
+            else:
+                query_json = correct_field_mappings_with_index_awareness(query_json, index)
             
             # Validate against schema
             schema_valid, schema_error = validate_against_schema(query_json, schema_path)
@@ -624,6 +793,50 @@ def generate_with_retries(task_prompt, schema_path, rules_path, max_retries=2, i
     
     metrics["latency_seconds"] = time.time() - start_time
     return {"abstain": True, "reason": "Max retries exceeded", "metrics": metrics}
+
+def get_phase2_performance_stats():
+    """Get Phase 2 performance optimization statistics"""
+    stats = {"phase2_enabled": OPTIMIZATIONS_AVAILABLE}
+    
+    if OPTIMIZATIONS_AVAILABLE:
+        # Get async LLM manager stats
+        try:
+            async_manager = get_async_llm_manager()
+            stats["async_llm"] = async_manager.get_stats()
+        except Exception as e:
+            stats["async_llm"] = {"error": str(e)}
+        
+        # Get optimized field mapping stats
+        try:
+            from .optimized_field_mapping import get_optimized_field_mapper
+            field_mapper = get_optimized_field_mapper()
+            stats["field_mapping"] = field_mapper.get_stats()
+        except Exception as e:
+            stats["field_mapping"] = {"error": str(e)}
+    
+    return stats
+
+def clear_phase2_caches():
+    """Clear all Phase 2 optimization caches"""
+    if OPTIMIZATIONS_AVAILABLE:
+        try:
+            # Clear async LLM manager stats
+            async_manager = get_async_llm_manager()
+            async_manager.clear_stats()
+            
+            # Clear field mapping cache
+            from .optimized_field_mapping import get_optimized_field_mapper
+            field_mapper = get_optimized_field_mapper()
+            field_mapper.clear_cache()
+            
+            print("✅ Phase 2 caches cleared")
+            return True
+        except Exception as e:
+            print(f"⚠️ Error clearing Phase 2 caches: {e}")
+            return False
+    else:
+        print("⚠️ Phase 2 optimizations not available")
+        return False
 
 def main():
     parser = argparse.ArgumentParser(description="Generate constrained ES DSL queries")
