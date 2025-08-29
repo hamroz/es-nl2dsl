@@ -10,7 +10,8 @@ from gui.utils.backend_interface import (
     get_elasticsearch_client,
     get_available_indices,
     export_results_as_csv,
-    export_results_as_json
+    export_results_as_json,
+    get_index_profile_info
 )
 
 # Import logging utilities
@@ -18,6 +19,54 @@ from gui.utils.logging_utils import get_gui_logger
 
 # Initialize component logger
 explorer_logger = get_gui_logger("data_explorer")
+
+def get_index_fields(index_name):
+    """Get available fields for an index"""
+    try:
+        es = get_elasticsearch_client()
+        mapping = es.indices.get_mapping(index=index_name)
+        fields = []
+        
+        # Extract fields from mapping
+        index_mapping = mapping[index_name]['mappings']
+        if 'properties' in index_mapping:
+            for field_name, field_props in index_mapping['properties'].items():
+                # Skip complex nested fields for sorting
+                if field_props.get('type') in ['keyword', 'date', 'long', 'integer', 'float', 'double']:
+                    fields.append(field_name)
+                elif field_props.get('type') == 'text' and 'keyword' in field_props.get('fields', {}):
+                    # Add .keyword subfield for text fields that have it
+                    fields.append(f"{field_name}.keyword")
+        
+        # Add some common fallback fields
+        common_fields = ['@timestamp', '_doc', '_score']
+        for field in common_fields:
+            if field not in fields:
+                fields.append(field)
+        
+        return fields
+    except Exception as e:
+        # Fallback to common fields if mapping retrieval fails
+        return ['@timestamp', '_doc', 'src_ip', 'dst_ip', 'attack_type', 'label']
+
+def get_common_fields_across_indices(indices):
+    """Get fields that are common across multiple selected indices"""
+    if not indices:
+        return ['@timestamp', '_doc']
+    
+    if len(indices) == 1:
+        return get_index_fields(indices[0])
+    
+    # Get intersection of fields across all indices
+    all_fields = [set(get_index_fields(idx)) for idx in indices]
+    common_fields = set.intersection(*all_fields) if all_fields else set()
+    
+    # Always include basic fields
+    basic_fields = ['@timestamp', '_doc', '_score']
+    for field in basic_fields:
+        common_fields.add(field)
+    
+    return sorted(list(common_fields))
 
 def render_data_explorer():
     """Render the Data Explorer interface"""
@@ -35,26 +84,35 @@ def render_data_explorer():
     # Index selection
     col1, col2 = st.columns([2, 1])
     with col1:
-        selected_index = st.selectbox(
-            "Select Index",
+        # Allow multiple index selection
+        selected_indices = st.multiselect(
+            "Select Index(es)",
             options=indices,
-            help="Choose which Elasticsearch index to explore"
+            default=[indices[0]] if indices else [],
+            help="Choose which Elasticsearch indices to explore. Select multiple to search across them."
         )
         
+        # Backward compatibility - convert to single index if only one selected
+        selected_index = selected_indices[0] if len(selected_indices) == 1 else ','.join(selected_indices)
+        
         # Log index selection for data exploration
-        if "last_explorer_index" not in st.session_state:
-            st.session_state.last_explorer_index = selected_index
-        elif st.session_state.last_explorer_index != selected_index:
-            explorer_logger.log_selection_change("explorer_index", st.session_state.last_explorer_index, selected_index)
-            st.session_state.last_explorer_index = selected_index
+        if "last_explorer_indices" not in st.session_state:
+            st.session_state.last_explorer_indices = selected_indices
+        elif st.session_state.last_explorer_indices != selected_indices:
+            explorer_logger.log_selection_change("explorer_indices", st.session_state.last_explorer_indices, selected_indices)
+            st.session_state.last_explorer_indices = selected_indices
     
     with col2:
-        # Get document count for selected index
+        # Get document count for selected indices
         try:
-            es = get_elasticsearch_client()
-            count_result = es.count(index=selected_index)
-            total_docs = count_result['count']
-            st.metric("Total Documents", f"{total_docs:,}")
+            if selected_indices:
+                es = get_elasticsearch_client()
+                count_result = es.count(index=','.join(selected_indices))
+                total_docs = count_result['count']
+                st.metric("Total Documents", f"{total_docs:,}")
+            else:
+                total_docs = 0
+                st.metric("Total Documents", "0")
         except Exception as e:
             st.error(f"Error getting document count: {e}")
             total_docs = 0
@@ -76,11 +134,16 @@ def render_data_explorer():
         )
     
     with col2:
-        # Sort field
+        # Sort field - dynamically get available fields for selected indices
+        if selected_indices:
+            available_sort_fields = get_common_fields_across_indices(selected_indices)
+        else:
+            available_sort_fields = ['@timestamp', '_doc']
+        
         sort_field = st.selectbox(
             "Sort By",
-            options=["@timestamp", "_doc", "src_ip", "dst_ip", "attack_type", "label"],
-            help="Field to sort results by"
+            options=available_sort_fields,
+            help="Field to sort results by (shows fields available in all selected indices)"
         )
     
     with col3:
@@ -90,6 +153,13 @@ def render_data_explorer():
             options=["desc", "asc"],
             help="Descending (newest first) or Ascending (oldest first)"
         )
+    
+    # No filter option
+    use_no_filter = st.checkbox(
+        "📂 View All Data (No Filters)",
+        value=False,
+        help="Retrieve data without any filters applied - useful for exploring index structure"
+    )
     
     # Advanced filters
     with st.expander("🔧 Advanced Filters", expanded=False):
@@ -129,7 +199,8 @@ def render_data_explorer():
         
         with filter_col2:
             # Attack type filter for CIC data
-            if "cic" in selected_index.lower():
+            has_cic_index = any("cic" in idx.lower() for idx in selected_indices) if selected_indices else False
+            if has_cic_index:
                 use_attack_filter = st.checkbox("Filter by Attack Type", value=False)
                 if use_attack_filter:
                     attack_types = ["normal", "dos", "scan", "bruteforce", "web_attack"]
@@ -175,6 +246,7 @@ def render_data_explorer():
     
     # Build the query
     query = build_exploration_query(
+        use_no_filter=use_no_filter,
         use_time_filter=use_time_filter,
         time_range=time_range if use_time_filter else None,
         use_field_filter=use_field_filter,
@@ -191,7 +263,11 @@ def render_data_explorer():
     # Load Data button
     col1, col2, col3 = st.columns([1, 1, 3])
     with col1:
-        load_button = st.button("🚀 Load Data", type="primary", use_container_width=True)
+        if selected_indices:
+            load_button = st.button("🚀 Load Data", type="primary", use_container_width=True)
+        else:
+            st.button("🚀 Load Data", type="primary", use_container_width=True, disabled=True, help="Please select at least one index")
+            load_button = False
     with col2:
         clear_button = st.button("🔄 Clear Results", use_container_width=True)
     
@@ -204,9 +280,9 @@ def render_data_explorer():
         else:
             st.info("No results to clear")
     
-    if load_button:
+    if load_button and selected_indices:
         explorer_logger.log_button_click("Load Data",
-            index=selected_index,
+            indices=selected_indices,
             result_limit=result_limit,
             sort_field=sort_field,
             sort_order=sort_order,
@@ -222,7 +298,7 @@ def render_data_explorer():
                 
                 # Execute search
                 response = es.search(
-                    index=selected_index,
+                    index=','.join(selected_indices),
                     body=query,
                     size=result_limit,
                     sort=sort_param
@@ -230,14 +306,14 @@ def render_data_explorer():
                 
                 # Store results in session state
                 st.session_state.explorer_results = response
-                st.session_state.explorer_index = selected_index
+                st.session_state.explorer_indices = selected_indices
                 st.session_state.explorer_query = query
                 
                 # Log successful data load
                 total_hits = response.get('hits', {}).get('total', {}).get('value', 0)
                 returned_hits = len(response.get('hits', {}).get('hits', []))
                 explorer_logger.log_success("Data exploration query executed", 
-                    index=selected_index,
+                    indices=selected_indices,
                     total_hits=total_hits,
                     returned_hits=returned_hits,
                     execution_time_ms=response.get('took', 0),
@@ -247,7 +323,7 @@ def render_data_explorer():
             except Exception as e:
                 st.error(f"Error loading data: {str(e)}")
                 explorer_logger.log_error("Data exploration query failed", str(e), 
-                                        index=selected_index, result_limit=result_limit)
+                                        indices=selected_indices, result_limit=result_limit)
                 return
     
     # Display results
@@ -255,6 +331,9 @@ def render_data_explorer():
         response = st.session_state.explorer_results
         hits = response.get('hits', {}).get('hits', [])
         total_hits = response.get('hits', {}).get('total', {}).get('value', 0)
+        
+        # Get the indices used for this result set
+        result_indices = st.session_state.get('explorer_indices', selected_indices if selected_indices else [])
         
         # Results summary
         st.markdown("---")
@@ -281,13 +360,14 @@ def render_data_explorer():
                 # Wrap hits in expected format for export functions
                 export_data = {"results": [hit["_source"] for hit in hits]}
                 csv_data = export_results_as_csv(export_data)
+                indices_str = '_'.join(result_indices) if result_indices else 'unknown'
                 if st.download_button(
                     label="📊 Export CSV",
                     data=csv_data,
-                    file_name=f"data_export_{selected_index}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                    file_name=f"data_export_{indices_str}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
                     mime="text/csv"
                 ):
-                    explorer_logger.log_download(f"data_export_{selected_index}.csv", "CSV",
+                    explorer_logger.log_download(f"data_export_{indices_str}.csv", "CSV",
                                                record_count=len(hits))
             
             with col2:
@@ -297,19 +377,19 @@ def render_data_explorer():
                 if st.download_button(
                     label="📋 Export JSON",
                     data=json_data,
-                    file_name=f"data_export_{selected_index}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
+                    file_name=f"data_export_{indices_str}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
                     mime="application/json"
                 ):
-                    explorer_logger.log_download(f"data_export_{selected_index}.json", "JSON",
+                    explorer_logger.log_download(f"data_export_{indices_str}.json", "JSON",
                                                record_count=len(hits))
             
             # Display data based on selected format
             if "Table View" in display_format:
-                display_table_view(hits, selected_index)
+                display_table_view(hits, result_indices)
             elif "JSON View" in display_format:
                 display_json_view(hits)
             else:
-                display_document_cards(hits, selected_index)
+                display_document_cards(hits, result_indices)
         else:
             st.info("No documents found matching the criteria.")
     
@@ -319,12 +399,16 @@ def render_data_explorer():
             st.markdown("### Generated Elasticsearch Query")
             st.json(st.session_state.explorer_query)
 
-def build_exploration_query(use_time_filter=False, time_range=None,
+def build_exploration_query(use_no_filter=False, use_time_filter=False, time_range=None,
                            use_field_filter=False, filter_field=None, filter_value=None,
                            use_attack_filter=False, selected_attack=None,
                            use_text_search=False, search_text=None,
                            use_sampling=False, sample_seed=None):
     """Build Elasticsearch query based on exploration options"""
+    
+    # If no filter is requested, use match_all
+    if use_no_filter:
+        return {"query": {"match_all": {}}}
     
     # Start with base query
     query = {"query": {"bool": {"filter": []}}}
@@ -385,18 +469,24 @@ def build_exploration_query(use_time_filter=False, time_range=None,
         }
     
     # If no filters, use match_all
-    if not query["query"]["bool"]["filter"] and "must" not in query["query"]["bool"]:
+    if ("bool" not in query["query"] or 
+        (not query["query"]["bool"].get("filter") and 
+         "must" not in query["query"]["bool"])):
         query = {"query": {"match_all": {}}}
     
     return query
 
-def display_table_view(hits, index_name):
+def display_table_view(hits, index_names):
     """Display results in table format"""
     # Extract data for DataFrame
     data_rows = []
     for hit in hits:
         source = hit['_source']
         row = {'_id': hit['_id']}
+        
+        # Add index info if multiple indices
+        if isinstance(index_names, list) and len(index_names) > 1:
+            row['_index'] = hit.get('_index', 'unknown')
         
         # Add common fields first
         common_fields = ['@timestamp', 'src_ip', 'dst_ip', 'src_port', 'dst_port', 
@@ -406,7 +496,9 @@ def display_table_view(hits, index_name):
                 row[field] = source[field]
         
         # Add numeric fields for CIC data
-        if "cic" in index_name.lower():
+        has_cic = (isinstance(index_names, list) and any("cic" in idx.lower() for idx in index_names)) or \
+                  (isinstance(index_names, str) and "cic" in index_names.lower())
+        if has_cic:
             numeric_fields = ['flow_packets_s', 'flow_bytes_s', 'flow_duration',
                             'total_fwd_packets', 'total_bwd_packets']
             for field in numeric_fields:
@@ -433,17 +525,23 @@ def display_table_view(hits, index_name):
         df['@timestamp'] = pd.to_datetime(df['@timestamp']).dt.strftime('%Y-%m-%d %H:%M:%S')
     
     # Display with column configuration
+    column_config = {
+        "_id": st.column_config.TextColumn("Document ID", width="small"),
+        "@timestamp": st.column_config.TextColumn("Timestamp", width="medium"),
+        "src_ip": st.column_config.TextColumn("Source IP", width="medium"),
+        "dst_ip": st.column_config.TextColumn("Dest IP", width="medium"),
+        "attack_type": st.column_config.TextColumn("Attack Type", width="small"),
+    }
+    
+    # Add index column if multiple indices
+    if '_index' in df.columns:
+        column_config["_index"] = st.column_config.TextColumn("Index", width="small")
+    
     st.dataframe(
         df,
         use_container_width=True,
         hide_index=True,
-        column_config={
-            "_id": st.column_config.TextColumn("Document ID", width="small"),
-            "@timestamp": st.column_config.TextColumn("Timestamp", width="medium"),
-            "src_ip": st.column_config.TextColumn("Source IP", width="medium"),
-            "dst_ip": st.column_config.TextColumn("Dest IP", width="medium"),
-            "attack_type": st.column_config.TextColumn("Attack Type", width="small"),
-        }
+        column_config=column_config
     )
 
 def display_json_view(hits):
@@ -469,7 +567,7 @@ def display_json_view(hits):
         sources = [hit['_source'] for hit in hits]
         st.json(sources)
 
-def display_document_cards(hits, index_name):
+def display_document_cards(hits, index_names):
     """Display results as document cards"""
     for i, hit in enumerate(hits):
         source = hit['_source']
@@ -479,7 +577,10 @@ def display_document_cards(hits, index_name):
             # Card header
             col1, col2 = st.columns([3, 1])
             with col1:
-                st.markdown(f"### Document {i+1}")
+                title = f"### Document {i+1}"
+                if isinstance(index_names, list) and len(index_names) > 1:
+                    title += f" (from {hit.get('_index', 'unknown')})"
+                st.markdown(title)
             with col2:
                 st.caption(f"ID: {hit['_id'][:8]}...")
             
@@ -506,7 +607,9 @@ def display_document_cards(hits, index_name):
             
             with col3:
                 # Show metrics for CIC data
-                if "cic" in index_name.lower():
+                has_cic = (isinstance(index_names, list) and any("cic" in idx.lower() for idx in index_names)) or \
+                          (isinstance(index_names, str) and "cic" in index_names.lower())
+                if has_cic:
                     if 'flow_packets_s' in source:
                         st.metric("Packets/s", f"{source['flow_packets_s']:.2f}")
                     if 'flow_bytes_s' in source:
