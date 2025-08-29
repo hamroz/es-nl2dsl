@@ -6,6 +6,11 @@ from typing import Dict, List, Any, Optional
 from pathlib import Path
 import logging
 
+# Add project root to path for imports
+import sys
+project_root = Path(__file__).parent.parent.parent
+sys.path.append(str(project_root))
+
 logger = logging.getLogger(__name__)
 
 class MappingStorage:
@@ -14,6 +19,19 @@ class MappingStorage:
     def __init__(self, storage_path: str = "artifacts/mappings"):
         self.storage_path = Path(storage_path)
         self.storage_path.mkdir(exist_ok=True)
+        self._profiler = None
+    
+    @property 
+    def profiler(self):
+        """Lazy load the index profiler to avoid circular imports"""
+        if self._profiler is None:
+            try:
+                from src.index_profiler import IndexProfiler
+                self._profiler = IndexProfiler()
+            except ImportError as e:
+                logger.warning(f"Could not import IndexProfiler: {e}")
+                self._profiler = None
+        return self._profiler
     
     def store_index_mapping(self, index_name: str, mapping_info: Dict[str, Any]) -> bool:
         """Store mapping information for an index"""
@@ -75,21 +93,68 @@ class MappingStorage:
     
     def get_field_mapping_for_query_generation(self, index_name: str) -> Dict[str, Any]:
         """Get field mapping specifically formatted for query generation"""
+        # First try to get from stored mapping (for manually adapted data)
         mapping = self.get_index_mapping(index_name)
-        if not mapping:
-            return {}
+        if mapping:
+            # Extract the most important information for query generation
+            return {
+                "index_name": index_name,
+                "timestamp_fields": mapping.get("field_patterns", {}).get("timestamp_fields", []),
+                "ip_fields": mapping.get("field_patterns", {}).get("ip_fields", []),
+                "user_fields": mapping.get("field_patterns", {}).get("user_fields", []),
+                "status_fields": mapping.get("field_patterns", {}).get("status_fields", []),
+                "message_fields": mapping.get("field_patterns", {}).get("message_fields", []),
+                "all_fields": list(mapping.get("schema", {}).get("fields", {}).keys()),
+                "system_type": mapping.get("ai_analysis", {}).get("analysis", {}).get("system_type", "Unknown"),
+                "important_fields": mapping.get("ai_analysis", {}).get("analysis", {}).get("important_fields", [])
+            }
         
-        # Extract the most important information for query generation
+        # If no stored mapping, try to get from index profiler (for any index)
+        if self.profiler:
+            try:
+                profile = self.profiler.analyze_index(index_name)
+                return self._convert_profile_to_mapping(profile)
+            except Exception as e:
+                logger.debug(f"Could not get profile for {index_name}: {e}")
+        
+        return {}
+    
+    def _convert_profile_to_mapping(self, profile) -> Dict[str, Any]:
+        """Convert an IndexProfile to the mapping format expected by query generation"""
+        from src.index_profiler import IndexProfile
+        
+        # Group fields by type and patterns
+        timestamp_fields = []
+        ip_fields = []
+        user_fields = []
+        status_fields = []
+        message_fields = []
+        
+        for field_name, field_info in profile.fields.items():
+            if field_info.type == "date" or "timestamp" in field_name.lower():
+                timestamp_fields.append(field_name)
+            elif "ip_address" in field_info.patterns:
+                ip_fields.append(field_name)
+            elif any(keyword in field_name.lower() for keyword in ["user", "username", "uid"]):
+                user_fields.append(field_name)
+            elif any(keyword in field_name.lower() for keyword in ["status", "result", "action", "label"]):
+                status_fields.append(field_name)
+            elif field_info.type == "text" and any(keyword in field_name.lower() for keyword in ["message", "description", "log"]):
+                message_fields.append(field_name)
+        
         return {
-            "index_name": index_name,
-            "timestamp_fields": mapping.get("field_patterns", {}).get("timestamp_fields", []),
-            "ip_fields": mapping.get("field_patterns", {}).get("ip_fields", []),
-            "user_fields": mapping.get("field_patterns", {}).get("user_fields", []),
-            "status_fields": mapping.get("field_patterns", {}).get("status_fields", []),
-            "message_fields": mapping.get("field_patterns", {}).get("message_fields", []),
-            "all_fields": list(mapping.get("schema", {}).get("fields", {}).keys()),
-            "system_type": mapping.get("ai_analysis", {}).get("analysis", {}).get("system_type", "Unknown"),
-            "important_fields": mapping.get("ai_analysis", {}).get("analysis", {}).get("important_fields", [])
+            "index_name": profile.index_name,
+            "timestamp_fields": timestamp_fields,
+            "ip_fields": ip_fields,
+            "user_fields": user_fields,
+            "status_fields": status_fields,
+            "message_fields": message_fields,
+            "all_fields": list(profile.fields.keys()),
+            "system_type": "Auto-detected",
+            "important_fields": [f for f in profile.fields.keys() if profile.fields[f].is_searchable],
+            "date_range": profile.date_range,
+            "semantic_mappings": profile.suggested_field_mappings,
+            "primary_timestamp": profile.primary_timestamp_field
         }
     
     def _extract_common_fields(self, mapping_info: Dict[str, Any]) -> Dict[str, str]:
@@ -136,3 +201,89 @@ class MappingStorage:
         except Exception as e:
             logger.error(f"Error deleting mapping for {index_name}: {e}")
             return False
+    
+    def get_field_catalog_for_index(self, index_name: str) -> Dict[str, Dict[str, str]]:
+        """Get field catalog suitable for query generation (unified interface)"""
+        # Try profiler first for most up-to-date information
+        if self.profiler:
+            try:
+                return self.profiler.get_field_catalog_for_index(index_name)
+            except Exception as e:
+                logger.debug(f"Could not get field catalog from profiler for {index_name}: {e}")
+        
+        # Fallback to stored mapping if available
+        mapping = self.get_field_mapping_for_query_generation(index_name)
+        if mapping and mapping.get("all_fields"):
+            catalog = {}
+            for field_name in mapping["all_fields"]:
+                # Create basic catalog entry
+                catalog[field_name] = {
+                    "type": "keyword",  # Default type
+                    "description": f"Field from {mapping.get('system_type', 'unknown')} system"
+                }
+            return catalog
+        
+        return {}
+    
+    def get_dynamic_date_range(self, index_name: str) -> Dict[str, str]:
+        """Get appropriate date range for queries (unified interface)"""
+        if self.profiler:
+            try:
+                return self.profiler.get_dynamic_date_range(index_name)
+            except Exception as e:
+                logger.debug(f"Could not get date range from profiler for {index_name}: {e}")
+        
+        # Fallback to stored mapping
+        mapping = self.get_field_mapping_for_query_generation(index_name)
+        if mapping and mapping.get("date_range"):
+            return mapping["date_range"]
+        
+        # Ultimate fallback to 2017 dates for backward compatibility
+        return {
+            "min_date": "2017-01-01T00:00:00Z",
+            "max_date": "2017-12-31T23:59:59Z"
+        }
+    
+    def has_index_profile(self, index_name: str) -> bool:
+        """Check if we have any profile/mapping information for an index"""
+        # Check stored mapping
+        if self.get_index_mapping(index_name):
+            return True
+        
+        # Check if profiler can analyze it
+        if self.profiler:
+            try:
+                self.profiler.analyze_index(index_name)
+                return True
+            except Exception:
+                pass
+        
+        return False
+    
+    def refresh_index_profile(self, index_name: str) -> bool:
+        """Force refresh of index profile"""
+        if self.profiler:
+            try:
+                self.profiler.analyze_index(index_name, force_refresh=True)
+                logger.info(f"Refreshed profile for {index_name}")
+                return True
+            except Exception as e:
+                logger.error(f"Failed to refresh profile for {index_name}: {e}")
+        return False
+
+
+# Convenience functions for external use
+def get_unified_field_mapping(index_name: str) -> Dict[str, Any]:
+    """Get field mapping with automatic fallback to profiler"""
+    storage = MappingStorage()
+    return storage.get_field_mapping_for_query_generation(index_name)
+
+def get_unified_field_catalog(index_name: str) -> Dict[str, Dict[str, str]]:
+    """Get field catalog with automatic fallback to profiler"""
+    storage = MappingStorage()
+    return storage.get_field_catalog_for_index(index_name)
+
+def get_unified_date_range(index_name: str) -> Dict[str, str]:
+    """Get date range with automatic fallback to profiler"""
+    storage = MappingStorage()
+    return storage.get_dynamic_date_range(index_name)

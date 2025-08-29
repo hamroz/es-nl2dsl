@@ -135,12 +135,72 @@ def load_fewshot_examples(index=None):
             return yaml.safe_load(f)
     return []
 
+def get_dynamic_index_info(index):
+    """Get dynamic information about an index"""
+    if not index:
+        return None
+        
+    try:
+        # Import here to avoid circular dependencies
+        from src.data_adaptation.mapping_storage import MappingStorage
+        mapping_storage = MappingStorage()
+        
+        # Get field mapping and date range
+        field_mapping = mapping_storage.get_field_mapping_for_query_generation(index)
+        date_range = mapping_storage.get_dynamic_date_range(index)
+        field_catalog = mapping_storage.get_field_catalog_for_index(index)
+        
+        if field_mapping and field_mapping.get("all_fields"):
+            return {
+                "has_profile": True,
+                "field_mapping": field_mapping,
+                "date_range": date_range,
+                "field_catalog": field_catalog,
+                "timestamp_field": field_mapping.get("primary_timestamp", "@timestamp"),
+                "system_type": field_mapping.get("system_type", "Unknown")
+            }
+    except Exception as e:
+        logger.debug(f"Could not get dynamic info for {index}: {e}")
+    
+    return None
+
 def build_prompt(task_prompt, index=None):
-    """Build the constrained generation prompt"""
+    """Build the constrained generation prompt with dynamic index awareness"""
     prompt = "You are an Elasticsearch DSL query generator for cybersecurity log analysis.\n\n"
     
-    # Load appropriate field catalog based on index
-    if index and "cic" in index.lower():
+    # Try to get dynamic index information
+    dynamic_info = get_dynamic_index_info(index)
+    
+    # If we have dynamic info, use it; otherwise fall back to hardcoded logic
+    if dynamic_info and dynamic_info["has_profile"]:
+        # Use dynamic index information
+        field_catalog = dynamic_info["field_catalog"]
+        system_type = dynamic_info["system_type"]
+        timestamp_field = dynamic_info["timestamp_field"]
+        
+        prompt += f"Dataset: {index}"
+        if system_type != "Unknown":
+            prompt += f" ({system_type})"
+        prompt += f" with {len(field_catalog)} available fields\n\n"
+        
+        prompt += "Key fields:\n"
+        # Add most important fields (limit to prevent prompt bloat)
+        important_keywords = ["timestamp", "ip", "port", "protocol", "label", "attack", "status", "action", "bytes"]
+        field_count = 0
+        max_fields = 12
+        
+        for field_name, field_info in field_catalog.items():
+            if field_count >= max_fields:
+                break
+            if any(keyword in field_name.lower() for keyword in important_keywords):
+                prompt += f"- {field_name} ({field_info['type']}): {field_info['description']}\n"
+                field_count += 1
+        
+        if len(field_catalog) > max_fields:
+            prompt += f"... and {len(field_catalog) - field_count} more fields\n"
+        prompt += "\n"
+        
+    elif index and "cic" in index.lower():
         prompt += "Dataset: CIC-IDS2017 network traffic with attack labels\n\n"
         prompt += "Key fields for CIC data:\n"
         prompt += "- src_ip (keyword): Source IP address\n"
@@ -177,8 +237,22 @@ def build_prompt(task_prompt, index=None):
     
     prompt += "\nRules:\n"
     prompt += "- Always use bool.filter for combining conditions\n"
-    prompt += "- Always include a time range filter using @timestamp\n"
-    prompt += "- For CIC data, use dates in 2017 (e.g., gte: '2017-01-01', lte: '2017-12-31')\n"
+    
+    # Use dynamic timestamp field and date range if available
+    if dynamic_info and dynamic_info["has_profile"]:
+        timestamp_field = dynamic_info["timestamp_field"]
+        date_range = dynamic_info["date_range"]
+        prompt += f"- Always include a time range filter using {timestamp_field}\n"
+        
+        if date_range and date_range.get("min_date") and date_range.get("max_date"):
+            min_date = date_range["min_date"][:10]  # Just date part
+            max_date = date_range["max_date"][:10]
+            prompt += f"- Use dates between {min_date} and {max_date} for time ranges\n"
+        else:
+            prompt += "- Use appropriate dates based on the query context\n"
+    else:
+        prompt += "- Always include a time range filter using @timestamp\n"
+        prompt += "- For CIC data, use dates in 2017 (e.g., gte: '2017-01-01', lte: '2017-12-31')\n"
     prompt += "- Use term for exact matches, terms for multiple values\n"
     prompt += "- Use range only for date and numeric fields\n"
     prompt += "- Output only valid JSON, no explanations\n\n"
@@ -372,16 +446,32 @@ def check_security_violations_basic(prompt_text):
     
     return False, None
 
-def correct_field_mappings(query_json):
-    """Recursively correct common field name mistakes in the query"""
+def correct_field_mappings_with_index_awareness(query_json, index=None):
+    """Recursively correct field name mistakes, but be aware of index-specific fields"""
+    # Get dynamic info to know what fields actually exist
+    dynamic_info = get_dynamic_index_info(index)
+    
     if isinstance(query_json, dict):
         corrected = {}
         for key, value in query_json.items():
             # Check if this key is a field name that needs correction
             if key in FIELD_CORRECTIONS:
                 corrected_key = FIELD_CORRECTIONS[key]
-                print(f"Field correction: '{key}' → '{corrected_key}'")
-                corrected[corrected_key] = correct_field_mappings(value)
+                
+                # If we have index info, check if the original field actually exists
+                should_correct = True
+                if dynamic_info and dynamic_info.get("field_catalog"):
+                    available_fields = set(dynamic_info["field_catalog"].keys())
+                    # If the original field exists in the index, don't correct it
+                    if key in available_fields:
+                        should_correct = False
+                        logger.debug(f"Keeping field '{key}' as it exists in index {index}")
+                
+                if should_correct:
+                    print(f"Field correction: '{key}' → '{corrected_key}'")
+                    corrected[corrected_key] = correct_field_mappings_with_index_awareness(value, index)
+                else:
+                    corrected[key] = correct_field_mappings_with_index_awareness(value, index)
             else:
                 # For term/terms/range operators, check field names inside
                 if key in ["term", "terms", "range", "match", "exists"]:
@@ -390,20 +480,35 @@ def correct_field_mappings(query_json):
                         for field, field_value in value.items():
                             if field in FIELD_CORRECTIONS:
                                 corrected_field = FIELD_CORRECTIONS[field]
-                                print(f"Field correction: '{field}' → '{corrected_field}'")
-                                corrected_value[corrected_field] = field_value
+                                
+                                # Check if original field exists in index
+                                should_correct = True
+                                if dynamic_info and dynamic_info.get("field_catalog"):
+                                    available_fields = set(dynamic_info["field_catalog"].keys())
+                                    if field in available_fields:
+                                        should_correct = False
+                                
+                                if should_correct:
+                                    print(f"Field correction: '{field}' → '{corrected_field}'")
+                                    corrected_value[corrected_field] = field_value
+                                else:
+                                    corrected_value[field] = field_value
                             else:
                                 corrected_value[field] = field_value
                         corrected[key] = corrected_value
                     else:
-                        corrected[key] = correct_field_mappings(value)
+                        corrected[key] = correct_field_mappings_with_index_awareness(value, index)
                 else:
-                    corrected[key] = correct_field_mappings(value)
+                    corrected[key] = correct_field_mappings_with_index_awareness(value, index)
         return corrected
     elif isinstance(query_json, list):
-        return [correct_field_mappings(item) for item in query_json]
+        return [correct_field_mappings_with_index_awareness(item, index) for item in query_json]
     else:
         return query_json
+
+def correct_field_mappings(query_json):
+    """Original field mapping correction function for backward compatibility"""
+    return correct_field_mappings_with_index_awareness(query_json, None)
 
 def generate_with_retries(task_prompt, schema_path, rules_path, max_retries=2, index=None, model="llama3.1:latest"):
     """Generate query with validation and retries"""
@@ -448,7 +553,7 @@ def generate_with_retries(task_prompt, schema_path, rules_path, max_retries=2, i
             query_json = json.loads(response)
             
             # Apply field corrections BEFORE validation
-            query_json = correct_field_mappings(query_json)
+            query_json = correct_field_mappings_with_index_awareness(query_json, index)
             
             # Validate against schema
             schema_valid, schema_error = validate_against_schema(query_json, schema_path)
