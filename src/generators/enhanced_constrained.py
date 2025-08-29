@@ -22,6 +22,13 @@ from src.generators.constrained import (
 )
 from src.data_adaptation.mapping_storage import MappingStorage
 
+# Import new security layer
+try:
+    from src.generators.secure_generator import get_secure_generator
+    NEW_SECURITY_AVAILABLE = True
+except ImportError:
+    NEW_SECURITY_AVAILABLE = False
+
 logger = logging.getLogger(__name__)
 
 def build_enhanced_prompt(task_prompt, index=None):
@@ -258,10 +265,24 @@ def generate_enhanced_query(
         try:
             logger.info(f"Generation attempt {attempt + 1}/{max_retries}")
             
-            # Check security
-            is_violation, violation_msg = check_security_violations(enhanced_prompt)
-            if is_violation:
-                return {"abstain": True, "reason": violation_msg}
+            # Use new comprehensive security layer if available, fallback to old system
+            if NEW_SECURITY_AVAILABLE:
+                secure_gen = get_secure_generator()
+                security_validation = secure_gen.validate_input_security(prompt, index)
+                if not security_validation["is_secure"]:
+                    return {
+                        "abstain": True, 
+                        "reason": f"Security validation failed: {security_validation['reason']}", 
+                        "security_metrics": security_validation["metrics"]
+                    }
+                # Use sanitized prompt for generation
+                sanitized_prompt = security_validation["sanitized_prompt"]
+                enhanced_prompt = build_enhanced_prompt(sanitized_prompt, index)
+            else:
+                # Fallback to old security check
+                is_violation, violation_msg = check_security_violations(enhanced_prompt)
+                if is_violation:
+                    return {"abstain": True, "reason": violation_msg}
             
             # Call model
             result = call_local_model(enhanced_prompt, model)

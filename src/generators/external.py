@@ -23,6 +23,13 @@ from src.generators.constrained import (
     load_fewshot_examples
 )
 
+# Import new security layer
+try:
+    from src.generators.secure_generator import get_secure_generator
+    NEW_SECURITY_AVAILABLE = True
+except ImportError:
+    NEW_SECURITY_AVAILABLE = False
+
 def generate_with_external_llm(
     llm_name: str,
     task_prompt: str,
@@ -41,11 +48,26 @@ def generate_with_external_llm(
         "llm_used": llm_name
     }
     
-    # Check for security violations first
-    is_violation, violation_reason = check_security_violations(task_prompt)
-    if is_violation:
-        metrics["latency_seconds"] = time.time() - start_time
-        return {"abstain": True, "reason": f"Security violation: {violation_reason}", "metrics": metrics}
+    # Use new comprehensive security layer if available, fallback to old system
+    if NEW_SECURITY_AVAILABLE:
+        secure_gen = get_secure_generator()
+        security_validation = secure_gen.validate_input_security(task_prompt, index)
+        if not security_validation["is_secure"]:
+            metrics["latency_seconds"] = time.time() - start_time
+            return {
+                "abstain": True, 
+                "reason": f"Security validation failed: {security_validation['reason']}", 
+                "metrics": metrics,
+                "security_metrics": security_validation["metrics"]
+            }
+        # Use sanitized prompt for generation
+        task_prompt = security_validation["sanitized_prompt"]
+    else:
+        # Fallback to old security check
+        is_violation, violation_reason = check_security_violations(task_prompt)
+        if is_violation:
+            metrics["latency_seconds"] = time.time() - start_time
+            return {"abstain": True, "reason": f"Security violation: {violation_reason}", "metrics": metrics}
     
     # Get LLM manager
     manager = get_external_llm_manager()

@@ -5,6 +5,7 @@ import re
 import argparse
 from datetime import datetime, timedelta
 from pathlib import Path
+import time
 
 # Import shared field mapping utilities
 try:
@@ -15,6 +16,20 @@ except ImportError:
     from pathlib import Path
     sys.path.append(str(Path(__file__).parent.parent.parent))
     from src.generators.utils.field_mapping import FIELD_CORRECTIONS, correct_field_mappings
+
+# Import new security layer
+try:
+    from src.generators.secure_generator import get_secure_generator
+    NEW_SECURITY_AVAILABLE = True
+except ImportError:
+    NEW_SECURITY_AVAILABLE = False
+
+# Import old security check as fallback
+try:
+    from src.generators.constrained import check_security_violations
+    OLD_SECURITY_AVAILABLE = True
+except ImportError:
+    OLD_SECURITY_AVAILABLE = False
 
 def extract_date_patterns(prompt):
     """Extract date patterns from prompt"""
@@ -191,8 +206,54 @@ def main():
     
     args = parser.parse_args()
     
+    start_time = time.time()
+    
+    # Security check before generation
+    task_prompt = args.prompt
+    if NEW_SECURITY_AVAILABLE:
+        secure_gen = get_secure_generator()
+        security_validation = secure_gen.validate_input_security(task_prompt, None)
+        if not security_validation["is_secure"]:
+            # Write abstain result
+            abstain_result = {
+                "abstain": True,
+                "reason": f"Security validation failed: {security_validation['reason']}",
+                "metrics": {
+                    "method": "rules-based",
+                    "latency_seconds": time.time() - start_time,
+                    "security_metrics": security_validation["metrics"]
+                }
+            }
+            output_dir = Path(args.output_dir)
+            output_dir.mkdir(parents=True, exist_ok=True)
+            output_file = output_dir / f"rules_{args.task_id or 'output'}.json"
+            with open(output_file, 'w') as f:
+                json.dump(abstain_result, f, indent=2)
+            print(f"Generation abstained: {abstain_result['reason']}")
+            return
+        # Use sanitized prompt
+        task_prompt = security_validation["sanitized_prompt"]
+    elif OLD_SECURITY_AVAILABLE:
+        is_violation, violation_reason = check_security_violations(task_prompt)
+        if is_violation:
+            abstain_result = {
+                "abstain": True,
+                "reason": f"Security violation: {violation_reason}",
+                "metrics": {
+                    "method": "rules-based",
+                    "latency_seconds": time.time() - start_time
+                }
+            }
+            output_dir = Path(args.output_dir)
+            output_dir.mkdir(parents=True, exist_ok=True)
+            output_file = output_dir / f"rules_{args.task_id or 'output'}.json"
+            with open(output_file, 'w') as f:
+                json.dump(abstain_result, f, indent=2)
+            print(f"Generation abstained: {violation_reason}")
+            return
+    
     # Generate query
-    query = generate_rule_based_query(args.prompt)
+    query = generate_rule_based_query(task_prompt)
     
     # Apply field corrections
     query = correct_field_mappings(query)

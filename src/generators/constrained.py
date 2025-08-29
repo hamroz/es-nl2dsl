@@ -37,6 +37,13 @@ try:
 except ImportError:
     ADVANCED_SECURITY = False
 
+# Import new security layer
+try:
+    from src.generators.secure_generator import get_secure_generator
+    NEW_SECURITY_AVAILABLE = True
+except ImportError:
+    NEW_SECURITY_AVAILABLE = False
+
 FIELD_CATALOG = {
     "@timestamp": {"type": "date", "description": "Event timestamp"},
     "src_ip": {"type": "keyword", "description": "Source IP address"},
@@ -519,11 +526,26 @@ def generate_with_retries(task_prompt, schema_path, rules_path, max_retries=2, i
         "retry_reasons": []
     }
     
-    # Check for security violations and ambiguity first
-    is_violation, violation_reason = check_security_violations(task_prompt)
-    if is_violation:
-        metrics["latency_seconds"] = time.time() - start_time
-        return {"abstain": True, "reason": f"Security violation: {violation_reason}", "metrics": metrics}
+    # Use new comprehensive security layer if available, fallback to old system
+    if NEW_SECURITY_AVAILABLE:
+        secure_gen = get_secure_generator()
+        security_validation = secure_gen.validate_input_security(task_prompt, index)
+        if not security_validation["is_secure"]:
+            metrics["latency_seconds"] = time.time() - start_time
+            return {
+                "abstain": True, 
+                "reason": f"Security validation failed: {security_validation['reason']}", 
+                "metrics": metrics,
+                "security_metrics": security_validation["metrics"]
+            }
+        # Use sanitized prompt for generation
+        task_prompt = security_validation["sanitized_prompt"]
+    else:
+        # Fallback to old security check
+        is_violation, violation_reason = check_security_violations(task_prompt)
+        if is_violation:
+            metrics["latency_seconds"] = time.time() - start_time
+            return {"abstain": True, "reason": f"Security violation: {violation_reason}", "metrics": metrics}
     
     # Enhance prompt if CIC index and enhancer available
     enhanced_task_prompt = task_prompt

@@ -17,6 +17,20 @@ except ImportError:
     sys.path.append(str(Path(__file__).parent.parent.parent))
     from src.generators.utils.field_mapping import FIELD_CORRECTIONS, correct_field_mappings
 
+# Import new security layer
+try:
+    from src.generators.secure_generator import get_secure_generator
+    NEW_SECURITY_AVAILABLE = True
+except ImportError:
+    NEW_SECURITY_AVAILABLE = False
+
+# Import old security check as fallback
+try:
+    from src.generators.constrained import check_security_violations
+    OLD_SECURITY_AVAILABLE = True
+except ImportError:
+    OLD_SECURITY_AVAILABLE = False
+
 def call_model_zeroshot(prompt, model="llama3.1:latest"):
     """Call model with minimal prompt - no schema or examples"""
     # Very minimal prompt - just basic instructions
@@ -92,9 +106,53 @@ def main():
     print("Zero-shot generation (no schema, no examples)...")
     start_time = time.time()
     
+    # Security check before generation
+    task_prompt = args.prompt
+    if NEW_SECURITY_AVAILABLE:
+        secure_gen = get_secure_generator()
+        security_validation = secure_gen.validate_input_security(task_prompt, None)
+        if not security_validation["is_secure"]:
+            # Write abstain result
+            abstain_result = {
+                "abstain": True,
+                "reason": f"Security validation failed: {security_validation['reason']}",
+                "metrics": {
+                    "method": "zero-shot",
+                    "latency_seconds": time.time() - start_time,
+                    "security_metrics": security_validation["metrics"]
+                }
+            }
+            output_dir = Path(args.output_dir)
+            output_dir.mkdir(parents=True, exist_ok=True)
+            output_file = output_dir / f"zeroshot_{args.task_id or 'output'}.json"
+            with open(output_file, 'w') as f:
+                json.dump(abstain_result, f, indent=2)
+            print(f"Generation abstained: {abstain_result['reason']}")
+            return
+        # Use sanitized prompt
+        task_prompt = security_validation["sanitized_prompt"]
+    elif OLD_SECURITY_AVAILABLE:
+        is_violation, violation_reason = check_security_violations(task_prompt)
+        if is_violation:
+            abstain_result = {
+                "abstain": True,
+                "reason": f"Security violation: {violation_reason}",
+                "metrics": {
+                    "method": "zero-shot",
+                    "latency_seconds": time.time() - start_time
+                }
+            }
+            output_dir = Path(args.output_dir)
+            output_dir.mkdir(parents=True, exist_ok=True)
+            output_file = output_dir / f"zeroshot_{args.task_id or 'output'}.json"
+            with open(output_file, 'w') as f:
+                json.dump(abstain_result, f, indent=2)
+            print(f"Generation abstained: {violation_reason}")
+            return
+    
     try:
         # Call model
-        response = call_model_zeroshot(args.prompt, args.model)
+        response = call_model_zeroshot(task_prompt, args.model)
         
         # Extract JSON
         query = extract_json_from_response(response)
