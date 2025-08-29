@@ -459,6 +459,219 @@ def get_available_indices() -> List[str]:
     except Exception as e:
         return ["logs_net", "logs_cic_ids2017"]  # Fallback
 
+def get_all_indices_with_details() -> List[Dict[str, Any]]:
+    """Get detailed information about all Elasticsearch indices"""
+    try:
+        result = subprocess.run([
+            "curl", "-s", "-u", "elastic:ChangeMe_123",
+            "http://localhost:9200/_cat/indices?format=json&bytes=b"
+        ], capture_output=True, text=True, timeout=10)
+        
+        if result.returncode == 0:
+            indices = json.loads(result.stdout)
+            detailed_indices = []
+            
+            for idx in indices:
+                # Skip system indices (starting with .)
+                if idx["index"].startswith("."):
+                    continue
+                    
+                detailed_indices.append({
+                    "name": idx["index"],
+                    "health": idx["health"],
+                    "status": idx["status"],
+                    "uuid": idx["uuid"],
+                    "docs_count": int(idx.get("docs.count", 0) or 0),
+                    "docs_deleted": int(idx.get("docs.deleted", 0) or 0),
+                    "store_size": idx.get("store.size", "0b"),
+                    "pri_store_size": idx.get("pri.store.size", "0b"),
+                    "shards": int(idx.get("pri", 1)),
+                    "replicas": int(idx.get("rep", 0))
+                })
+            
+            return sorted(detailed_indices, key=lambda x: x["name"])
+        else:
+            logger.error(f"Failed to get indices: {result.stderr}")
+            return []
+    except Exception as e:
+        logger.error(f"Error getting index details: {e}")
+        return []
+
+def delete_elasticsearch_index(index_name: str) -> Tuple[bool, str]:
+    """Delete an Elasticsearch index"""
+    try:
+        # Use Elasticsearch client for safer deletion
+        es = get_elasticsearch_client()
+        
+        # Check if index exists first
+        if not es.indices.exists(index=index_name):
+            return False, f"Index '{index_name}' does not exist"
+        
+        # Delete the index
+        response = es.indices.delete(index=index_name)
+        
+        backend_logger.log_success("Index deleted", index_name=index_name)
+        return True, f"Index '{index_name}' deleted successfully"
+        
+    except Exception as e:
+        error_msg = f"Error deleting index '{index_name}': {str(e)}"
+        backend_logger.log_error("Index deletion failed", str(e), index_name=index_name)
+        return False, error_msg
+
+def create_dp_index(base_index: str, dp_ratio: float = 0.1) -> Tuple[bool, str]:
+    """Create a differentially private version of an index"""
+    try:
+        dp_index_name = f"{base_index}_dp"
+        
+        # Use the DP script if it exists
+        dp_script = Path("scripts/create_dp_index.py")
+        if dp_script.exists():
+            result = subprocess.run([
+                sys.executable, str(dp_script),
+                "--source", base_index,
+                "--target", dp_index_name,
+                "--ratio", str(dp_ratio)
+            ], capture_output=True, text=True, timeout=120)
+            
+            if result.returncode == 0:
+                backend_logger.log_success("DP index created", 
+                    base_index=base_index, dp_index=dp_index_name, ratio=dp_ratio)
+                return True, f"DP index '{dp_index_name}' created successfully"
+            else:
+                error_msg = f"DP index creation failed: {result.stderr}"
+                backend_logger.log_error("DP index creation failed", result.stderr,
+                                       base_index=base_index, dp_index=dp_index_name)
+                return False, error_msg
+        else:
+            # Simple implementation: copy with sampling
+            es = get_elasticsearch_client()
+            
+            # Create target index with same mapping
+            source_mapping = es.indices.get_mapping(index=base_index)
+            es.indices.create(index=dp_index_name, body={
+                "mappings": source_mapping[base_index]["mappings"]
+            })
+            
+            # Copy a sample of documents
+            sample_size = max(1, int(es.count(index=base_index)["count"] * dp_ratio))
+            
+            # Use random sampling query
+            sample_query = {
+                "query": {
+                    "function_score": {
+                        "query": {"match_all": {}},
+                        "random_score": {"seed": 42}
+                    }
+                }
+            }
+            
+            # Scroll through and copy documents
+            response = es.search(index=base_index, body=sample_query, size=min(sample_size, 1000), scroll="2m")
+            
+            docs_copied = 0
+            while response["hits"]["hits"]:
+                bulk_data = []
+                for hit in response["hits"]["hits"]:
+                    bulk_data.extend([
+                        {"index": {"_index": dp_index_name}},
+                        hit["_source"]
+                    ])
+                
+                if bulk_data:
+                    es.bulk(body=bulk_data)
+                    docs_copied += len(bulk_data) // 2
+                
+                if docs_copied >= sample_size:
+                    break
+                    
+                try:
+                    response = es.scroll(scroll_id=response["_scroll_id"], scroll="2m")
+                except:
+                    break
+            
+            backend_logger.log_success("DP index created via sampling", 
+                base_index=base_index, dp_index=dp_index_name, docs_copied=docs_copied)
+            return True, f"DP index '{dp_index_name}' created with {docs_copied} documents"
+            
+    except Exception as e:
+        error_msg = f"Error creating DP index: {str(e)}"
+        backend_logger.log_error("DP index creation error", str(e), base_index=base_index)
+        return False, error_msg
+
+def create_drift_index(base_index: str, drift_type: str = "temporal") -> Tuple[bool, str]:
+    """Create a drift simulation index"""
+    try:
+        drift_index_name = f"{base_index}_drift_{drift_type}"
+        
+        es = get_elasticsearch_client()
+        
+        # Get source mapping
+        source_mapping = es.indices.get_mapping(index=base_index)
+        
+        # Create drift index with same mapping
+        es.indices.create(index=drift_index_name, body={
+            "mappings": source_mapping[base_index]["mappings"]
+        })
+        
+        # Copy documents with modifications based on drift type
+        response = es.search(index=base_index, size=1000, scroll="2m")
+        
+        docs_copied = 0
+        while response["hits"]["hits"]:
+            bulk_data = []
+            for hit in response["hits"]["hits"]:
+                doc = hit["_source"].copy()
+                
+                # Apply drift modifications
+                if drift_type == "temporal":
+                    # Modify timestamps to simulate temporal drift
+                    if "@timestamp" in doc:
+                        from datetime import datetime, timedelta
+                        import random
+                        # Add random time offset
+                        offset_days = random.randint(30, 90)
+                        if isinstance(doc["@timestamp"], str):
+                            try:
+                                dt = datetime.fromisoformat(doc["@timestamp"].replace('Z', '+00:00'))
+                                new_dt = dt + timedelta(days=offset_days)
+                                doc["@timestamp"] = new_dt.isoformat()
+                            except:
+                                pass
+                
+                elif drift_type == "feature":
+                    # Modify feature values to simulate feature drift
+                    import random
+                    for field in ["src_port", "dst_port", "packet_length", "flow_duration"]:
+                        if field in doc and isinstance(doc[field], (int, float)):
+                            # Add random noise
+                            noise = random.uniform(0.9, 1.1)
+                            doc[field] = int(doc[field] * noise)
+                
+                bulk_data.extend([
+                    {"index": {"_index": drift_index_name}},
+                    doc
+                ])
+            
+            if bulk_data:
+                es.bulk(body=bulk_data)
+                docs_copied += len(bulk_data) // 2
+            
+            try:
+                response = es.scroll(scroll_id=response["_scroll_id"], scroll="2m")
+            except:
+                break
+        
+        backend_logger.log_success("Drift index created", 
+            base_index=base_index, drift_index=drift_index_name, 
+            drift_type=drift_type, docs_copied=docs_copied)
+        return True, f"Drift index '{drift_index_name}' created with {docs_copied} documents"
+        
+    except Exception as e:
+        error_msg = f"Error creating drift index: {str(e)}"
+        backend_logger.log_error("Drift index creation error", str(e), 
+                               base_index=base_index, drift_type=drift_type)
+        return False, error_msg
+
 def execute_elasticsearch_query(query: Dict[str, Any], index: str, max_size: int = 1000) -> Tuple[bool, Dict[str, Any]]:
     """Execute an Elasticsearch query and return results with metadata"""
     logger.info(f"🔍 Executing Elasticsearch query on index: {index}")

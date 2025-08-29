@@ -18,7 +18,10 @@ from gui.utils.logging_utils import get_gui_logger
 # Initialize component logger
 admin_logger = get_gui_logger("admin_panel")
 
-from gui.utils.backend_interface import check_system_status
+from gui.utils.backend_interface import (
+    check_system_status, get_all_indices_with_details, 
+    delete_elasticsearch_index, create_dp_index, create_drift_index
+)
 from gui.components.external_llm_panel import render_external_llm_panel
 
 def render_admin_panel():
@@ -349,17 +352,258 @@ def render_index_management_tab():
     st.subheader("🗂️ Index Management")
     
     # Refresh button
-    if st.button("🔄 Refresh Index List", type="primary"):
-        admin_logger.log_button_click("Refresh Index List")
-        st.session_state.pop("index_list", None)
-        st.toast("Index list refreshed!", icon="✅")
-        admin_logger.log_system_operation("Index list manually refreshed")
+    col1, col2, col3 = st.columns([1, 1, 2])
+    with col1:
+        if st.button("🔄 Refresh Index List", type="primary"):
+            admin_logger.log_button_click("Refresh Index List")
+            st.session_state.pop("index_details", None)
+            st.toast("Index list refreshed!", icon="✅")
+            admin_logger.log_system_operation("Index list manually refreshed")
+            st.rerun()
     
-    st.info("📋 Index management functionality preserved from original implementation")
-    st.write("This section includes:")
-    st.write("- View all indices with document counts")
-    st.write("- Create DP indices and drift indices")
-    st.write("- Index deletion with safety confirmations")
+    # Get detailed index information
+    if "index_details" not in st.session_state:
+        with st.spinner("Loading index information..."):
+            st.session_state.index_details = get_all_indices_with_details()
+    
+    indices = st.session_state.index_details
+    
+    if not indices:
+        st.warning("⚠️ No indices found or Elasticsearch is not accessible")
+        return
+    
+    # Index overview
+    st.markdown("### 📊 Index Overview")
+    
+    # Summary metrics
+    total_docs = sum(idx.get("docs_count", 0) for idx in indices)
+    total_indices = len(indices)
+    healthy_indices = len([idx for idx in indices if idx.get("health") == "green"])
+    
+    metric_col1, metric_col2, metric_col3, metric_col4 = st.columns(4)
+    with metric_col1:
+        st.metric("Total Indices", total_indices)
+    with metric_col2:
+        st.metric("Total Documents", f"{total_docs:,}")
+    with metric_col3:
+        st.metric("Healthy Indices", healthy_indices)
+    with metric_col4:
+        health_percentage = (healthy_indices / total_indices * 100) if total_indices > 0 else 0
+        st.metric("Health %", f"{health_percentage:.0f}%")
+    
+    # Index table
+    st.markdown("### 📋 All Indices")
+    
+    # Prepare data for display
+    display_data = []
+    for idx in indices:
+        # Format store size for display
+        store_size = idx.get("store_size", "0b")
+        if store_size.endswith("b"):
+            store_size = store_size[:-1]  # Remove 'b' suffix
+        
+        # Health status with emoji
+        health_emoji = {
+            "green": "🟢",
+            "yellow": "🟡", 
+            "red": "🔴"
+        }.get(idx.get("health", "unknown"), "⚪")
+        
+        display_data.append({
+            "Health": f"{health_emoji} {idx.get('health', 'unknown')}",
+            "Index Name": idx["name"],
+            "Documents": f"{idx.get('docs_count', 0):,}",
+            "Size": store_size,
+            "Shards": idx.get("shards", 1),
+            "Status": idx.get("status", "unknown")
+        })
+    
+    # Create DataFrame for display
+    df = pd.DataFrame(display_data)
+    
+    # Display with custom column config
+    st.dataframe(
+        df,
+        use_container_width=True,
+        hide_index=True,
+        column_config={
+            "Health": st.column_config.TextColumn("Health", width="small"),
+            "Index Name": st.column_config.TextColumn("Index Name", width="medium"),
+            "Documents": st.column_config.TextColumn("Documents", width="small"),
+            "Size": st.column_config.TextColumn("Size", width="small"),
+            "Shards": st.column_config.NumberColumn("Shards", width="small"),
+            "Status": st.column_config.TextColumn("Status", width="small")
+        }
+    )
+    
+    # Index operations
+    st.markdown("### ⚙️ Index Operations")
+    
+    # Create tabs for different operations
+    op_tab1, op_tab2, op_tab3 = st.tabs(["🗑️ Delete Index", "🔒 Create DP Index", "📈 Create Drift Index"])
+    
+    with op_tab1:
+        st.markdown("#### 🗑️ Delete Index")
+        st.warning("⚠️ **WARNING**: Index deletion is irreversible. All data will be lost.")
+        
+        # Select index to delete
+        deletable_indices = [idx["name"] for idx in indices]
+        if deletable_indices:
+            selected_delete_index = st.selectbox(
+                "Select index to delete:",
+                options=deletable_indices,
+                help="Choose the index you want to delete permanently"
+            )
+            
+            # Show index details
+            selected_idx_details = next((idx for idx in indices if idx["name"] == selected_delete_index), None)
+            if selected_idx_details:
+                st.info(f"📋 **Index Details**: {selected_idx_details['docs_count']:,} documents, {selected_idx_details.get('store_size', 'Unknown')} size")
+            
+            # Safety confirmation
+            confirm_delete = st.checkbox(f"I understand that deleting '{selected_delete_index}' is irreversible")
+            
+            # Delete button
+            if st.button("🗑️ DELETE INDEX", type="secondary", disabled=not confirm_delete):
+                admin_logger.log_button_click("Delete Index", index_name=selected_delete_index)
+                
+                with st.spinner(f"Deleting index '{selected_delete_index}'..."):
+                    success, message = delete_elasticsearch_index(selected_delete_index)
+                    
+                    if success:
+                        st.success(f"✅ {message}")
+                        admin_logger.log_success("Index deleted successfully", index_name=selected_delete_index)
+                        # Clear cached data and refresh
+                        st.session_state.pop("index_details", None)
+                        time.sleep(1)
+                        st.rerun()
+                    else:
+                        st.error(f"❌ {message}")
+                        admin_logger.log_error("Index deletion failed", message, index_name=selected_delete_index)
+        else:
+            st.info("No indices available for deletion")
+    
+    with op_tab2:
+        st.markdown("#### 🔒 Create Differentially Private Index")
+        st.info("Create a privacy-preserving version of an existing index with differential privacy techniques.")
+        
+        # Select source index
+        source_indices = [idx["name"] for idx in indices if not idx["name"].endswith("_dp")]
+        if source_indices:
+            selected_source_index = st.selectbox(
+                "Source index:",
+                options=source_indices,
+                help="Choose the source index to create a DP version from"
+            )
+            
+            # DP parameters
+            dp_col1, dp_col2 = st.columns(2)
+            with dp_col1:
+                dp_ratio = st.slider(
+                    "Sampling Ratio",
+                    min_value=0.01,
+                    max_value=1.0,
+                    value=0.1,
+                    step=0.01,
+                    help="Fraction of documents to include in DP index"
+                )
+            
+            with dp_col2:
+                # Show estimated output size
+                source_idx_details = next((idx for idx in indices if idx["name"] == selected_source_index), None)
+                if source_idx_details:
+                    estimated_docs = int(source_idx_details["docs_count"] * dp_ratio)
+                    st.metric("Estimated DP Docs", f"{estimated_docs:,}")
+            
+            # Create DP index button
+            dp_index_name = f"{selected_source_index}_dp"
+            
+            # Check if DP index already exists
+            dp_exists = any(idx["name"] == dp_index_name for idx in indices)
+            if dp_exists:
+                st.warning(f"⚠️ DP index '{dp_index_name}' already exists")
+            
+            if st.button("🔒 Create DP Index", type="primary", disabled=dp_exists):
+                admin_logger.log_button_click("Create DP Index", 
+                    source_index=selected_source_index, dp_ratio=dp_ratio)
+                
+                with st.spinner(f"Creating DP index '{dp_index_name}'..."):
+                    success, message = create_dp_index(selected_source_index, dp_ratio)
+                    
+                    if success:
+                        st.success(f"✅ {message}")
+                        admin_logger.log_success("DP index created successfully", 
+                            source_index=selected_source_index, dp_index=dp_index_name)
+                        # Clear cached data and refresh
+                        st.session_state.pop("index_details", None)
+                        time.sleep(1)
+                        st.rerun()
+                    else:
+                        st.error(f"❌ {message}")
+                        admin_logger.log_error("DP index creation failed", message,
+                                            source_index=selected_source_index)
+        else:
+            st.info("No source indices available for DP index creation")
+    
+    with op_tab3:
+        st.markdown("#### 📈 Create Drift Simulation Index")
+        st.info("Create an index with simulated data drift for testing drift detection algorithms.")
+        
+        # Select source index
+        drift_source_indices = [idx["name"] for idx in indices if not "_drift_" in idx["name"]]
+        if drift_source_indices:
+            selected_drift_source = st.selectbox(
+                "Source index:",
+                options=drift_source_indices,
+                help="Choose the source index to create a drift simulation from"
+            )
+            
+            # Drift parameters
+            drift_col1, drift_col2 = st.columns(2)
+            with drift_col1:
+                drift_type = st.selectbox(
+                    "Drift Type",
+                    options=["temporal", "feature"],
+                    help="Type of drift to simulate"
+                )
+            
+            with drift_col2:
+                # Show drift description
+                drift_descriptions = {
+                    "temporal": "Modifies timestamps to simulate temporal drift",
+                    "feature": "Adds noise to numeric features to simulate feature drift"
+                }
+                st.info(drift_descriptions[drift_type])
+            
+            # Create drift index button
+            drift_index_name = f"{selected_drift_source}_drift_{drift_type}"
+            
+            # Check if drift index already exists
+            drift_exists = any(idx["name"] == drift_index_name for idx in indices)
+            if drift_exists:
+                st.warning(f"⚠️ Drift index '{drift_index_name}' already exists")
+            
+            if st.button("📈 Create Drift Index", type="primary", disabled=drift_exists):
+                admin_logger.log_button_click("Create Drift Index",
+                    source_index=selected_drift_source, drift_type=drift_type)
+                
+                with st.spinner(f"Creating drift index '{drift_index_name}'..."):
+                    success, message = create_drift_index(selected_drift_source, drift_type)
+                    
+                    if success:
+                        st.success(f"✅ {message}")
+                        admin_logger.log_success("Drift index created successfully",
+                            source_index=selected_drift_source, drift_index=drift_index_name)
+                        # Clear cached data and refresh
+                        st.session_state.pop("index_details", None)
+                        time.sleep(1)
+                        st.rerun()
+                    else:
+                        st.error(f"❌ {message}")
+                        admin_logger.log_error("Drift index creation failed", message,
+                                            source_index=selected_drift_source)
+        else:
+            st.info("No source indices available for drift index creation")
 
 
 def get_all_cleanup_targets():

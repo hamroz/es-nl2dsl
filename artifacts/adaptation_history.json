@@ -1,31 +1,16 @@
 {
-  "adapt_1756427658_e427f267": {
-    "id": "adapt_1756427658_e427f267",
-    "timestamp": 1756427658.567776,
-    "file_name": "test-security-logs.csv",
+  "adapt_1756473742_3318857b": {
+    "id": "adapt_1756473742_3318857b",
+    "timestamp": 1756473742.7612538,
+    "file_name": "cybersecurity-threat-detection-logs.csv",
     "file_format": "csv",
-    "index_name": "logs_test_security",
+    "index_name": "logs_cybersecurity-threat-detection-logs",
     "status": "completed",
     "schema": {
       "format": "csv",
-      "sample_records": 100,
+      "total_columns": 10,
+      "sample_records": 1000,
       "fields": {
         "timestamp": {
-          "type": "datetime"
-        },
-        "source_ip": {
-          "type": "ip"
-        },
-        "action": {
-          "type": "text"
-        }
-      }
-    },
-    "ai_analysis": {},
-    "elasticsearch_mapping": {},
-    "document_count": 100,
-    "generated_queries": [],
-    "model_used": "\u2601\ufe0f gpt-4o-mini",
-    "notes": ""
-  }
-}
+          "type": "object",
+          "non_null_count": 
