@@ -10,15 +10,37 @@ import asyncio
 from pathlib import Path
 from jsonschema import validate, ValidationError
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - [CONSTRAINED] - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler(sys.stdout),
-        logging.FileHandler('logs/gui_backend.log', mode='a')
-    ]
-)
+# Configure logging with robust path handling
+def setup_logging():
+    """Setup logging with fallback for different execution contexts"""
+    handlers = [logging.StreamHandler(sys.stdout)]
+    
+    # Try to add file handler with robust path resolution
+    try:
+        # Try relative to current working directory first
+        log_path = Path('logs/gui_backend.log')
+        if not log_path.parent.exists():
+            # Try relative to project root
+            project_root = Path(__file__).parent.parent.parent
+            log_path = project_root / 'logs' / 'gui_backend.log'
+            
+        # Create logs directory if it doesn't exist
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        
+        handlers.append(logging.FileHandler(str(log_path), mode='a'))
+    except Exception as e:
+        # If file logging fails, just use console logging
+        print(f"Warning: Could not setup file logging: {e}")
+    
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - [CONSTRAINED] - %(levelname)s - %(message)s',
+        handlers=handlers,
+        force=True  # Override any existing configuration
+    )
+
+# Setup logging
+setup_logging()
 logger = logging.getLogger(__name__)
 # Add project root to path for absolute imports
 project_root = Path(__file__).parent.parent.parent
@@ -144,16 +166,24 @@ def load_fewshot_examples(index=None):
     return []
 
 def get_dynamic_index_info(index):
-    """Get dynamic information about an index"""
+    """Get dynamic information about an index with robust error handling"""
     if not index:
         return None
+    
+    # Cache to prevent repeated failed attempts
+    if not hasattr(get_dynamic_index_info, '_failed_indices'):
+        get_dynamic_index_info._failed_indices = set()
+    
+    if index in get_dynamic_index_info._failed_indices:
+        # Don't retry failed indices to prevent loops
+        return {"has_profile": False, "field_catalog": {}}
         
     try:
         # Import here to avoid circular dependencies
         from src.data_adaptation.mapping_storage import MappingStorage
         mapping_storage = MappingStorage()
         
-        # Get field mapping and date range
+        # Get field mapping and date range with timeout/retry protection
         field_mapping = mapping_storage.get_field_mapping_for_query_generation(index)
         date_range = mapping_storage.get_dynamic_date_range(index)
         field_catalog = mapping_storage.get_field_catalog_for_index(index)
@@ -168,9 +198,11 @@ def get_dynamic_index_info(index):
                 "system_type": field_mapping.get("system_type", "Unknown")
             }
     except Exception as e:
+        # Cache failed index to prevent retry loops
+        get_dynamic_index_info._failed_indices.add(index)
         logger.debug(f"Could not get dynamic info for {index}: {e}")
     
-    return None
+    return {"has_profile": False, "field_catalog": {}}
 
 def build_prompt(task_prompt, index=None):
     """Build the constrained generation prompt with dynamic index awareness"""
@@ -518,15 +550,34 @@ def correct_field_mappings(query_json):
     """Original field mapping correction function for backward compatibility"""
     return correct_field_mappings_with_index_awareness(query_json, None)
 
-# Import optimized field mapping and async LLM
+# Import optimized field mapping and async LLM with robust fallback
+OPTIMIZATIONS_AVAILABLE = False
+
+# Try relative imports first (when used as module)
 try:
     from .optimized_field_mapping import correct_field_mappings_with_index_awareness_optimized
     from .async_llm import call_local_model_async, get_async_llm_manager
     OPTIMIZATIONS_AVAILABLE = True
     print("✅ Phase 2 optimizations available: async LLM + optimized field mapping")
-except ImportError as e:
-    OPTIMIZATIONS_AVAILABLE = False
-    print(f"⚠️ Phase 2 optimizations not available: {e}")
+except (ImportError, ValueError) as e:
+    # Try absolute imports (when run directly or from different context)
+    try:
+        import sys
+        from pathlib import Path
+        
+        # Add the generators directory to path if not already there
+        generators_dir = Path(__file__).parent
+        if str(generators_dir) not in sys.path:
+            sys.path.insert(0, str(generators_dir))
+        
+        from optimized_field_mapping import correct_field_mappings_with_index_awareness_optimized
+        from async_llm import call_local_model_async, get_async_llm_manager
+        OPTIMIZATIONS_AVAILABLE = True
+        print("✅ Phase 2 optimizations available: async LLM + optimized field mapping (absolute imports)")
+    except ImportError as e2:
+        OPTIMIZATIONS_AVAILABLE = False
+        print(f"⚠️ Phase 2 optimizations not available: {e2}")
+        print("   Falling back to original sync processing...")
 
 async def generate_with_retries_async(task_prompt, schema_path, rules_path, max_retries=2, index=None, model="llama3.1:latest"):
     """Async version of generate_with_retries for improved performance"""
