@@ -50,6 +50,12 @@ class ContextValidator:
             (r'(?i)\b(audit|check|verify|validate)\s+.*(compliance|security|access)', 'compliance_check'),
             (r'(?i)\b(hunt|search|look\s+for)\s+.*(indicators|iocs|artifacts)', 'threat_hunting'),
             (r'(?i)\b(forensic|digital\s+investigation|evidence)', 'forensic_analysis'),
+            # Network analysis patterns (legitimate cybersecurity use cases)
+            (r'(?i)\b(find|show|get|search)\s+.*(traffic|network|connection|flow)', 'network_analysis'),
+            (r'(?i)\b(filter|query)\s+.*(events|data|logs|activity)', 'log_analysis'),
+            (r'(?i)\b(from|to|with)\s+.*(ip|address|port|protocol)', 'network_filtering'),
+            (r'(?i)\b(events|data|logs|activity)\s+.*(from|to|with|on)', 'data_analysis'),
+            (r'(?i)\b(yesterday|today|recent|between|during|time)', 'temporal_analysis'),
         ]
         self.compiled_security_patterns = [(re.compile(p), ctx) for p, ctx in self.security_context_patterns]
         
@@ -146,12 +152,18 @@ class ContextValidator:
             if re.search(pattern, text):
                 return False, f"Out of scope: {pattern}"
         
-        # Must contain security-related terms
+        # Must contain security-related terms or legitimate network analysis terms
         security_terms = [
             'security', 'attack', 'threat', 'malicious', 'intrusion',
             'breach', 'vulnerability', 'incident', 'forensic', 'audit',
             'monitor', 'detect', 'analyze', 'investigate', 'log', 'pattern',
-            'suspicious', 'anomalous', 'indicators', 'compromise'
+            'suspicious', 'anomalous', 'indicators', 'compromise',
+            # Network analysis terms (legitimate for cybersecurity)
+            'traffic', 'network', 'connection', 'flow', 'packet', 'bytes',
+            'port', 'protocol', 'ip', 'address', 'src', 'dst', 'source', 'destination',
+            'events', 'activity', 'data', 'query', 'search', 'find', 'show', 'get',
+            # Time-based analysis terms
+            'yesterday', 'today', 'recent', 'between', 'during', 'time', 'range'
         ]
         
         text_lower = text.lower()
