@@ -23,7 +23,6 @@ class AdaptationRecord:
     ai_analysis: Dict[str, Any]
     elasticsearch_mapping: Dict[str, Any]
     document_count: int
-    generated_queries: List[Dict[str, Any]]
     model_used: str
     notes: str = ""
     
@@ -162,7 +161,6 @@ class AdaptationHistory:
             ai_analysis={},
             elasticsearch_mapping={},
             document_count=0,
-            generated_queries=[],
             model_used=model_used
         )
         

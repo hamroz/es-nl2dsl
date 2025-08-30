@@ -45,8 +45,7 @@ class MappingStorage:
                 "field_patterns": mapping_info.get("field_patterns", {}),
                 "ai_analysis": mapping_info.get("ai_analysis", {}),
                 "elasticsearch_mapping": mapping_info.get("elasticsearch_mapping", {}),
-                "common_fields": self._extract_common_fields(mapping_info),
-                "query_suggestions": mapping_info.get("query_suggestions", [])
+                "common_fields": self._extract_common_fields(mapping_info)
             }
             
             # Add timestamp
@@ -180,13 +179,7 @@ class MappingStorage:
         
         return common_fields
     
-    def update_query_suggestions(self, index_name: str, suggestions: List[Dict[str, Any]]) -> bool:
-        """Update query suggestions for an index"""
-        mapping = self.get_index_mapping(index_name)
-        if mapping:
-            mapping["query_suggestions"] = suggestions
-            return self.store_index_mapping(index_name, mapping)
-        return False
+
     
     def delete_index_mapping(self, index_name: str) -> bool:
         """Delete mapping information for an index"""

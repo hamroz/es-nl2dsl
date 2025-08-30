@@ -18,10 +18,9 @@ def render_multimodal_dashboard():
     st.markdown("Adapt the system to new log data from any source with AI assistance")
     
     # Main workflow tabs
-    tab1, tab2, tab3, tab4 = st.tabs([
+    tab1, tab2, tab3 = st.tabs([
         "📁 Data Analysis", 
         "🔄 Data Ingestion", 
-        "🎯 Query Generation",
         "📚 History"
     ])
     
@@ -32,9 +31,6 @@ def render_multimodal_dashboard():
         render_data_ingestion_tab()
     
     with tab3:
-        render_query_generation_tab()
-    
-    with tab4:
         render_history_tab()
 
 
@@ -361,8 +357,7 @@ def render_data_ingestion_tab():
                     "schema": schema,
                     "field_patterns": schema.get('detected_patterns', {}),
                     "ai_analysis": getattr(st.session_state, 'ai_analysis', {}),
-                    "elasticsearch_mapping": es_mapping,
-                    "query_suggestions": []
+                    "elasticsearch_mapping": es_mapping
                 }
                 
                 mapping_storage.store_index_mapping(index_name, mapping_info)
@@ -412,172 +407,7 @@ def render_data_ingestion_tab():
         Path(temp_path).unlink(missing_ok=True)
 
 
-def render_query_generation_tab():
-    """Render AI-assisted query generation tab"""
-    st.subheader("🎯 Generate Queries for New Data")
-    st.markdown("Use AI to generate useful queries for your newly ingested data")
-    
-    # Show current session status if available
-    if hasattr(st.session_state, 'current_adaptation_id'):
-        from src.data_adaptation.adaptation_history import get_adaptation_history
-        history = get_adaptation_history()
-        record = history.get_record(st.session_state.current_adaptation_id)
-        if record:
-            st.info(f"📋 Current session: {record.get_status_emoji()} {record.get_display_name()} ({record.status})")
-    
-    # Check if data has been ingested
-    if not hasattr(st.session_state, 'ingested_index'):
-        st.warning("⚠️ Please ingest data in the **Data Ingestion** tab first")
-        return
-    
-    index_name = st.session_state.ingested_index
-    schema = st.session_state.analyzed_schema
-    
-    # Display index info
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.metric("Index Name", index_name)
-    with col2:
-        if hasattr(st.session_state, 'ingestion_result'):
-            st.metric("Documents", st.session_state.ingestion_result.get('successful', 0))
-    with col3:
-        st.metric("Fields", len(schema.get('fields', {})))
-    
-    # AI-assisted query generation
-    st.markdown("### 🤖 AI-Assisted Query Generation")
-    
-    user_request = st.text_area(
-        "Describe what you want to find",
-        placeholder="e.g., 'Show me failed login attempts from the last 24 hours'",
-        help="Describe in natural language what kind of queries you need"
-    )
-    
-    # AI Model selection
-    from gui.utils.backend_interface import get_all_available_models
-    all_models = get_all_available_models()
-    
-    ai_model = st.selectbox(
-        "AI Model",
-        all_models,
-        key="query_gen_model"
-    )
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        if st.button("🎯 Enhanced AI Queries", type="primary") and user_request:
-            model_name = ai_model  # Keep the full model name with emoji prefix
-            
-            with st.spinner("Generating enhanced queries with AI..."):
-                from src.data_adaptation.ai_assistant import AIAssistant
-                ai_assistant = AIAssistant()
-                
-                # Use enhanced query generation
-                query_result = ai_assistant.generate_enhanced_queries(schema, user_request, model_name)
-                
-                if query_result["success"]:
-                    st.session_state.generated_queries = query_result["generated_queries"]
-                    st.session_state.query_context = query_result.get("schema_context", {})
-                    
-                    st.success(f"✅ Generated {len(query_result['generated_queries'])} enhanced queries!")
-                    
-                    # Show domain detection
-                    domain = query_result.get("schema_context", {}).get("domain", "general")
-                    st.info(f"🎯 Detected domain: **{domain.title()}** - queries optimized for this context")
-                    
-                    # Update history record with generated queries
-                    if hasattr(st.session_state, 'current_adaptation_id'):
-                        from src.data_adaptation.adaptation_history import get_adaptation_history
-                        history = get_adaptation_history()
-                        history.update_record(
-                            st.session_state.current_adaptation_id,
-                            generated_queries=query_result["generated_queries"],
-                            status="completed"
-                        )
-                else:
-                    st.error(f"Query generation failed: {query_result.get('error', 'Unknown error')}")
-    
-    with col2:
-        if st.button("⚡ Smart Query Suggestions", type="secondary"):
-            with st.spinner("Generating field-aware suggestions..."):
-                from src.data_adaptation.ai_assistant import AIAssistant
-                ai_assistant = AIAssistant()
-                
-                # Generate field-aware suggestions
-                suggestions = ai_assistant.suggest_field_aware_queries(schema)
-                
-                if suggestions:
-                    st.session_state.generated_queries = suggestions
-                    st.session_state.query_context = {"source": "field_aware_suggestions"}
-                    
-                    st.success(f"✅ Generated {len(suggestions)} smart suggestions!")
-                    
-                    # Show suggestion categories
-                    categories = set(q.get('category', 'general') for q in suggestions)
-                    st.info(f"📊 Categories: {', '.join(categories)}")
-    
-    # Display generated queries
-    if hasattr(st.session_state, 'generated_queries'):
-        st.markdown("---")
-        st.markdown("### 📝 Generated Queries")
-        
-        # Query source info
-        if hasattr(st.session_state, 'query_context'):
-            context = st.session_state.query_context
-            if context.get("source") == "field_aware_suggestions":
-                st.info("💡 These are smart field-aware suggestions based on your data schema")
-            elif context.get("domain"):
-                st.info(f"🎯 AI-generated queries for **{context['domain']}** domain")
-        
-        for i, query in enumerate(st.session_state.generated_queries):
-            # Enhanced query header with category and complexity
-            query_name = query.get('name', f'Query {i+1}')
-            category = query.get('category', '')
-            complexity = query.get('complexity', '')
-            
-            header_parts = [query_name]
-            if category:
-                header_parts.append(f"[{category}]")
-            if complexity:
-                header_parts.append(f"({complexity})")
-            
-            header = " ".join(header_parts)
-            
-            with st.expander(f"🔍 {header}"):
-                col1, col2 = st.columns([3, 1])
-                
-                with col1:
-                    st.markdown(f"**Description:** {query.get('description', 'No description')}")
-                    
-                    # Show use case if available
-                    if query.get('use_case'):
-                        st.markdown(f"**Use Case:** {query['use_case']}")
-                    
-                    # Show performance hints if available
-                    if query.get('performance_hints'):
-                        st.markdown("**💡 Performance Hints:**")
-                        for hint in query['performance_hints']:
-                            st.info(f"💡 {hint}")
-                
-                with col2:
-                    if query.get('category'):
-                        st.markdown(f"**📊 Category:** `{query['category']}`")
-                    if query.get('complexity'):
-                        complexity_colors = {
-                            'basic': '🟢',
-                            'intermediate': '🟡', 
-                            'advanced': '🔴'
-                        }
-                        icon = complexity_colors.get(query['complexity'], '⚪')
-                        st.markdown(f"**🎯 Complexity:** {icon} `{query['complexity']}`")
-                
-                # Query DSL
-                st.markdown("**Elasticsearch DSL:**")
-                st.code(json.dumps(query.get('dsl', {}), indent=2), language="json")
-                
-                # Test button
-                if st.button(f"🧪 Test Query", key=f"test_{i}"):
-                    test_query_on_index(query.get('dsl', {}), index_name)
+
 
 
 def render_history_tab():
@@ -693,14 +523,7 @@ def render_history_tab():
                     field_list.append(f"• ... and {len(fields) - 10} more fields")
                 st.markdown("\n".join(field_list))
             
-            # Show generated queries
-            if record.generated_queries:
-                st.markdown(f"**🎯 Generated Queries ({len(record.generated_queries)}):**")
-                for i, query in enumerate(record.generated_queries):
-                    st.markdown(f"  {i+1}. **{query.get('name', 'Unnamed')}** - *{query.get('description', 'No description')}*")
-                    if st.button(f"Test Query {i+1}", key=f"test_{record.id}_{i}"):
-                        if record.index_name:
-                            test_query_on_index(query.get('dsl', {}), record.index_name)
+
 
 
 def load_session_to_current(record):
@@ -725,9 +548,7 @@ def load_session_to_current(record):
             "errors": 0
         }
     
-    # Load generated queries if available
-    if record.generated_queries:
-        st.session_state.generated_queries = record.generated_queries
+
 
 
 def display_schema_analysis(schema):
