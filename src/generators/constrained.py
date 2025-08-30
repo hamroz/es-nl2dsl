@@ -132,25 +132,86 @@ def enhance_prompt_with_field_matching(task_prompt, index_name):
         matcher = get_field_matcher()
         constraints = matcher.extract_field_value_pairs(task_prompt, available_field_names)
         
-        if not constraints:
+        # Analyze boolean logic
+        boolean_logic = matcher.analyze_boolean_logic(task_prompt)
+        
+        # Extract special constraint types
+        negated_constraints = matcher.extract_negated_constraints(task_prompt, available_field_names)
+        range_constraints = matcher.extract_range_constraints(task_prompt, available_field_names)
+        
+        # Combine all constraints
+        all_constraints = constraints + negated_constraints + range_constraints
+        
+        if not all_constraints:
             return task_prompt
         
         # Build enhanced prompt with field mappings
         enhanced_prompt = task_prompt + "\n\n"
-        enhanced_prompt += "DETECTED FIELD MAPPINGS:\n"
+        enhanced_prompt += "=" * 60 + "\n"
+        enhanced_prompt += "MANDATORY FIELD MAPPINGS - USE EXACTLY AS SPECIFIED:\n"
+        enhanced_prompt += "=" * 60 + "\n"
         
-        for constraint in constraints:
-            field_match = constraint['field_match']
-            value = constraint['value']
-            original = constraint['original_text']
-            confidence = field_match['confidence']
-            
-            enhanced_prompt += f"- '{original}' → {field_match['field']}:'{value}' (confidence: {confidence:.2f})\n"
-            
-            logger.info(f"Field mapping: '{original}' → {field_match['field']} (confidence: {confidence:.2f})")
+        # Add boolean logic information
+        if boolean_logic['complexity'] == 'complex':
+            enhanced_prompt += f"BOOLEAN LOGIC: {boolean_logic['primary_logic']} logic detected\n"
+            if boolean_logic['has_or']:
+                enhanced_prompt += "- Use 'should' clauses for OR conditions\n"
+            if boolean_logic['has_not']:
+                enhanced_prompt += "- Use 'must_not' clauses for NOT/excluded conditions\n"
+            enhanced_prompt += "\n"
         
-        enhanced_prompt += "\nIMPORTANT: You MUST use these exact field mappings in your query.\n"
-        enhanced_prompt += "Do NOT use any other field names - only use the fields specified above.\n"
+        # Regular constraints
+        if constraints:
+            enhanced_prompt += "POSITIVE CONSTRAINTS (use 'filter' or 'must'):\n"
+            for constraint in constraints:
+                field_match = constraint['field_match']
+                value = constraint['value']
+                original = constraint['original_text']
+                confidence = field_match['confidence']
+                
+                enhanced_prompt += f"'{original}' → MUST use field '{field_match['field']}' with value '{value}'\n"
+                logger.info(f"Field mapping: '{original}' → {field_match['field']} (confidence: {confidence:.2f})")
+        
+        # Negated constraints
+        if negated_constraints:
+            enhanced_prompt += "\nNEGATED CONSTRAINTS (use 'must_not'):\n"
+            for constraint in negated_constraints:
+                field_match = constraint['field_match']
+                value = constraint.get('value', 'any')
+                original = constraint['original_text']
+                
+                enhanced_prompt += f"'{original}' → MUST use 'must_not' with field '{field_match['field']}'"
+                if value:
+                    enhanced_prompt += f" and value '{value}'"
+                enhanced_prompt += "\n"
+                logger.info(f"Negated constraint: '{original}' → must_not {field_match['field']}")
+        
+        # Range constraints
+        if range_constraints:
+            enhanced_prompt += "\nRANGE CONSTRAINTS (use 'range'):\n"
+            for constraint in range_constraints:
+                field_match = constraint['field_match']
+                original = constraint['original_text']
+                range_type = constraint['range_type']
+                
+                if range_type == 'between':
+                    enhanced_prompt += f"'{original}' → MUST use 'range' with field '{field_match['field']}' gte:{constraint['value_min']} lte:{constraint['value_max']}\n"
+                elif range_type == 'gt':
+                    enhanced_prompt += f"'{original}' → MUST use 'range' with field '{field_match['field']}' gt:{constraint['value']}\n"
+                elif range_type == 'lt':
+                    enhanced_prompt += f"'{original}' → MUST use 'range' with field '{field_match['field']}' lt:{constraint['value']}\n"
+                
+                logger.info(f"Range constraint: '{original}' → range {field_match['field']}")
+        
+        enhanced_prompt += "\n" + "=" * 60 + "\n"
+        enhanced_prompt += "CRITICAL INSTRUCTIONS:\n"
+        enhanced_prompt += "1. You MUST use ONLY the field names listed above\n"
+        enhanced_prompt += "2. Do NOT substitute with similar fields (e.g., do NOT use 'label' when 'log_type.keyword' is specified)\n"
+        enhanced_prompt += "3. Do NOT use any field names not explicitly provided above\n"
+        enhanced_prompt += "4. If a field mapping specifies '.keyword', use the .keyword version exactly\n"
+        enhanced_prompt += "5. Follow the exact field→value mappings shown above\n"
+        enhanced_prompt += "6. Use appropriate ES query structures: 'filter' for AND, 'should' for OR, 'must_not' for NOT\n"
+        enhanced_prompt += "=" * 60 + "\n"
         
         return enhanced_prompt
         

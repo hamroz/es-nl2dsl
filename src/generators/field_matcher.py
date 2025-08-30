@@ -280,37 +280,66 @@ class FieldMatcher:
         """
         constraints = []
         
-        # Patterns to match field-value pairs (ordered by specificity)
+        # Enhanced patterns to match field-value pairs (ordered by specificity)
         patterns = [
-            # Special IP patterns (most specific first)
-            r'\b(?:source\s+ip|src\s+ip|from\s+ip|source)\s+((?:\d{1,3}\.){3}\d{1,3})\b',
-            r'\b(?:dest\s+ip|dst\s+ip|destination\s+ip|to\s+ip|destination)\s+((?:\d{1,3}\.){3}\d{1,3})\b',
-            r'\b(?:ip|address)\s+((?:\d{1,3}\.){3}\d{1,3})\b',
-            r'\b((?:\d{1,3}\.){3}\d{1,3})\b',  # Standalone IP
+            # Special IP patterns (most specific first) with context
+            r'\b(?:source\s+ip|src\s+ip|from\s+ip|source|originating\s+from)\s+(?:is\s+|address\s+)?([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})\b',
+            r'\b(?:dest\s+ip|dst\s+ip|destination\s+ip|to\s+ip|destination|targeting)\s+(?:is\s+|address\s+)?([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})\b',
+            r'\b(?:ip|address)\s+(?:is\s+)?([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})\b',
+            r'\b([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})\b',  # Standalone IP
             
-            # Port patterns
-            r'\bport\s+(\d+)\b',
+            # Port patterns with ranges and lists
+            r'\bports?\s+(?:are\s+|in\s+|include\s+)?(\d+(?:\s*,\s*\d+)*|\d+-\d+)\b',
+            r'\b(?:source\s+port|src\s+port|from\s+port)\s+(?:is\s+)?(\d+)\b',
+            r'\b(?:dest\s+port|dst\s+port|destination\s+port|to\s+port|target\s+port)\s+(?:is\s+)?(\d+)\b',
+            r'\bport\s+(?:is\s+)?(\d+)\b',
             
-            # Protocol patterns  
-            r'\bprotocol\s+(\w+)\b',
+            # Protocol patterns with variations
+            r'\b(?:protocol|proto)\s+(?:is\s+|equals\s+)?(\w+)\b',
+            r'\b(tcp|udp|icmp|http|https|ssh|ftp|dns)\s+(?:traffic|packets|connections)\b',
             
-            # Explicit field-value patterns
-            r'\b(log\s+type|event\s+type|message\s+type)\s+(?:is\s+)?(\w+)\b',
-            r'\b(action|status|result)\s+(?:is\s+)?(\w+)\b',
-            r'\b(user|username)\s+(?:is\s+|contains\s+)?(\w+)\b',
-            r'\b(host|hostname|server)\s+(?:is\s+)?(\w+)\b',
+            # Enhanced field-value patterns with more natural language
+            r'\b(log\s+type|event\s+type|message\s+type|record\s+type|entry\s+type)\s+(?:is\s+|equals\s+|of\s+|contains\s+)?(?:"([^"]+)"|(\w+))\b',
+            r'\b(action|activity|operation|verb)\s+(?:is\s+|was\s+|equals\s+|performed\s+)?(?:"([^"]+)"|(\w+))\b',
+            r'\b(status|state|result|outcome|response)\s+(?:is\s+|was\s+|equals\s+|shows\s+)?(?:"([^"]+)"|(\w+))\b',
+            r'\b(user|username|account|login)\s+(?:is\s+|was\s+|contains\s+|named\s+|equals\s+)?(?:"([^"]+)"|(\w+))\b',
+            r'\b(host|hostname|server|machine|computer)\s+(?:is\s+|was\s+|named\s+|equals\s+)?(?:"([^"]+)"|(\w+))\b',
             
-            # General "field is value" patterns
-            r'\b(\w+(?:\s+\w+){0,2})\s+(?:is|equals?)\s+(\w+)\b',
+            # Threat/Security specific patterns
+            r'\b(threat|alert|warning|risk)\s+(?:is\s+|type\s+|level\s+|classified\s+as\s+)?(?:"([^"]+)"|(\w+))\b',
+            r'\b(malware|virus|trojan|attack)\s+(?:type\s+|named\s+|called\s+|is\s+)?(?:"([^"]+)"|(\w+))\b',
+            r'\b(severity|priority|confidence|score)\s+(?:is\s+|level\s+|of\s+|equals\s+)?(\d+(?:\.\d+)?|\w+)\b',
             
-            # "with field value" patterns
-            r'\bwith\s+(\w+(?:\s+\w+){0,2})\s+(\w+)\b',
+            # Firewall/Network specific patterns  
+            r'\b(firewall|fw)\s+(?:action\s+|rule\s+|policy\s+)?(?:is\s+|shows\s+|equals\s+)?(?:"([^"]+)"|(\w+))\b',
+            r'\b(?:traffic|connection|session)\s+(?:is\s+|was\s+|marked\s+as\s+)?(?:allowed|permitted|denied|blocked|dropped)\b',
             
-            # "where field = value" patterns
-            r'\bwhere\s+(\w+(?:\s+\w+){0,2})\s*[=:]\s*(\w+)\b',
+            # Byte/Size patterns with operators
+            r'\b(bytes|size|length|data)\s+(?:transferred\s+|sent\s+|received\s+)?(?:is\s+|equals\s+|greater\s+than\s+|less\s+than\s+|over\s+|under\s+|above\s+|below\s+)?([0-9]+(?:\.[0-9]+)?[kmgtKMGT]?[bB]?)\b',
             
-            # "field:value" or "field=value" notation
-            r'\b(\w+(?:\s+\w+){0,2})[=:]\s*(\w+)\b',
+            # Time/Date patterns
+            r'\b(?:on\s+|during\s+|at\s+|date\s+|time\s+)(\d{4}-\d{2}-\d{2}(?:\s+\d{2}:\d{2}:\d{2})?|\d{2}/\d{2}/\d{4})\b',
+            r'\b(today|yesterday|last\s+week|this\s+week|last\s+month|this\s+month)\b',
+            
+            # Comparison operators with fields
+            r'\b(\w+(?:\s+\w+){0,2})\s+(greater\s+than|more\s+than|over|above|less\s+than|below|under)\s+([0-9]+(?:\.[0-9]+)?)\b',
+            r'\b(\w+(?:\s+\w+){0,2})\s+(equals?|is|matches?)\s+(?:"([^"]+)"|(\w+))\b',
+            
+            # Range patterns
+            r'\b(\w+(?:\s+\w+){0,2})\s+(?:between|from)\s+([0-9]+(?:\.[0-9]+)?)\s+(?:and|to)\s+([0-9]+(?:\.[0-9]+)?)\b',
+            
+            # "with/having field value" patterns
+            r'\b(?:with|having)\s+(\w+(?:\s+\w+){0,2})\s+(?:of\s+|equals?\s+|is\s+)?(?:"([^"]+)"|(\w+))\b',
+            
+            # "where field = value" patterns with various operators
+            r'\bwhere\s+(\w+(?:\s+\w+){0,2})\s*([=:<>!]+|equals?|is|contains?|matches?)\s*(?:"([^"]+)"|(\w+))\b',
+            
+            # SQL-like patterns
+            r'\b(\w+(?:\s+\w+){0,2})\s*([=:<>!]+)\s*(?:"([^"]+)"|(\w+))\b',
+            
+            # List patterns (field in [value1, value2])
+            r'\b(\w+(?:\s+\w+){0,2})\s+(?:in|includes?|contains?|any\s+of)\s*\[\s*([^[\]]+)\s*\]\b',
+            r'\b(\w+(?:\s+\w+){0,2})\s+(?:in|includes?|contains?|any\s+of)\s*\(([^()]+)\)\b',
         ]
         
         processed_spans = set()  # Track processed text spans to avoid duplicates
@@ -326,47 +355,102 @@ class FieldMatcher:
                 
                 processed_spans.add(span)
                 
-                if len(match.groups()) == 1:
-                    # Special patterns (IP, port, etc.)
-                    value = match.group(1)
-                    context = prompt[max(0, match.start()-20):match.end()+20].lower()
+                # Extract field hint and value from match groups
+                field_hint = None
+                value = None
+                
+                groups = [g for g in match.groups() if g is not None]
+                
+                if len(groups) == 1:
+                    # Single group - could be IP, port, or standalone value
+                    potential_value = groups[0].strip()
+                    context = prompt[max(0, match.start()-30):match.end()+30].lower()
                     
-                    # Determine field based on context
-                    if re.search(r'\b(?:\d{1,3}\.){3}\d{1,3}\b', value):
-                        # IP address
-                        if 'source' in context or 'src' in context or 'from' in context:
+                    if re.match(r'^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$', potential_value):
+                        # IP address - determine field from context or pattern
+                        if any(term in pattern for term in ['source', 'src', 'from', 'originating']):
+                            field_hint = 'source ip'
+                        elif any(term in pattern for term in ['dest', 'dst', 'destination', 'to', 'targeting']):
+                            field_hint = 'destination ip'
+                        elif 'source' in context or 'src' in context or 'from' in context:
                             field_hint = 'source ip'
                         elif 'dest' in context or 'dst' in context or 'to' in context:
-                            field_hint = 'destination ip'
+                            field_hint = 'destination ip'  
                         else:
                             field_hint = 'ip'
-                    elif value.isdigit():
-                        # Port number
-                        field_hint = 'port'
+                        value = potential_value
+                        
+                    elif potential_value.isdigit():
+                        # Port number - determine field from context or pattern
+                        if any(term in pattern for term in ['source_port', 'src_port', 'from_port']):
+                            field_hint = 'source port'
+                        elif any(term in pattern for term in ['dest_port', 'dst_port', 'destination_port', 'target_port']):
+                            field_hint = 'destination port'
+                        else:
+                            field_hint = 'port'
+                        value = potential_value
+                        
+                    elif potential_value.lower() in ['tcp', 'udp', 'icmp', 'http', 'https', 'ssh', 'ftp', 'dns']:
+                        # Protocol
+                        field_hint = 'protocol'
+                        value = potential_value.upper()
+                        
+                    elif re.match(r'^\d{4}-\d{2}-\d{2}', potential_value) or re.match(r'^\d{2}/\d{2}/\d{4}', potential_value):
+                        # Date
+                        field_hint = 'timestamp'
+                        value = potential_value
+                        
+                    elif potential_value.lower() in ['today', 'yesterday', 'last week', 'this week', 'last month', 'this month']:
+                        # Relative time
+                        field_hint = 'timestamp'
+                        value = potential_value
+                        
                     else:
+                        # Skip unknown single values
                         continue
-                    
-                    field_match = self.smart_match(field_hint, available_fields)
-                    if field_match:
-                        constraints.append({
-                            'field_match': field_match,
-                            'value': value,
-                            'original_text': match.group(0),
-                            'position': span
-                        })
                 
-                elif len(match.groups()) == 2:
+                elif len(groups) >= 2:
                     # Field-value pairs
-                    field_hint = match.group(1).strip()
-                    value = match.group(2).strip()
+                    field_hint = groups[0].strip() if groups[0] else None
                     
+                    # Handle patterns with multiple capture groups for values
+                    # Find the first non-empty value group
+                    for i in range(1, len(groups)):
+                        if groups[i] and groups[i].strip():
+                            value = groups[i].strip()
+                            break
+                    
+                    # Special handling for firewall patterns
+                    if not field_hint and 'firewall' in match.group(0).lower():
+                        field_hint = 'action'
+                        # Extract value from firewall context
+                        firewall_match = re.search(r'(allowed|permitted|denied|blocked|dropped)', match.group(0), re.IGNORECASE)
+                        if firewall_match:
+                            value = firewall_match.group(1).lower()
+                    
+                    # Special handling for comparison operators
+                    if len(groups) >= 3 and groups[1]:
+                        operator = groups[1].strip().lower()
+                        if operator in ['greater than', 'more than', 'over', 'above']:
+                            # Convert to range query hint
+                            value = f">{value}"
+                        elif operator in ['less than', 'below', 'under']:
+                            value = f"<{value}"
+                        elif operator in ['between', 'from']:
+                            # Handle range queries
+                            if len(groups) >= 4 and groups[3]:
+                                value = f"{value}-{groups[3]}"
+                
+                # Try to match field if we have both field hint and value
+                if field_hint and value:
                     field_match = self.smart_match(field_hint, available_fields)
                     if field_match:
                         constraints.append({
                             'field_match': field_match,
                             'value': value,
                             'original_text': match.group(0),
-                            'position': span
+                            'position': span,
+                            'operator': 'term'  # Default, can be enhanced based on pattern
                         })
         
         # Remove duplicates based on field and value
@@ -446,6 +530,143 @@ class FieldMatcher:
         # Sort by confidence and return top matches
         suggestions.sort(key=lambda x: x['confidence'], reverse=True)
         return suggestions[:max_suggestions]
+    
+    def analyze_boolean_logic(self, prompt: str) -> Dict[str, any]:
+        """
+        Analyze boolean logic patterns in the prompt (AND, OR, NOT)
+        
+        Returns:
+            Dictionary with boolean logic information
+        """
+        prompt_lower = prompt.lower()
+        
+        # Detect boolean connectors
+        has_and = bool(re.search(r'\b(?:and|with|plus|also|additionally)\b', prompt_lower))
+        has_or = bool(re.search(r'\b(?:or|either|alternatively|any of)\b', prompt_lower))
+        has_not = bool(re.search(r'\b(?:not|exclude|without|except|excluding|no)\b', prompt_lower))
+        
+        # Count constraints to infer logic
+        constraints_count = len(re.findall(r'\b(?:where|with|and|or)\b', prompt_lower))
+        
+        # Determine primary logic
+        if has_or and not has_and:
+            primary_logic = 'OR'
+        elif has_not:
+            primary_logic = 'NOT'
+        else:
+            primary_logic = 'AND'  # Default
+        
+        return {
+            'primary_logic': primary_logic,
+            'has_and': has_and,
+            'has_or': has_or,  
+            'has_not': has_not,
+            'constraint_count': constraints_count,
+            'complexity': 'complex' if (has_or or has_not or constraints_count > 2) else 'simple'
+        }
+    
+    def extract_negated_constraints(self, prompt: str, available_fields: List[str]) -> List[Dict[str, any]]:
+        """
+        Extract negated/excluded constraints from prompt
+        
+        Returns:
+            List of constraints that should be negated in the query
+        """
+        negated_constraints = []
+        
+        # Negation patterns
+        negation_patterns = [
+            r'\b(?:not|exclude|without|except|excluding)\s+(\w+(?:\s+\w+){0,2})\s+(?:is\s+|equals?\s+)?(?:"([^"]+)"|(\w+))\b',
+            r'\b(?:no|zero)\s+(\w+(?:\s+\w+){0,2})\b',
+            r'\b(\w+(?:\s+\w+){0,2})\s+(?:is\s+not|not\s+equal\s+to|!=)\s+(?:"([^"]+)"|(\w+))\b',
+            r'\b(?:filter\s+out|remove|skip)\s+(\w+(?:\s+\w+){0,2})\s+(?:with\s+|equals?\s+)?(?:"([^"]+)"|(\w+))\b',
+        ]
+        
+        for pattern in negation_patterns:
+            matches = re.finditer(pattern, prompt, re.IGNORECASE)
+            
+            for match in matches:
+                groups = [g for g in match.groups() if g is not None]
+                if len(groups) >= 1:
+                    field_hint = groups[0].strip()
+                    value = groups[1].strip() if len(groups) > 1 else None
+                    
+                    field_match = self.smart_match(field_hint, available_fields)
+                    if field_match:
+                        negated_constraints.append({
+                            'field_match': field_match,
+                            'value': value,
+                            'original_text': match.group(0),
+                            'operator': 'must_not'
+                        })
+        
+        return negated_constraints
+    
+    def extract_range_constraints(self, prompt: str, available_fields: List[str]) -> List[Dict[str, any]]:
+        """
+        Extract range-based constraints (greater than, less than, between)
+        
+        Returns:
+            List of range constraints
+        """
+        range_constraints = []
+        
+        # Range patterns
+        range_patterns = [
+            # "field greater than X"
+            r'\b(\w+(?:\s+\w+){0,2})\s+(?:greater\s+than|more\s+than|over|above|>)\s+([0-9]+(?:\.[0-9]+)?)\b',
+            # "field less than X" 
+            r'\b(\w+(?:\s+\w+){0,2})\s+(?:less\s+than|below|under|<)\s+([0-9]+(?:\.[0-9]+)?)\b',
+            # "field between X and Y"
+            r'\b(\w+(?:\s+\w+){0,2})\s+(?:between|from)\s+([0-9]+(?:\.[0-9]+)?)\s+(?:and|to)\s+([0-9]+(?:\.[0-9]+)?)\b',
+            # "X < field < Y" format
+            r'\b([0-9]+(?:\.[0-9]+)?)\s*<\s*(\w+(?:\s+\w+){0,2})\s*<\s*([0-9]+(?:\.[0-9]+)?)\b',
+        ]
+        
+        for pattern in range_patterns:
+            matches = re.finditer(pattern, prompt, re.IGNORECASE)
+            
+            for match in matches:
+                groups = [g for g in match.groups() if g is not None]
+                
+                if 'greater than' in match.group(0).lower() or '>' in match.group(0):
+                    field_hint = groups[0]
+                    field_match = self.smart_match(field_hint, available_fields)
+                    if field_match:
+                        range_constraints.append({
+                            'field_match': field_match,
+                            'operator': 'range',
+                            'range_type': 'gt',
+                            'value': groups[1],
+                            'original_text': match.group(0)
+                        })
+                        
+                elif 'less than' in match.group(0).lower() or '<' in match.group(0):
+                    field_hint = groups[0]
+                    field_match = self.smart_match(field_hint, available_fields)
+                    if field_match:
+                        range_constraints.append({
+                            'field_match': field_match,
+                            'operator': 'range',
+                            'range_type': 'lt',
+                            'value': groups[1], 
+                            'original_text': match.group(0)
+                        })
+                        
+                elif 'between' in match.group(0).lower():
+                    field_hint = groups[0]
+                    field_match = self.smart_match(field_hint, available_fields)
+                    if field_match:
+                        range_constraints.append({
+                            'field_match': field_match,
+                            'operator': 'range',
+                            'range_type': 'between',
+                            'value_min': groups[1],
+                            'value_max': groups[2],
+                            'original_text': match.group(0)
+                        })
+        
+        return range_constraints
 
 
 # Singleton instance
