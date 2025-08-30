@@ -329,6 +329,26 @@ def render_data_ingestion_tab():
                 st.session_state.ingested_index = index_name
                 st.session_state.ingestion_result = result
                 
+                # Quick verification using get_index_info instead
+                try:
+                    index_info = adapter.get_index_info(index_name)
+                    if "error" not in index_info:
+                        st.success("✅ Ingestion completed successfully!")
+                        st.info(f"📊 Index created: {index_info['document_count']} documents, {index_info['field_count']} fields")
+                        st.info(f"🔍 Fields: {', '.join(index_info['fields'][:5])}{'...' if len(index_info['fields']) > 5 else ''}")
+                        
+                        # Check if we got all expected fields
+                        expected_fields = list(schema.get('fields', {}).keys())
+                        if len(index_info['fields']) >= len(expected_fields):
+                            st.success("✅ All CSV columns appear to be properly indexed!")
+                        else:
+                            st.warning(f"⚠️ Expected {len(expected_fields)} fields but got {len(index_info['fields'])}")
+                    else:
+                        st.warning("⚠️ Could not verify index creation")
+                except Exception as e:
+                    st.warning(f"⚠️ Verification unavailable: {e}")
+                    st.info("Index created but verification skipped")
+                
                 # Store mapping information for future query generation
                 from src.data_adaptation.mapping_storage import MappingStorage
                 mapping_storage = MappingStorage()
@@ -358,6 +378,31 @@ def render_data_ingestion_tab():
                 
             else:
                 st.error(f"❌ Ingestion failed: {result.get('error', 'Unknown error')}")
+                
+                # Enhanced error reporting
+                if 'missing_fields' in result and result['missing_fields']:
+                    st.error(f"🔍 Missing field mappings: {result['missing_fields']}")
+                    st.info("💡 These CSV columns were not included in the generated mapping. Please regenerate the mapping or check your schema analysis.")
+                
+                if 'error_details' in result:
+                    error_details = result['error_details']
+                    
+                    # Field rejection errors
+                    if error_details.get('field_rejections'):
+                        st.error("🚫 Field Rejection Errors:")
+                        for error in error_details['field_rejections']:
+                            st.code(f"Field '{error['field']}' was rejected: {error['reason']}")
+                    
+                    # Mapping errors
+                    if error_details.get('mapping_errors'):
+                        st.error("📝 Mapping Errors:")
+                        for error in error_details['mapping_errors']:
+                            st.code(f"Mapping error: {error['reason']}")
+                    
+                    # Other errors
+                    if error_details.get('other_errors'):
+                        with st.expander("Other Error Details"):
+                            st.json(error_details['other_errors'])
         
         # Clean up
         Path(temp_path).unlink(missing_ok=True)

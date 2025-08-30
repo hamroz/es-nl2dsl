@@ -488,12 +488,9 @@ def display_table_view(hits, index_names):
         if isinstance(index_names, list) and len(index_names) > 1:
             row['_index'] = hit.get('_index', 'unknown')
         
-        # Add common fields first
-        common_fields = ['@timestamp', 'src_ip', 'dst_ip', 'src_port', 'dst_port', 
-                        'protocol', 'attack_type', 'label']
-        for field in common_fields:
-            if field in source:
-                row[field] = source[field]
+        # Add ALL fields from the document source (dynamic display)
+        for field, value in source.items():
+            row[field] = value
         
         # Add numeric fields for CIC data
         has_cic = (isinstance(index_names, list) and any("cic" in idx.lower() for idx in index_names)) or \
@@ -524,14 +521,23 @@ def display_table_view(hits, index_names):
     if '@timestamp' in df.columns:
         df['@timestamp'] = pd.to_datetime(df['@timestamp']).dt.strftime('%Y-%m-%d %H:%M:%S')
     
-    # Display with column configuration
+    # Display with dynamic column configuration
     column_config = {
         "_id": st.column_config.TextColumn("Document ID", width="small"),
-        "@timestamp": st.column_config.TextColumn("Timestamp", width="medium"),
-        "src_ip": st.column_config.TextColumn("Source IP", width="medium"),
-        "dst_ip": st.column_config.TextColumn("Dest IP", width="medium"),
-        "attack_type": st.column_config.TextColumn("Attack Type", width="small"),
     }
+    
+    # Add configuration for common field patterns
+    for col in df.columns:
+        if col == "_id":
+            continue
+        elif "timestamp" in col.lower() or "time" in col.lower():
+            column_config[col] = st.column_config.TextColumn(col.title(), width="medium")
+        elif "ip" in col.lower() or "addr" in col.lower():
+            column_config[col] = st.column_config.TextColumn(col.title(), width="medium")
+        elif col.lower() in ["protocol", "action", "label", "type"]:
+            column_config[col] = st.column_config.TextColumn(col.title(), width="small")
+        else:
+            column_config[col] = st.column_config.TextColumn(col.title(), width="medium")
     
     # Add index column if multiple indices
     if '_index' in df.columns:

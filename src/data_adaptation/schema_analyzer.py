@@ -210,20 +210,27 @@ class SchemaAnalyzer:
         """Suggest Elasticsearch mapping based on analyzed schema"""
         mapping = {
             "mappings": {
+                "dynamic": "false",  # Don't index unknown fields but don't reject documents
                 "properties": {}
             }
         }
         
+        # Ensure all CSV fields have mappings
         for field_name, field_info in schema.get('fields', {}).items():
             field_type = field_info.get('type', 'text')
             
-            if field_type == 'timestamp':
+            # Enhanced field type detection based on pandas dtype and values
+            if field_type == 'timestamp' or self._is_timestamp_field(field_name, field_info):
                 mapping["mappings"]["properties"][field_name] = {"type": "date"}
-            elif field_type == 'ip_address':
+            elif field_type == 'ip_address' or self._is_ip_field(field_name, field_info):
                 mapping["mappings"]["properties"][field_name] = {"type": "ip"}
-            elif field_type == 'numeric':
-                mapping["mappings"]["properties"][field_name] = {"type": "long"}
-            elif field_type == 'boolean':
+            elif field_type == 'numeric' or self._is_numeric_field(field_info):
+                # Determine if integer or float based on sample values
+                if self._is_integer_field(field_info):
+                    mapping["mappings"]["properties"][field_name] = {"type": "long"}
+                else:
+                    mapping["mappings"]["properties"][field_name] = {"type": "float"}
+            elif field_type == 'boolean' or self._is_boolean_field(field_info):
                 mapping["mappings"]["properties"][field_name] = {"type": "boolean"}
             else:
                 # Text field with keyword for aggregations
@@ -235,6 +242,9 @@ class SchemaAnalyzer:
                         }
                     }
                 }
+        
+        # Log mapping generation for debugging
+        logger.info(f"Generated mapping for {len(mapping['mappings']['properties'])} fields: {list(mapping['mappings']['properties'].keys())}")
         
         return mapping
     
@@ -303,3 +313,126 @@ class SchemaAnalyzer:
             ])
         
         return suggestions
+    
+    def _is_timestamp_field(self, field_name: str, field_info: Dict[str, Any]) -> bool:
+        """Enhanced timestamp field detection"""
+        # Check field name patterns
+        timestamp_patterns = ['timestamp', 'time', 'date', 'created', 'updated', 'logged']
+        field_lower = field_name.lower()
+        if any(pattern in field_lower for pattern in timestamp_patterns):
+            return True
+        
+        # Check sample values for timestamp patterns
+        sample_values = field_info.get('sample_values', [])
+        if sample_values:
+            first_value = str(sample_values[0])
+            # ISO timestamp pattern
+            if 'T' in first_value and ('Z' in first_value or '+' in first_value):
+                return True
+            # Date patterns
+            if len(first_value) >= 10 and ('-' in first_value or '/' in first_value):
+                import re
+                date_pattern = r'\d{4}[-/]\d{1,2}[-/]\d{1,2}'
+                if re.match(date_pattern, first_value):
+                    return True
+        
+        return False
+    
+    def _is_ip_field(self, field_name: str, field_info: Dict[str, Any]) -> bool:
+        """Enhanced IP field detection"""
+        # Check field name patterns
+        ip_patterns = ['ip', 'addr', 'address']
+        field_lower = field_name.lower()
+        if any(pattern in field_lower for pattern in ip_patterns):
+            return True
+        
+        # Check sample values for IP patterns
+        sample_values = field_info.get('sample_values', [])
+        if sample_values:
+            import re
+            ip_pattern = r'^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$'
+            if re.match(ip_pattern, str(sample_values[0])):
+                return True
+        
+        return False
+    
+    def _is_numeric_field(self, field_info: Dict[str, Any]) -> bool:
+        """Enhanced numeric field detection"""
+        dtype = field_info.get('type', '')
+        # Check pandas dtype
+        if any(num_type in dtype.lower() for num_type in ['int', 'float', 'number']):
+            return True
+        
+        # Check sample values
+        sample_values = field_info.get('sample_values', [])
+        if sample_values:
+            try:
+                # Try to convert first few values to numbers
+                for val in sample_values[:3]:
+                    if val is not None:
+                        float(val)
+                return True
+            except (ValueError, TypeError):
+                pass
+        
+        return False
+    
+    def _is_integer_field(self, field_info: Dict[str, Any]) -> bool:
+        """Determine if numeric field should be integer or float"""
+        dtype = field_info.get('type', '')
+        if 'int' in dtype.lower():
+            return True
+        
+        # Check sample values for integer patterns
+        sample_values = field_info.get('sample_values', [])
+        if sample_values:
+            try:
+                for val in sample_values[:5]:
+                    if val is not None:
+                        float_val = float(val)
+                        if float_val != int(float_val):
+                            return False  # Has decimal places
+                return True
+            except (ValueError, TypeError):
+                pass
+        
+        return False
+    
+    def _is_boolean_field(self, field_info: Dict[str, Any]) -> bool:
+        """Enhanced boolean field detection"""
+        sample_values = field_info.get('sample_values', [])
+        if sample_values:
+            # Check if all values are boolean-like
+            bool_values = {'true', 'false', '1', '0', 'yes', 'no', 'y', 'n'}
+            for val in sample_values:
+                if val is not None and str(val).lower() not in bool_values:
+                    return False
+            return True
+        
+        return False
+    
+    def validate_csv_against_mapping(self, csv_path: str, mapping: Dict[str, Any]) -> tuple:
+        """Validate that all CSV columns have corresponding mapping entries"""
+        try:
+            # Read just the header row to get column names
+            df = pd.read_csv(csv_path, nrows=0)
+            csv_columns = set(df.columns)
+            
+            # Get mapping field names
+            mapping_fields = set(mapping.get("mappings", {}).get("properties", {}).keys())
+            
+            # Find missing and extra fields
+            missing_fields = csv_columns - mapping_fields
+            extra_fields = mapping_fields - csv_columns
+            
+            if missing_fields:
+                logger.error(f"CSV columns missing from mapping: {missing_fields}")
+            if extra_fields:
+                logger.warning(f"Mapping fields not in CSV: {extra_fields}")
+            
+            is_valid = len(missing_fields) == 0
+            return is_valid, list(missing_fields), list(extra_fields)
+            
+        except Exception as e:
+            logger.error(f"Error validating CSV against mapping: {e}")
+            return False, [], []

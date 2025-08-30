@@ -1,11 +1,11 @@
 {
-  "adapt_1756473742_3318857b": {
-    "id": "adapt_1756473742_3318857b",
-    "timestamp": 1756473742.7612538,
+  "adapt_1756577027_c238c9ef": {
+    "id": "adapt_1756577027_c238c9ef",
+    "timestamp": 1756577027.408092,
     "file_name": "cybersecurity-threat-detection-logs.csv",
     "file_format": "csv",
-    "index_name": "logs_cybersecurity-threat-detection-logs",
-    "status": "completed",
+    "index_name": "",
+    "status": "analyzed",
     "schema": {
       "format": "csv",
       "total_columns": 10,
