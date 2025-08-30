@@ -161,102 +161,208 @@ def render_data_explorer():
         help="Retrieve data without any filters applied - useful for exploring index structure"
     )
     
-    # Advanced filters
+    # Enhanced Advanced filters
     with st.expander("🔧 Advanced Filters", expanded=False):
-        filter_col1, filter_col2 = st.columns(2)
+        filter_col1, filter_col2, filter_col3 = st.columns(3)
         
         with filter_col1:
+            st.markdown("**🕒 Time Filters**")
             # Time range filter
             use_time_filter = st.checkbox("Enable Time Filter", value=False)
             if use_time_filter:
-                time_range = st.selectbox(
-                    "Time Range",
-                    options=[
-                        "Last 1 hour",
-                        "Last 24 hours",
-                        "Last 7 days",
-                        "Last 30 days",
-                        "All time"
-                    ],
-                    index=4
+                time_filter_type = st.radio(
+                    "Time Filter Type",
+                    ["Quick Range", "Custom Range"],
+                    horizontal=True
                 )
+                
+                if time_filter_type == "Quick Range":
+                    time_range = st.selectbox(
+                        "Time Range",
+                        options=[
+                            "Last 15 minutes",
+                            "Last 1 hour", 
+                            "Last 6 hours",
+                            "Last 24 hours",
+                            "Last 7 days",
+                            "Last 30 days",
+                            "All time"
+                        ],
+                        index=6
+                    )
+                    custom_start_time = None
+                    custom_end_time = None
+                else:
+                    time_range = "Custom"
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        custom_start_time = st.datetime_input("Start Date", value=datetime.now() - timedelta(days=1))
+                    with col2:
+                        custom_end_time = st.datetime_input("End Date", value=datetime.now())
             else:
                 time_range = "All time"
+                custom_start_time = None
+                custom_end_time = None
             
-            # Field value filter
-            use_field_filter = st.checkbox("Enable Field Filter", value=False)
+            st.markdown("**🔍 Field Filters**")
+            # Multiple field filters
+            use_field_filter = st.checkbox("Enable Field Filters", value=False)
+            field_filters = []
             if use_field_filter:
-                filter_field = st.text_input(
-                    "Field Name",
-                    placeholder="e.g., attack_type",
-                    help="Field to filter on"
-                )
-                filter_value = st.text_input(
-                    "Field Value",
-                    placeholder="e.g., dos",
-                    help="Value to filter for"
-                )
+                num_filters = st.number_input("Number of field filters", min_value=1, max_value=5, value=1)
+                for i in range(num_filters):
+                    st.markdown(f"*Filter {i+1}:*")
+                    filter_col_a, filter_col_b = st.columns(2)
+                    with filter_col_a:
+                        filter_field = st.text_input(
+                            f"Field Name {i+1}",
+                            placeholder="e.g., protocol",
+                            help="Field to filter on",
+                            key=f"filter_field_{i}"
+                        )
+                    with filter_col_b:
+                        filter_value = st.text_input(
+                            f"Field Value {i+1}",
+                            placeholder="e.g., TCP",
+                            help="Value to filter for",
+                            key=f"filter_value_{i}"
+                        )
+                    if filter_field and filter_value:
+                        field_filters.append({"field": filter_field, "value": filter_value})
         
         with filter_col2:
+            st.markdown("**🎯 Smart Filters**")
             # Attack type filter for CIC data
             has_cic_index = any("cic" in idx.lower() for idx in selected_indices) if selected_indices else False
             if has_cic_index:
                 use_attack_filter = st.checkbox("Filter by Attack Type", value=False)
                 if use_attack_filter:
-                    attack_types = ["normal", "dos", "scan", "bruteforce", "web_attack"]
-                    selected_attack = st.selectbox("Attack Type", attack_types)
+                    attack_types = ["normal", "dos", "scan", "bruteforce", "web_attack", "infiltration"]
+                    selected_attacks = st.multiselect("Attack Types", attack_types, help="Select multiple attack types")
                 else:
-                    selected_attack = None
+                    selected_attacks = []
             else:
                 use_attack_filter = False
-                selected_attack = None
+                selected_attacks = []
             
-            # Search text
+            # IP range filter
+            use_ip_filter = st.checkbox("IP Address Filter", value=False)
+            # Initialize all IP filter variables
+            ip_filter_type = None
+            ip_address = None
+            ip_start = None
+            ip_end = None
+            cidr_block = None
+            ip_field = None
+            
+            if use_ip_filter:
+                ip_filter_type = st.selectbox(
+                    "IP Filter Type", 
+                    ["Specific IP", "IP Range", "CIDR Block"]
+                )
+                if ip_filter_type == "Specific IP":
+                    ip_address = st.text_input("IP Address", placeholder="192.168.1.1")
+                    ip_field = st.selectbox("IP Field", ["src_ip", "dst_ip", "any"])
+                elif ip_filter_type == "IP Range":
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        ip_start = st.text_input("Start IP", placeholder="192.168.1.1")
+                    with col2:
+                        ip_end = st.text_input("End IP", placeholder="192.168.1.255")
+                    ip_field = st.selectbox("IP Field", ["src_ip", "dst_ip", "any"], key="ip_range_field")
+                else:  # CIDR
+                    cidr_block = st.text_input("CIDR Block", placeholder="192.168.1.0/24")
+                    ip_field = st.selectbox("IP Field", ["src_ip", "dst_ip", "any"], key="cidr_field")
+                
+            # Numeric range filters
+            use_numeric_filter = st.checkbox("Numeric Range Filter", value=False)
+            # Initialize numeric filter variables
+            numeric_field = None
+            min_value = None
+            max_value = None
+            
+            if use_numeric_filter:
+                numeric_field = st.text_input("Numeric Field", placeholder="e.g., bytes_transferred")
+                col1, col2 = st.columns(2)
+                with col1:
+                    min_value = st.number_input("Min Value", value=0.0)
+                with col2:
+                    max_value = st.number_input("Max Value", value=1000000.0)
+        
+        with filter_col3:
+            st.markdown("**📝 Text Search**")
+            # Enhanced text search
             use_text_search = st.checkbox("Enable Text Search", value=False)
+            # Initialize text search variables
+            search_type = None
+            search_text = None
+            search_fields = []
+            
             if use_text_search:
-                search_text = st.text_input(
+                search_type = st.selectbox(
+                    "Search Type",
+                    ["Simple Text", "Wildcard", "Regex", "Fuzzy"]
+                )
+                search_text = st.text_area(
                     "Search Text",
-                    placeholder="Enter search terms",
+                    placeholder="Enter search terms (one per line for multiple)",
                     help="Search across all text fields"
                 )
-            else:
-                search_text = None
-    
-    # Sample data option
-    st.markdown("### 📊 Sampling Options")
-    sample_col1, sample_col2 = st.columns(2)
-    
-    with sample_col1:
-        use_sampling = st.checkbox(
-            "Use Random Sampling",
-            value=False,
-            help="Get a random sample instead of the most recent documents"
-        )
-    
-    with sample_col2:
-        if use_sampling:
-            sample_seed = st.number_input(
-                "Random Seed",
-                min_value=0,
-                value=42,
-                help="Seed for reproducible random sampling"
-            )
-        else:
+                search_fields = st.multiselect(
+                    "Search in Fields (optional)",
+                    options=get_common_fields_across_indices(selected_indices) if selected_indices else [],
+                    help="Leave empty to search all fields"
+                )
+            
+            st.markdown("**🎲 Sampling**")
+            # Enhanced sampling
+            use_sampling = st.checkbox("Random Sampling", value=False)
+            # Initialize sampling variables
+            sample_method = None
+            stratify_field = None
             sample_seed = None
+            
+            if use_sampling:
+                sample_method = st.selectbox(
+                    "Sampling Method",
+                    ["Random", "Stratified", "Top N by Score"]
+                )
+                if sample_method == "Stratified":
+                    stratify_field = st.selectbox(
+                        "Stratify by Field",
+                        options=get_common_fields_across_indices(selected_indices) if selected_indices else []
+                    )
+                    
+                sample_seed = st.number_input("Random Seed", min_value=0, value=42)
     
-    # Build the query
-    query = build_exploration_query(
+    # Build the enhanced query
+    query = build_enhanced_exploration_query(
         use_no_filter=use_no_filter,
         use_time_filter=use_time_filter,
         time_range=time_range if use_time_filter else None,
-        use_field_filter=use_field_filter,
-        filter_field=filter_field if use_field_filter else None,
-        filter_value=filter_value if use_field_filter else None,
+        custom_start_time=custom_start_time,
+        custom_end_time=custom_end_time,
+        field_filters=field_filters if use_field_filter else [],
         use_attack_filter=use_attack_filter,
-        selected_attack=selected_attack,
+        selected_attacks=selected_attacks,
+        use_ip_filter=use_ip_filter,
+        ip_filter_type=ip_filter_type,
+        ip_address=ip_address,
+        ip_start=ip_start,
+        ip_end=ip_end,
+        cidr_block=cidr_block,
+        ip_field=ip_field,
+        use_numeric_filter=use_numeric_filter,
+        numeric_field=numeric_field,
+        min_value=min_value,
+        max_value=max_value,
         use_text_search=use_text_search,
+        search_type=search_type,
         search_text=search_text,
+        search_fields=search_fields,
         use_sampling=use_sampling,
+        sample_method=sample_method,
+        stratify_field=stratify_field,
         sample_seed=sample_seed
     )
     
@@ -347,10 +453,10 @@ def render_data_explorer():
             st.metric("Query Time", f"{execution_time}ms")
         
         if hits:
-            # Display format selection
+            # Display format selection with visualization option
             display_format = st.radio(
                 "Display Format",
-                ["📊 Table View", "📋 JSON View", "📄 Document Cards"],
+                ["📊 Table View", "📈 Data Visualization", "📋 JSON View", "📄 Document Cards"],
                 horizontal=True
             )
             
@@ -386,6 +492,8 @@ def render_data_explorer():
             # Display data based on selected format
             if "Table View" in display_format:
                 display_table_view(hits, result_indices)
+            elif "Data Visualization" in display_format:
+                display_data_visualization(hits, result_indices)
             elif "JSON View" in display_format:
                 display_json_view(hits)
             else:
@@ -399,79 +507,224 @@ def render_data_explorer():
             st.markdown("### Generated Elasticsearch Query")
             st.json(st.session_state.explorer_query)
 
-def build_exploration_query(use_no_filter=False, use_time_filter=False, time_range=None,
-                           use_field_filter=False, filter_field=None, filter_value=None,
-                           use_attack_filter=False, selected_attack=None,
-                           use_text_search=False, search_text=None,
-                           use_sampling=False, sample_seed=None):
-    """Build Elasticsearch query based on exploration options"""
+def build_enhanced_exploration_query(use_no_filter=False, use_time_filter=False, time_range=None,
+                                    custom_start_time=None, custom_end_time=None,
+                                    field_filters=None, use_attack_filter=False, selected_attacks=None,
+                                    use_ip_filter=False, ip_filter_type=None, ip_address=None,
+                                    ip_start=None, ip_end=None, cidr_block=None, ip_field=None,
+                                    use_numeric_filter=False, numeric_field=None, min_value=None, max_value=None,
+                                    use_text_search=False, search_type=None, search_text=None, search_fields=None,
+                                    use_sampling=False, sample_method=None, stratify_field=None, sample_seed=None):
+    """Build advanced Elasticsearch query with enhanced filtering capabilities"""
     
     # If no filter is requested, use match_all
     if use_no_filter:
         return {"query": {"match_all": {}}}
     
     # Start with base query
-    query = {"query": {"bool": {"filter": []}}}
+    query = {"query": {"bool": {"filter": [], "must": [], "should": []}}}
     
-    # Add time filter
+    # Enhanced time filter
     if use_time_filter and time_range != "All time":
-        now = datetime.now()
-        if time_range == "Last 1 hour":
-            start_time = now - timedelta(hours=1)
-        elif time_range == "Last 24 hours":
-            start_time = now - timedelta(days=1)
-        elif time_range == "Last 7 days":
-            start_time = now - timedelta(days=7)
-        elif time_range == "Last 30 days":
-            start_time = now - timedelta(days=30)
-        else:
-            start_time = None
-        
-        if start_time:
+        if time_range == "Custom" and custom_start_time and custom_end_time:
+            # Custom date range
             query["query"]["bool"]["filter"].append({
                 "range": {
                     "@timestamp": {
-                        "gte": start_time.isoformat()
+                        "gte": custom_start_time.isoformat(),
+                        "lte": custom_end_time.isoformat()
                     }
                 }
             })
+        else:
+            # Predefined ranges
+            now = datetime.now()
+            if time_range == "Last 15 minutes":
+                start_time = now - timedelta(minutes=15)
+            elif time_range == "Last 1 hour":
+                start_time = now - timedelta(hours=1)
+            elif time_range == "Last 6 hours":
+                start_time = now - timedelta(hours=6)
+            elif time_range == "Last 24 hours":
+                start_time = now - timedelta(days=1)
+            elif time_range == "Last 7 days":
+                start_time = now - timedelta(days=7)
+            elif time_range == "Last 30 days":
+                start_time = now - timedelta(days=30)
+            else:
+                start_time = None
+            
+            if start_time:
+                query["query"]["bool"]["filter"].append({
+                    "range": {
+                        "@timestamp": {
+                            "gte": start_time.isoformat()
+                        }
+                    }
+                })
     
-    # Add field filter
-    if use_field_filter and filter_field and filter_value:
+    # Multiple field filters
+    if field_filters:
+        for field_filter in field_filters:
+            query["query"]["bool"]["filter"].append({
+                "term": {field_filter["field"]: field_filter["value"]}
+            })
+    
+    # Enhanced attack type filter (multiple selection)
+    if use_attack_filter and selected_attacks:
         query["query"]["bool"]["filter"].append({
-            "term": {filter_field: filter_value}
+            "terms": {"attack_type": selected_attacks}
         })
     
-    # Add attack type filter
-    if use_attack_filter and selected_attack:
-        query["query"]["bool"]["filter"].append({
-            "term": {"attack_type": selected_attack}
-        })
-    
-    # Add text search
-    if use_text_search and search_text:
-        query["query"]["bool"]["must"] = [{
-            "query_string": {
-                "query": search_text,
-                "default_field": "*"
-            }
-        }]
-    
-    # Add random sampling
-    if use_sampling and sample_seed is not None:
-        query["query"] = {
-            "function_score": {
-                "query": query["query"],
-                "random_score": {
-                    "seed": sample_seed
+    # IP address filtering
+    if use_ip_filter:
+        if ip_filter_type == "Specific IP" and ip_address:
+            if ip_field == "any":
+                query["query"]["bool"]["should"].extend([
+                    {"term": {"src_ip": ip_address}},
+                    {"term": {"dst_ip": ip_address}}
+                ])
+                query["query"]["bool"]["minimum_should_match"] = 1
+            else:
+                query["query"]["bool"]["filter"].append({
+                    "term": {ip_field: ip_address}
+                })
+        elif ip_filter_type == "IP Range" and ip_start and ip_end:
+            # Convert IP to numeric for range comparison
+            range_filter = {
+                "range": {
+                    ip_field if ip_field != "any" else "src_ip": {
+                        "gte": ip_start,
+                        "lte": ip_end
+                    }
                 }
             }
-        }
+            if ip_field == "any":
+                query["query"]["bool"]["should"].extend([
+                    {"range": {"src_ip": {"gte": ip_start, "lte": ip_end}}},
+                    {"range": {"dst_ip": {"gte": ip_start, "lte": ip_end}}}
+                ])
+                query["query"]["bool"]["minimum_should_match"] = 1
+            else:
+                query["query"]["bool"]["filter"].append(range_filter)
+        elif ip_filter_type == "CIDR Block" and cidr_block:
+            # CIDR block filtering (simplified - would need proper CIDR parsing in production)
+            query["query"]["bool"]["filter"].append({
+                "wildcard": {
+                    ip_field if ip_field != "any" else "src_ip": cidr_block.replace("/24", "*")
+                }
+            })
     
-    # If no filters, use match_all
-    if ("bool" not in query["query"] or 
-        (not query["query"]["bool"].get("filter") and 
-         "must" not in query["query"]["bool"])):
+    # Numeric range filter
+    if use_numeric_filter and numeric_field and min_value is not None and max_value is not None:
+        query["query"]["bool"]["filter"].append({
+            "range": {
+                numeric_field: {
+                    "gte": min_value,
+                    "lte": max_value
+                }
+            }
+        })
+    
+    # Enhanced text search
+    if use_text_search and search_text:
+        search_lines = [line.strip() for line in search_text.split('\n') if line.strip()]
+        
+        for search_term in search_lines:
+            if search_type == "Simple Text":
+                search_query = {
+                    "multi_match": {
+                        "query": search_term,
+                        "fields": search_fields if search_fields else ["*"],
+                        "type": "best_fields"
+                    }
+                }
+            elif search_type == "Wildcard":
+                search_query = {
+                    "wildcard": {
+                        "_all" if not search_fields else search_fields[0]: f"*{search_term}*"
+                    }
+                }
+            elif search_type == "Regex":
+                search_query = {
+                    "regexp": {
+                        "_all" if not search_fields else search_fields[0]: search_term
+                    }
+                }
+            elif search_type == "Fuzzy":
+                search_query = {
+                    "fuzzy": {
+                        "_all" if not search_fields else search_fields[0]: {
+                            "value": search_term,
+                            "fuzziness": "AUTO"
+                        }
+                    }
+                }
+            else:
+                search_query = {
+                    "query_string": {
+                        "query": search_term,
+                        "fields": search_fields if search_fields else ["*"]
+                    }
+                }
+            
+            query["query"]["bool"]["must"].append(search_query)
+    
+    # Enhanced sampling
+    if use_sampling and sample_seed is not None:
+        if sample_method == "Random":
+            query["query"] = {
+                "function_score": {
+                    "query": query["query"],
+                    "random_score": {
+                        "seed": sample_seed
+                    }
+                }
+            }
+        elif sample_method == "Stratified" and stratify_field:
+            # Add aggregation for stratified sampling
+            query["aggs"] = {
+                "stratified_sample": {
+                    "terms": {
+                        "field": stratify_field,
+                        "size": 100
+                    },
+                    "aggs": {
+                        "sample": {
+                            "top_hits": {
+                                "size": 10,
+                                "sort": [
+                                    {
+                                        "_script": {
+                                            "type": "number",
+                                            "script": {
+                                                "source": f"Math.random() * params.factor",
+                                                "params": {"factor": sample_seed}
+                                            }
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                    }
+                }
+            }
+        # Top N by Score is handled by default ES scoring
+    
+    # Clean up empty arrays - check if 'bool' exists first
+    if "bool" in query["query"]:
+        if "filter" in query["query"]["bool"] and not query["query"]["bool"]["filter"]:
+            del query["query"]["bool"]["filter"]
+        if "must" in query["query"]["bool"] and not query["query"]["bool"]["must"]:
+            del query["query"]["bool"]["must"]
+        if "should" in query["query"]["bool"] and not query["query"]["bool"]["should"]:
+            del query["query"]["bool"]["should"]
+        
+        # If no filters at all, use match_all
+        if not query["query"]["bool"]:
+            query = {"query": {"match_all": {}}}
+    else:
+        # If no bool query was created, use match_all
         query = {"query": {"match_all": {}}}
     
     return query
@@ -635,3 +888,372 @@ def display_document_cards(hits, index_names):
                         st.text(f"{key}: {value}")
             
             st.markdown("---")
+
+def display_data_visualization(hits, index_names):
+    """Display data visualizations and analytics"""
+    import plotly.express as px
+    import plotly.graph_objects as go
+    from collections import Counter
+    import numpy as np
+    
+    st.markdown("### 📈 Data Visualizations")
+    
+    # Convert hits to DataFrame for analysis
+    data_rows = []
+    for hit in hits:
+        source = hit['_source']
+        row = {'_id': hit['_id']}
+        row.update(source)
+        data_rows.append(row)
+    
+    df = pd.DataFrame(data_rows)
+    
+    if df.empty:
+        st.warning("No data available for visualization")
+        return
+    
+    # Visualization type selection
+    viz_col1, viz_col2 = st.columns([1, 3])
+    
+    with viz_col1:
+        viz_type = st.selectbox(
+            "Visualization Type",
+            [
+                "📊 Field Distribution",
+                "⏰ Time Series",
+                "🌐 IP Analysis", 
+                "🔢 Numeric Analysis",
+                "🎯 Attack Analysis",
+                "📈 Correlation Matrix"
+            ]
+        )
+    
+    with viz_col2:
+        if viz_type == "📊 Field Distribution":
+            # Field distribution charts
+            categorical_fields = []
+            for col in df.columns:
+                if df[col].dtype == 'object' and df[col].nunique() < 50:
+                    categorical_fields.append(col)
+            
+            if categorical_fields:
+                field_to_plot = st.selectbox("Select field to analyze", categorical_fields)
+                
+                # Count distribution
+                field_counts = df[field_to_plot].value_counts().head(20)
+                
+                col1, col2 = st.columns(2)
+                with col1:
+                    # Bar chart
+                    fig_bar = px.bar(
+                        x=field_counts.index,
+                        y=field_counts.values,
+                        title=f"Distribution of {field_to_plot}",
+                        labels={'x': field_to_plot, 'y': 'Count'}
+                    )
+                    fig_bar.update_layout(xaxis_tickangle=-45)
+                    st.plotly_chart(fig_bar, use_container_width=True)
+                
+                with col2:
+                    # Pie chart
+                    fig_pie = px.pie(
+                        values=field_counts.values[:10],
+                        names=field_counts.index[:10],
+                        title=f"Top 10 {field_to_plot} Distribution"
+                    )
+                    st.plotly_chart(fig_pie, use_container_width=True)
+                
+                # Statistics
+                st.markdown("**📊 Field Statistics:**")
+                col1, col2, col3, col4 = st.columns(4)
+                with col1:
+                    st.metric("Unique Values", df[field_to_plot].nunique())
+                with col2:
+                    st.metric("Most Common", field_counts.index[0])
+                with col3:
+                    st.metric("Most Common Count", field_counts.iloc[0])
+                with col4:
+                    st.metric("Coverage", f"{(field_counts.sum()/len(df)*100):.1f}%")
+            else:
+                st.info("No suitable categorical fields found for distribution analysis")
+        
+        elif viz_type == "⏰ Time Series":
+            # Time series analysis
+            timestamp_fields = [col for col in df.columns if 'time' in col.lower() or col == '@timestamp']
+            
+            if timestamp_fields:
+                time_field = st.selectbox("Select timestamp field", timestamp_fields)
+                
+                try:
+                    # Convert to datetime
+                    df[time_field] = pd.to_datetime(df[time_field])
+                    
+                    # Group by time intervals
+                    time_interval = st.selectbox("Time Interval", ["1H", "1D", "1W", "1M"])
+                    
+                    # Time series aggregation
+                    time_counts = df.set_index(time_field).resample(time_interval).size()
+                    
+                    # Plot time series
+                    fig_ts = px.line(
+                        x=time_counts.index,
+                        y=time_counts.values,
+                        title=f"Document Count Over Time ({time_interval})",
+                        labels={'x': 'Time', 'y': 'Document Count'}
+                    )
+                    st.plotly_chart(fig_ts, use_container_width=True)
+                    
+                    # Show patterns
+                    st.markdown("**🕐 Time Patterns:**")
+                    df['hour'] = df[time_field].dt.hour
+                    df['day_of_week'] = df[time_field].dt.day_name()
+                    
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        hourly_counts = df['hour'].value_counts().sort_index()
+                        fig_hour = px.bar(
+                            x=hourly_counts.index,
+                            y=hourly_counts.values,
+                            title="Activity by Hour of Day"
+                        )
+                        st.plotly_chart(fig_hour, use_container_width=True)
+                    
+                    with col2:
+                        daily_counts = df['day_of_week'].value_counts()
+                        fig_day = px.bar(
+                            x=daily_counts.index,
+                            y=daily_counts.values,
+                            title="Activity by Day of Week"
+                        )
+                        st.plotly_chart(fig_day, use_container_width=True)
+                        
+                except Exception as e:
+                    st.error(f"Error processing timestamp field: {e}")
+            else:
+                st.info("No timestamp fields found for time series analysis")
+        
+        elif viz_type == "🌐 IP Analysis":
+            # IP address analysis
+            ip_fields = [col for col in df.columns if 'ip' in col.lower()]
+            
+            if ip_fields:
+                # IP distribution
+                st.markdown("**IP Address Analysis:**")
+                
+                for ip_field in ip_fields[:2]:  # Limit to first 2 IP fields
+                    if ip_field in df.columns:
+                        st.markdown(f"**{ip_field.title()} Distribution:**")
+                        
+                        ip_counts = df[ip_field].value_counts().head(20)
+                        
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            fig_ip = px.bar(
+                                x=ip_counts.values,
+                                y=ip_counts.index,
+                                orientation='h',
+                                title=f"Top {ip_field}s",
+                                labels={'x': 'Count', 'y': ip_field}
+                            )
+                            st.plotly_chart(fig_ip, use_container_width=True)
+                        
+                        with col2:
+                            # IP network analysis (simple)
+                            ip_networks = df[ip_field].apply(lambda x: '.'.join(str(x).split('.')[:3]) + '.0/24' if pd.notna(x) else None)
+                            network_counts = ip_networks.value_counts().head(10)
+                            
+                            fig_net = px.pie(
+                                values=network_counts.values,
+                                names=network_counts.index,
+                                title=f"{ip_field} Network Distribution"
+                            )
+                            st.plotly_chart(fig_net, use_container_width=True)
+                
+                # IP communication matrix
+                if 'src_ip' in df.columns and 'dst_ip' in df.columns:
+                    st.markdown("**🔄 Communication Matrix:**")
+                    comm_df = df.groupby(['src_ip', 'dst_ip']).size().reset_index(name='count')
+                    top_comm = comm_df.nlargest(100, 'count')
+                    
+                    fig_matrix = px.scatter(
+                        top_comm,
+                        x='src_ip',
+                        y='dst_ip',
+                        size='count',
+                        title="Top Communications (Source → Destination)",
+                        hover_data=['count']
+                    )
+                    fig_matrix.update_layout(xaxis_tickangle=-45, yaxis_tickangle=-45)
+                    st.plotly_chart(fig_matrix, use_container_width=True)
+            else:
+                st.info("No IP fields found for IP analysis")
+        
+        elif viz_type == "🔢 Numeric Analysis":
+            # Numeric field analysis
+            numeric_fields = df.select_dtypes(include=[np.number]).columns.tolist()
+            
+            if numeric_fields:
+                numeric_field = st.selectbox("Select numeric field", numeric_fields)
+                
+                col1, col2 = st.columns(2)
+                with col1:
+                    # Histogram
+                    fig_hist = px.histogram(
+                        df,
+                        x=numeric_field,
+                        title=f"Distribution of {numeric_field}",
+                        nbins=30
+                    )
+                    st.plotly_chart(fig_hist, use_container_width=True)
+                
+                with col2:
+                    # Box plot
+                    fig_box = px.box(
+                        df,
+                        y=numeric_field,
+                        title=f"Box Plot of {numeric_field}"
+                    )
+                    st.plotly_chart(fig_box, use_container_width=True)
+                
+                # Statistics
+                st.markdown(f"**📊 {numeric_field} Statistics:**")
+                stats = df[numeric_field].describe()
+                col1, col2, col3, col4, col5 = st.columns(5)
+                with col1:
+                    st.metric("Mean", f"{stats['mean']:.2f}")
+                with col2:
+                    st.metric("Median", f"{stats['50%']:.2f}")
+                with col3:
+                    st.metric("Std Dev", f"{stats['std']:.2f}")
+                with col4:
+                    st.metric("Min", f"{stats['min']:.2f}")
+                with col5:
+                    st.metric("Max", f"{stats['max']:.2f}")
+            else:
+                st.info("No numeric fields found for analysis")
+        
+        elif viz_type == "🎯 Attack Analysis":
+            # Attack/threat analysis
+            attack_fields = [col for col in df.columns if any(word in col.lower() for word in ['attack', 'threat', 'label', 'class'])]
+            
+            if attack_fields:
+                attack_field = st.selectbox("Select attack/label field", attack_fields)
+                
+                attack_counts = df[attack_field].value_counts()
+                
+                col1, col2 = st.columns(2)
+                with col1:
+                    # Attack type distribution
+                    fig_attack = px.bar(
+                        x=attack_counts.index,
+                        y=attack_counts.values,
+                        title="Attack Type Distribution",
+                        color=attack_counts.values,
+                        color_continuous_scale='Reds'
+                    )
+                    fig_attack.update_layout(xaxis_tickangle=-45)
+                    st.plotly_chart(fig_attack, use_container_width=True)
+                
+                with col2:
+                    # Attack severity (if normal vs attacks)
+                    normal_count = sum(1 for val in attack_counts.index if 'normal' in str(val).lower())
+                    attack_count = len(attack_counts) - normal_count
+                    
+                    fig_severity = px.pie(
+                        values=[normal_count, attack_count],
+                        names=['Normal', 'Attacks'],
+                        title="Normal vs Attack Traffic",
+                        color_discrete_map={'Normal': 'green', 'Attacks': 'red'}
+                    )
+                    st.plotly_chart(fig_severity, use_container_width=True)
+                
+                # Time-based attack analysis
+                if '@timestamp' in df.columns:
+                    st.markdown("**⏰ Attack Timeline:**")
+                    df['timestamp'] = pd.to_datetime(df['@timestamp'])
+                    df['hour'] = df['timestamp'].dt.hour
+                    
+                    attack_timeline = df.groupby(['hour', attack_field]).size().unstack(fill_value=0)
+                    
+                    fig_timeline = px.line(
+                        attack_timeline.T,
+                        title="Attack Types by Hour of Day"
+                    )
+                    st.plotly_chart(fig_timeline, use_container_width=True)
+            else:
+                st.info("No attack/label fields found for attack analysis")
+        
+        elif viz_type == "📈 Correlation Matrix":
+            # Correlation analysis for numeric fields
+            numeric_df = df.select_dtypes(include=[np.number])
+            
+            if len(numeric_df.columns) > 1:
+                # Calculate correlation matrix
+                corr_matrix = numeric_df.corr()
+                
+                # Create heatmap
+                fig_corr = px.imshow(
+                    corr_matrix,
+                    x=corr_matrix.columns,
+                    y=corr_matrix.columns,
+                    color_continuous_scale='RdBu',
+                    title="Correlation Matrix",
+                    aspect="auto"
+                )
+                fig_corr.update_layout(
+                    xaxis_tickangle=-45,
+                    yaxis_tickangle=0
+                )
+                st.plotly_chart(fig_corr, use_container_width=True)
+                
+                # Show strongest correlations
+                st.markdown("**🔗 Strongest Correlations:**")
+                
+                # Get correlation pairs
+                corr_pairs = []
+                for i in range(len(corr_matrix.columns)):
+                    for j in range(i+1, len(corr_matrix.columns)):
+                        corr_val = corr_matrix.iloc[i, j]
+                        if abs(corr_val) > 0.1:  # Only show meaningful correlations
+                            corr_pairs.append({
+                                'Field 1': corr_matrix.columns[i],
+                                'Field 2': corr_matrix.columns[j],
+                                'Correlation': corr_val
+                            })
+                
+                if corr_pairs:
+                    corr_df = pd.DataFrame(corr_pairs).sort_values('Correlation', key=abs, ascending=False)
+                    st.dataframe(corr_df.head(10), use_container_width=True)
+                else:
+                    st.info("No significant correlations found")
+            else:
+                st.info("Need at least 2 numeric fields for correlation analysis")
+    
+    # Data summary statistics
+    st.markdown("---")
+    st.markdown("### 📋 Data Summary")
+    
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        st.metric("Total Records", len(df))
+    with col2:
+        st.metric("Total Fields", len(df.columns))
+    with col3:
+        st.metric("Numeric Fields", len(df.select_dtypes(include=[np.number]).columns))
+    with col4:
+        st.metric("Text Fields", len(df.select_dtypes(include=['object']).columns))
+    
+    # Field information table
+    with st.expander("📊 Field Information"):
+        field_info = []
+        for col in df.columns:
+            field_info.append({
+                'Field': col,
+                'Type': str(df[col].dtype),
+                'Non-Null Count': df[col].count(),
+                'Unique Values': df[col].nunique(),
+                'Sample Value': str(df[col].iloc[0]) if len(df) > 0 else 'N/A'
+            })
+        
+        field_df = pd.DataFrame(field_info)
+        st.dataframe(field_df, use_container_width=True)
