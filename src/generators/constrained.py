@@ -75,6 +75,14 @@ except ImportError:
     INDEX_ANALYZER_AVAILABLE = False
     logger.warning("Index analyzer not available, falling back to static field catalog")
 
+# Import smart field matcher
+try:
+    from src.generators.field_matcher import get_field_matcher, extract_constraints_from_prompt
+    FIELD_MATCHER_AVAILABLE = True
+except ImportError:
+    FIELD_MATCHER_AVAILABLE = False
+    logger.warning("Field matcher not available, using basic field corrections")
+
 # Static field catalog (fallback when dynamic discovery isn't available)
 STATIC_FIELD_CATALOG = {
     "@timestamp": {"type": "date", "description": "Event timestamp"},
@@ -103,6 +111,52 @@ def get_field_catalog_for_index(index_name=None):
     
     # Fallback to static catalog
     return STATIC_FIELD_CATALOG
+
+def enhance_prompt_with_field_matching(task_prompt, index_name):
+    """
+    Preprocess the prompt to identify field-value pairs and provide hints to the LLM
+    """
+    if not index_name or not FIELD_MATCHER_AVAILABLE or not INDEX_ANALYZER_AVAILABLE:
+        return task_prompt
+    
+    try:
+        # Get available fields
+        analyzer = get_index_analyzer()
+        fields = analyzer.get_index_fields(index_name)
+        if not fields:
+            return task_prompt
+        
+        available_field_names = list(fields.keys())
+        
+        # Extract constraints from the prompt
+        matcher = get_field_matcher()
+        constraints = matcher.extract_field_value_pairs(task_prompt, available_field_names)
+        
+        if not constraints:
+            return task_prompt
+        
+        # Build enhanced prompt with field mappings
+        enhanced_prompt = task_prompt + "\n\n"
+        enhanced_prompt += "DETECTED FIELD MAPPINGS:\n"
+        
+        for constraint in constraints:
+            field_match = constraint['field_match']
+            value = constraint['value']
+            original = constraint['original_text']
+            confidence = field_match['confidence']
+            
+            enhanced_prompt += f"- '{original}' → {field_match['field']}:'{value}' (confidence: {confidence:.2f})\n"
+            
+            logger.info(f"Field mapping: '{original}' → {field_match['field']} (confidence: {confidence:.2f})")
+        
+        enhanced_prompt += "\nIMPORTANT: You MUST use these exact field mappings in your query.\n"
+        enhanced_prompt += "Do NOT use any other field names - only use the fields specified above.\n"
+        
+        return enhanced_prompt
+        
+    except Exception as e:
+        logger.warning(f"Failed to enhance prompt with field matching: {e}")
+        return task_prompt
 
 # Common field mapping errors from LLMs (maps incorrect field names to correct ones)
 FIELD_CORRECTIONS = {
@@ -230,6 +284,9 @@ def get_dynamic_index_info(index):
 
 def build_prompt(task_prompt, index=None):
     """Build the constrained generation prompt with dynamic index awareness"""
+    # PHASE 2: First apply smart field matching to enhance the task prompt
+    enhanced_task_prompt = enhance_prompt_with_field_matching(task_prompt, index)
+    
     prompt = "You are an Elasticsearch DSL query generator for cybersecurity log analysis.\n\n"
     
     # First try our new dynamic index analyzer
@@ -386,7 +443,7 @@ def build_prompt(task_prompt, index=None):
         prompt += f"Input: {example['prompt']}\n"
         prompt += f"Output: {json.dumps(example['query'], indent=2)}\n\n"
     
-    prompt += f"Input: {task_prompt}\n"
+    prompt += f"Input: {enhanced_task_prompt}\n"
     prompt += "Output:"
     
     return prompt

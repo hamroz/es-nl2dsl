@@ -18,7 +18,7 @@
                       "term": {
                         "type": "object",
                         "patternProperties": {
-                          "^[a-zA-Z0-9_@]+$": {
+                          "^[a-zA-Z0-9_@.]+$": {
                             "oneOf": [
                               {"type": "string"},
                               {"type": "number"},
@@ -38,7 +38,7 @@
                       "terms": {
                         "type": "object",
                         "patternProperties": {
-                          "^[a-zA-Z0-9_@]+$": {
+                          "^[a-zA-Z0-9_@.]+$": {
                             "type": "array",
                             "items": {
                               "oneOf": [
@@ -60,7 +60,7 @@
                       "range": {
                         "type": "object",
                         "patternProperties": {
-                          "^[a-zA-Z0-9_@]+$": {
+                          "^[a-zA-Z0-9_@.]+$": {
                             "type": "object",
                             "properties": {
                               "gte": {"oneOf": [{"type": "string"}, {"type": "number"}]},
@@ -90,7 +90,7 @@
                       "term": {
                         "type": "object",
                         "patternProperties": {
-                          "^[a-zA-Z0-9_@]+$": {
+                          "^[a-zA-Z0-9_@.]+$": {
                             "oneOf": [
                               {"type": "string"},
                               {"type": "number"},
@@ -110,7 +110,7 @@
                       "terms": {
                         "type": "object",
                         "patternProperties": {
-                          "^[a-zA-Z0-9_@]+$": {
+                          "^[a-zA-Z0-9_@.]+$": {
                             "type": "array",
                             "items": {
                               "oneOf": [
@@ -132,7 +132,7 @@
                       "range": {
                         "type": "object",
                         "patternProperties": {
-                          "^[a-zA-Z0-9_@]+$": {
+                          "^[a-zA-Z0-9_@.]+$": {
                             "type": "object",
                             "properties": {
                               "gte": {"oneOf": [{"type": "string"}, {"type": "number"}]},
