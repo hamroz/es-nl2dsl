@@ -13,13 +13,73 @@ class SchemaAnalyzer:
     
     def __init__(self):
         self.known_patterns = {
-            'timestamp_fields': ['@timestamp', 'timestamp', 'time', 'datetime', 'date', 'created_at', 'logged_at'],
-            'ip_fields': ['src_ip', 'dst_ip', 'source_ip', 'dest_ip', 'client_ip', 'server_ip', 'ip_address', 'remote_addr'],
-            'user_fields': ['username', 'user', 'user_id', 'account', 'login', 'userid'],
-            'status_fields': ['status', 'result', 'response_code', 'http_status', 'exit_code', 'outcome'],
-            'message_fields': ['message', 'msg', 'description', 'details', 'content', 'log_message'],
-            'severity_fields': ['level', 'severity', 'priority', 'log_level', 'alert_level'],
-            'source_fields': ['source', 'service', 'application', 'system', 'host', 'hostname']
+            'timestamp_fields': ['@timestamp', 'timestamp', 'time', 'datetime', 'date', 'created_at', 'logged_at', 'event_time', 'log_time'],
+            'ip_fields': ['src_ip', 'dst_ip', 'source_ip', 'dest_ip', 'destination_ip', 'client_ip', 'server_ip', 'ip_address', 'remote_addr', 'ip'],
+            'user_fields': ['username', 'user', 'user_id', 'account', 'login', 'userid', 'user_name', 'account_name'],
+            'status_fields': ['status', 'result', 'response_code', 'http_status', 'exit_code', 'outcome', 'action', 'verdict'],
+            'message_fields': ['message', 'msg', 'description', 'details', 'content', 'log_message', 'event_message'],
+            'severity_fields': ['level', 'severity', 'priority', 'log_level', 'alert_level', 'threat_level'],
+            'source_fields': ['source', 'service', 'application', 'system', 'host', 'hostname', 'device', 'sensor']
+        }
+        
+        # Field name normalization mappings
+        self.field_normalization = {
+            # Timestamp variations
+            'event_time': 'timestamp',
+            'log_time': 'timestamp', 
+            'date_time': 'timestamp',
+            'created_at': 'timestamp',
+            'logged_at': 'timestamp',
+            
+            # IP address variations
+            'source_ip': 'src_ip',
+            'destination_ip': 'dst_ip',
+            'dest_ip': 'dst_ip',
+            'client_ip': 'src_ip',
+            'server_ip': 'dst_ip',
+            'remote_addr': 'src_ip',
+            
+            # Port variations
+            'source_port': 'src_port',
+            'destination_port': 'dst_port',
+            'dest_port': 'dst_port',
+            
+            # User variations
+            'username': 'user',
+            'user_id': 'user',
+            'account': 'user',
+            'login': 'user',
+            'user_name': 'user',
+            'account_name': 'user',
+            
+            # Status variations
+            'response_code': 'status',
+            'http_status': 'status',
+            'exit_code': 'status',
+            'outcome': 'status',
+            'result': 'status',
+            'verdict': 'action',
+            
+            # Message variations
+            'msg': 'message',
+            'description': 'message',
+            'details': 'message',
+            'content': 'message',
+            'log_message': 'message',
+            'event_message': 'message',
+            
+            # Severity variations
+            'log_level': 'level',
+            'alert_level': 'level',
+            'threat_level': 'level',
+            'priority': 'level',
+            
+            # Source variations
+            'service': 'source',
+            'application': 'source',
+            'system': 'source',
+            'device': 'source',
+            'sensor': 'source'
         }
     
     def analyze_data_file(self, file_path: str) -> Dict[str, Any]:
@@ -159,33 +219,41 @@ class SchemaAnalyzer:
         return schema
     
     def _detect_field_type(self, values: List[Any]) -> str:
-        """Detect the type of a field based on sample values"""
+        """Enhanced field type detection with comprehensive pattern analysis"""
         if not values:
             return "unknown"
         
-        # Check for common patterns
-        str_values = [str(v).lower() for v in values if v is not None]
+        # Clean and prepare values for analysis
+        non_null_values = [v for v in values if v is not None and v != '']
+        if not non_null_values:
+            return "unknown"
         
-        # Check for timestamps
-        if any(field in str_values[0] for field in ['timestamp', 'date', 'time']) or \
-           any(char in str_values[0] for char in ['T', ':', '-'] if len(str_values[0]) > 10):
-            return "timestamp"
+        str_values = [str(v) for v in non_null_values]
         
-        # Check for IPs
-        if any('.' in str(v) and len(str(v).split('.')) == 4 for v in str_values[:3]):
-            return "ip_address"
+        # Use confidence scoring for better detection
+        type_scores = {
+            'timestamp': self._score_timestamp_likelihood(str_values),
+            'ip_address': self._score_ip_likelihood(str_values),
+            'numeric': self._score_numeric_likelihood(str_values),
+            'boolean': self._score_boolean_likelihood(str_values),
+            'email': self._score_email_likelihood(str_values),
+            'url': self._score_url_likelihood(str_values),
+            'uuid': self._score_uuid_likelihood(str_values),
+            'json': self._score_json_likelihood(str_values),
+            'categorical': self._score_categorical_likelihood(str_values)
+        }
         
-        # Check for numbers
-        try:
-            [float(v) for v in values[:3] if v is not None]
-            return "numeric"
-        except:
-            pass
+        # Get the type with highest confidence score
+        best_type = max(type_scores.items(), key=lambda x: x[1])
         
-        # Check for boolean
-        if all(str(v).lower() in ['true', 'false', '0', '1'] for v in str_values[:5]):
-            return "boolean"
+        # Require minimum confidence threshold
+        if best_type[1] > 0.7:  # 70% confidence threshold
+            return best_type[0]
+        elif best_type[1] > 0.3:  # Lower threshold for likely types
+            if best_type[0] in ['timestamp', 'ip_address', 'numeric', 'boolean']:
+                return best_type[0]
         
+        # Default to text if no strong pattern detected
         return "text"
     
     def _detect_field_patterns(self, field_names: List[str]) -> Dict[str, List[str]]:
@@ -219,7 +287,7 @@ class SchemaAnalyzer:
         for field_name, field_info in schema.get('fields', {}).items():
             field_type = field_info.get('type', 'text')
             
-            # Enhanced field type detection based on pandas dtype and values
+            # Enhanced field type detection based on detected type and field analysis
             if field_type == 'timestamp' or self._is_timestamp_field(field_name, field_info):
                 mapping["mappings"]["properties"][field_name] = {"type": "date"}
             elif field_type == 'ip_address' or self._is_ip_field(field_name, field_info):
@@ -232,8 +300,33 @@ class SchemaAnalyzer:
                     mapping["mappings"]["properties"][field_name] = {"type": "float"}
             elif field_type == 'boolean' or self._is_boolean_field(field_info):
                 mapping["mappings"]["properties"][field_name] = {"type": "boolean"}
+            elif field_type == 'email':
+                # Email addresses as keyword for exact matching
+                mapping["mappings"]["properties"][field_name] = {"type": "keyword"}
+            elif field_type == 'url':
+                # URLs as keyword with text analysis for searching
+                mapping["mappings"]["properties"][field_name] = {
+                    "type": "text",
+                    "fields": {
+                        "keyword": {"type": "keyword"}
+                    }
+                }
+            elif field_type == 'uuid':
+                # UUIDs as keyword for exact matching
+                mapping["mappings"]["properties"][field_name] = {"type": "keyword"}
+            elif field_type == 'json':
+                # JSON content - store as object if possible, text otherwise
+                mapping["mappings"]["properties"][field_name] = {
+                    "type": "text",
+                    "fields": {
+                        "keyword": {"type": "keyword"}
+                    }
+                }
+            elif field_type == 'categorical':
+                # Categorical data as keyword for aggregations
+                mapping["mappings"]["properties"][field_name] = {"type": "keyword"}
             else:
-                # Text field with keyword for aggregations
+                # Default text field with keyword for aggregations
                 mapping["mappings"]["properties"][field_name] = {
                     "type": "text",
                     "fields": {
@@ -436,3 +529,249 @@ class SchemaAnalyzer:
         except Exception as e:
             logger.error(f"Error validating CSV against mapping: {e}")
             return False, [], []
+    
+    def _score_timestamp_likelihood(self, str_values: List[str]) -> float:
+        """Score how likely these values are timestamps"""
+        if not str_values:
+            return 0.0
+        
+        import re
+        from datetime import datetime
+        
+        timestamp_patterns = [
+            r'\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}',  # ISO format
+            r'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}',   # SQL datetime
+            r'\d{4}/\d{2}/\d{2} \d{2}:\d{2}:\d{2}',   # US format
+            r'\d{2}/\d{2}/\d{4} \d{2}:\d{2}:\d{2}',   # European format
+            r'\d{4}-\d{2}-\d{2}',                      # Date only
+            r'\d{10}',                                 # Unix timestamp (10 digits)
+            r'\d{13}',                                 # Unix timestamp milliseconds (13 digits)
+            r'\w{3} \w{3} \d{2} \d{2}:\d{2}:\d{2}',   # Apache log format
+        ]
+        
+        matches = 0
+        for value in str_values[:10]:  # Check first 10 values
+            for pattern in timestamp_patterns:
+                if re.match(pattern, value):
+                    matches += 1
+                    break
+        
+        return matches / len(str_values[:10])
+    
+    def _score_ip_likelihood(self, str_values: List[str]) -> float:
+        """Score how likely these values are IP addresses"""
+        if not str_values:
+            return 0.0
+        
+        import re
+        
+        # IPv4 pattern
+        ipv4_pattern = r'^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$'
+        # IPv6 pattern (simplified)
+        ipv6_pattern = r'^([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}$'
+        
+        matches = 0
+        for value in str_values[:10]:
+            if re.match(ipv4_pattern, value) or re.match(ipv6_pattern, value):
+                matches += 1
+        
+        return matches / len(str_values[:10])
+    
+    def _score_numeric_likelihood(self, str_values: List[str]) -> float:
+        """Score how likely these values are numeric"""
+        if not str_values:
+            return 0.0
+        
+        numeric_count = 0
+        for value in str_values[:10]:
+            try:
+                float(value)
+                numeric_count += 1
+            except ValueError:
+                pass
+        
+        return numeric_count / len(str_values[:10])
+    
+    def _score_boolean_likelihood(self, str_values: List[str]) -> float:
+        """Score how likely these values are boolean"""
+        if not str_values:
+            return 0.0
+        
+        bool_values = {
+            'true', 'false', '1', '0', 'yes', 'no', 'y', 'n', 
+            'on', 'off', 'enabled', 'disabled', 'active', 'inactive'
+        }
+        
+        matches = 0
+        for value in str_values[:10]:
+            if value.lower() in bool_values:
+                matches += 1
+        
+        # High confidence only if ALL values are boolean-like
+        if matches == len(str_values[:10]):
+            return 1.0
+        elif matches > len(str_values[:10]) * 0.8:  # 80% are boolean-like
+            return 0.8
+        else:
+            return 0.0
+    
+    def _score_email_likelihood(self, str_values: List[str]) -> float:
+        """Score how likely these values are email addresses"""
+        if not str_values:
+            return 0.0
+        
+        import re
+        email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        
+        matches = 0
+        for value in str_values[:10]:
+            if re.match(email_pattern, value):
+                matches += 1
+        
+        return matches / len(str_values[:10])
+    
+    def _score_url_likelihood(self, str_values: List[str]) -> float:
+        """Score how likely these values are URLs"""
+        if not str_values:
+            return 0.0
+        
+        import re
+        url_pattern = r'^https?://[^\s/$.?#].[^\s]*$'
+        
+        matches = 0
+        for value in str_values[:10]:
+            if re.match(url_pattern, value) or value.startswith(('http://', 'https://', 'ftp://')):
+                matches += 1
+        
+        return matches / len(str_values[:10])
+    
+    def _score_uuid_likelihood(self, str_values: List[str]) -> float:
+        """Score how likely these values are UUIDs"""
+        if not str_values:
+            return 0.0
+        
+        import re
+        uuid_pattern = r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
+        
+        matches = 0
+        for value in str_values[:10]:
+            if re.match(uuid_pattern, value):
+                matches += 1
+        
+        return matches / len(str_values[:10])
+    
+    def _score_json_likelihood(self, str_values: List[str]) -> float:
+        """Score how likely these values are JSON strings"""
+        if not str_values:
+            return 0.0
+        
+        import json
+        
+        matches = 0
+        for value in str_values[:10]:
+            if value.strip().startswith(('{', '[')):
+                try:
+                    json.loads(value)
+                    matches += 1
+                except json.JSONDecodeError:
+                    pass
+        
+        return matches / len(str_values[:10])
+    
+    def _score_categorical_likelihood(self, str_values: List[str]) -> float:
+        """Score how likely these values represent a categorical field"""
+        if not str_values:
+            return 0.0
+        
+        unique_values = set(str_values[:100])  # Check more values for categories
+        total_values = len(str_values[:100])
+        
+        # If there are very few unique values relative to total, likely categorical
+        uniqueness_ratio = len(unique_values) / total_values
+        
+        if uniqueness_ratio < 0.2:  # Less than 20% unique values
+            return 0.8
+        elif uniqueness_ratio < 0.4:  # Less than 40% unique values
+            return 0.5
+        else:
+            return 0.0
+    
+    def normalize_field_name(self, field_name: str) -> str:
+        """Normalize field name to standard format"""
+        # Convert to lowercase and replace special characters
+        normalized = field_name.lower()
+        
+        # Replace spaces, dots, slashes, and other separators with underscores
+        import re
+        normalized = re.sub(r'[.\s\-/]+', '_', normalized)
+        
+        # Remove special characters except underscore
+        normalized = re.sub(r'[^a-z0-9_]', '', normalized)
+        
+        # Remove leading/trailing underscores
+        normalized = normalized.strip('_')
+        
+        # Apply field normalization mapping if exists
+        if normalized in self.field_normalization:
+            normalized = self.field_normalization[normalized]
+        
+        return normalized
+    
+    def get_standardized_schema(self, schema: Dict[str, Any]) -> Dict[str, Any]:
+        """Return schema with standardized field names"""
+        standardized_schema = schema.copy()
+        standardized_fields = {}
+        field_mapping = {}  # Track original -> standardized mapping
+        
+        for original_field, field_info in schema.get('fields', {}).items():
+            normalized_field = self.normalize_field_name(original_field)
+            standardized_fields[normalized_field] = field_info.copy()
+            field_mapping[original_field] = normalized_field
+        
+        standardized_schema['fields'] = standardized_fields
+        standardized_schema['field_mapping'] = field_mapping
+        
+        # Update detected patterns with standardized names
+        if 'detected_patterns' in standardized_schema:
+            standardized_patterns = {}
+            for pattern_name, field_list in standardized_schema['detected_patterns'].items():
+                standardized_patterns[pattern_name] = [
+                    field_mapping.get(field, field) for field in field_list
+                ]
+            standardized_schema['detected_patterns'] = standardized_patterns
+        
+        return standardized_schema
+    
+    def suggest_field_aliases(self, field_names: List[str]) -> Dict[str, List[str]]:
+        """Suggest field aliases for better compatibility"""
+        aliases = {}
+        
+        for field in field_names:
+            normalized = self.normalize_field_name(field)
+            possible_aliases = []
+            
+            # Add common variations
+            if 'ip' in normalized:
+                if 'src' in normalized or 'source' in normalized:
+                    possible_aliases.extend(['source_ip', 'client_ip', 'src_addr'])
+                elif 'dst' in normalized or 'dest' in normalized:
+                    possible_aliases.extend(['dest_ip', 'destination_ip', 'server_ip', 'dst_addr'])
+                else:
+                    possible_aliases.extend(['ip_address', 'ip_addr'])
+            
+            if 'time' in normalized or 'date' in normalized:
+                possible_aliases.extend(['@timestamp', 'event_time', 'log_time'])
+            
+            if 'user' in normalized:
+                possible_aliases.extend(['username', 'account', 'user_id'])
+            
+            if 'port' in normalized:
+                if 'src' in normalized or 'source' in normalized:
+                    possible_aliases.extend(['source_port', 'src_port'])
+                elif 'dst' in normalized or 'dest' in normalized:
+                    possible_aliases.extend(['dest_port', 'destination_port'])
+            
+            if possible_aliases:
+                aliases[field] = list(set(possible_aliases))
+        
+        return aliases
