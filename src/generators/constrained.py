@@ -67,7 +67,16 @@ try:
 except ImportError:
     NEW_SECURITY_AVAILABLE = False
 
-FIELD_CATALOG = {
+# Import dynamic index analyzer
+try:
+    from src.generators.index_analyzer import get_index_analyzer, build_field_catalog
+    INDEX_ANALYZER_AVAILABLE = True
+except ImportError:
+    INDEX_ANALYZER_AVAILABLE = False
+    logger.warning("Index analyzer not available, falling back to static field catalog")
+
+# Static field catalog (fallback when dynamic discovery isn't available)
+STATIC_FIELD_CATALOG = {
     "@timestamp": {"type": "date", "description": "Event timestamp"},
     "src_ip": {"type": "keyword", "description": "Source IP address"},
     "dst_ip": {"type": "keyword", "description": "Destination IP address"},
@@ -79,6 +88,21 @@ FIELD_CATALOG = {
     "label": {"type": "keyword", "description": "Classification label (malicious, benign)"},
     "message": {"type": "text", "description": "Log message (not searchable)"}
 }
+
+def get_field_catalog_for_index(index_name=None):
+    """Get field catalog dynamically or fall back to static"""
+    if index_name and INDEX_ANALYZER_AVAILABLE:
+        try:
+            analyzer = get_index_analyzer()
+            fields = analyzer.get_index_fields(index_name)
+            if fields:
+                logger.info(f"Using dynamic field catalog for {index_name}: {len(fields)} fields")
+                return fields
+        except Exception as e:
+            logger.warning(f"Failed to get dynamic fields for {index_name}: {e}")
+    
+    # Fallback to static catalog
+    return STATIC_FIELD_CATALOG
 
 # Common field mapping errors from LLMs (maps incorrect field names to correct ones)
 FIELD_CORRECTIONS = {
@@ -208,37 +232,83 @@ def build_prompt(task_prompt, index=None):
     """Build the constrained generation prompt with dynamic index awareness"""
     prompt = "You are an Elasticsearch DSL query generator for cybersecurity log analysis.\n\n"
     
-    # Try to get dynamic index information
-    dynamic_info = get_dynamic_index_info(index)
+    # First try our new dynamic index analyzer
+    field_catalog = None
+    catalog_info = None
     
-    # If we have dynamic info, use it; otherwise fall back to hardcoded logic
-    if dynamic_info and dynamic_info["has_profile"]:
-        # Use dynamic index information
-        field_catalog = dynamic_info["field_catalog"]
-        system_type = dynamic_info["system_type"]
-        timestamp_field = dynamic_info["timestamp_field"]
+    if index and INDEX_ANALYZER_AVAILABLE:
+        try:
+            analyzer = get_index_analyzer()
+            catalog_info = analyzer.build_field_catalog(index)
+            field_catalog = catalog_info.get('fields', {})
+            
+            if field_catalog:
+                logger.info(f"Using dynamic field discovery for {index}: {len(field_catalog)} fields found")
+        except Exception as e:
+            logger.warning(f"Dynamic field discovery failed: {e}")
+    
+    # If dynamic discovery worked, use ALL fields
+    if field_catalog and catalog_info:
+        prompt += f"Index: {index} with {len(field_catalog)} available fields\n\n"
         
-        prompt += f"Dataset: {index}"
-        if system_type != "Unknown":
-            prompt += f" ({system_type})"
-        prompt += f" with {len(field_catalog)} available fields\n\n"
+        # Get timestamp field
+        timestamp_field = catalog_info.get('primary_timestamp', '@timestamp')
         
-        prompt += "Key fields:\n"
-        # Add most important fields (limit to prevent prompt bloat)
-        important_keywords = ["timestamp", "ip", "port", "protocol", "label", "attack", "status", "action", "bytes"]
-        field_count = 0
-        max_fields = 12
+        # Include ALL fields (or up to a reasonable limit)
+        prompt += "ALL AVAILABLE FIELDS:\n"
         
-        for field_name, field_info in field_catalog.items():
-            if field_count >= max_fields:
-                break
-            if any(keyword in field_name.lower() for keyword in important_keywords):
+        # If too many fields, use the sample query fields
+        if len(field_catalog) > 50:
+            important_fields = analyzer.get_sample_query_fields(index, limit=40)
+            for field_info in important_fields:
+                prompt += f"- {field_info['name']} ({field_info['type']}): {field_info['description']}\n"
+            prompt += f"... and {len(field_catalog) - len(important_fields)} more fields available\n"
+        else:
+            # Include all fields if reasonable number
+            for field_name, field_info in field_catalog.items():
                 prompt += f"- {field_name} ({field_info['type']}): {field_info['description']}\n"
-                field_count += 1
         
-        if len(field_catalog) > max_fields:
-            prompt += f"... and {len(field_catalog) - field_count} more fields\n"
         prompt += "\n"
+        
+        # Add field patterns if found
+        if catalog_info.get('common_patterns'):
+            prompt += "Field patterns detected:\n"
+            for pattern_type, fields in catalog_info['common_patterns'].items():
+                if fields:
+                    prompt += f"- {pattern_type}: {', '.join(fields[:5])}\n"
+            prompt += "\n"
+    
+    # Fallback to old dynamic info if new analyzer didn't work
+    elif index:
+        dynamic_info = get_dynamic_index_info(index)
+        
+        if dynamic_info and dynamic_info["has_profile"]:
+            # Use old dynamic index information
+            field_catalog = dynamic_info["field_catalog"]
+            system_type = dynamic_info["system_type"]
+            timestamp_field = dynamic_info["timestamp_field"]
+            
+            prompt += f"Dataset: {index}"
+            if system_type != "Unknown":
+                prompt += f" ({system_type})"
+            prompt += f" with {len(field_catalog)} available fields\n\n"
+            
+            prompt += "Key fields:\n"
+            # Add most important fields (limit to prevent prompt bloat)
+            important_keywords = ["timestamp", "ip", "port", "protocol", "label", "attack", "status", "action", "bytes", "type", "log", "firewall", "user", "host"]
+            field_count = 0
+            max_fields = 20  # Increased from 12
+            
+            for field_name, field_info in field_catalog.items():
+                if field_count >= max_fields:
+                    break
+                if any(keyword in field_name.lower() for keyword in important_keywords):
+                    prompt += f"- {field_name} ({field_info['type']}): {field_info['description']}\n"
+                    field_count += 1
+            
+            if len(field_catalog) > max_fields:
+                prompt += f"... and {len(field_catalog) - field_count} more fields\n"
+            prompt += "\n"
         
     elif index and "cic" in index.lower():
         prompt += "Dataset: CIC-IDS2017 network traffic with attack labels\n\n"
@@ -266,19 +336,32 @@ def build_prompt(task_prompt, index=None):
         prompt += "- For 'high bandwidth': use flow_bytes_s >= 1000000\n"
         prompt += "- Always include @timestamp range for time windowing\n\n"
     else:
+        # Use static catalog as last resort
+        static_catalog = get_field_catalog_for_index(None)
         prompt += "Available fields:\n"
-        for field, info in FIELD_CATALOG.items():
+        for field, info in static_catalog.items():
             if field != "message":  # Skip non-searchable field
                 prompt += f"- {field} ({info['type']}): {info['description']}\n"
     
-    prompt += "\nAllowed query operators:\n"
+    prompt += "\nIMPORTANT: USE ONLY THE FIELDS LISTED ABOVE!\n"
+    prompt += "Map natural language terms to the closest matching field from the list.\n"
+    prompt += "For example: 'log type' might map to 'type' or 'log_type' if those fields exist.\n\n"
+    
+    prompt += "Allowed query operators:\n"
     for op, desc in ALLOWED_OPERATORS.items():
         prompt += f"- {op}: {desc}\n"
     
     prompt += "\nRules:\n"
     prompt += "- Always use bool.filter for combining conditions\n"
+    prompt += "- MUST use only fields from the list above - do not invent field names\n"
+    
+    # Set timestamp field based on what we found
+    timestamp_field = '@timestamp'  # default
+    if catalog_info and catalog_info.get('primary_timestamp'):
+        timestamp_field = catalog_info['primary_timestamp']
     
     # Use dynamic timestamp field and date range if available
+    dynamic_info = get_dynamic_index_info(index) if index else None
     if dynamic_info and dynamic_info["has_profile"]:
         timestamp_field = dynamic_info["timestamp_field"]
         date_range = dynamic_info["date_range"]
