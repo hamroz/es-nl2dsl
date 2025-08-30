@@ -131,7 +131,7 @@ def check_configuration():
     
     required_files = [
         "artifacts/validator_rules.yaml",
-        "artifacts/mappings.json", 
+        # "artifacts/mappings.json", 
         "artifacts/esdsl_schema.json",
         "tasks/prompts.yaml"
     ]
