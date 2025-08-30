@@ -1,46 +1,114 @@
-# Few-shot examples for query generation
-# These examples are used in prompts but not evaluated
+# Enhanced Few-shot Examples for Query Generation
+# Phase 4: Includes field type examples, boolean logic, and complex patterns
 
-- prompt: "Find events labeled malicious on a specific date"
+# Basic field matching examples
+- prompt: "Find events with log type firewall"
+  query:
+    query:
+      bool:
+        filter:
+          - term:
+              log_type.keyword: "firewall"
+          - range:
+              "@timestamp":
+                gte: "2017-01-01T00:00:00Z"
+                lte: "2017-12-31T23:59:59Z"
+
+- prompt: "Show records with action blocked and source IP 192.168.1.10"
+  query:
+    query:
+      bool:
+        filter:
+          - term:
+              action.keyword: "blocked"
+          - term:
+              source_ip: "192.168.1.10"
+          - range:
+              "@timestamp":
+                gte: "2017-01-01T00:00:00Z"
+                lte: "2017-12-31T23:59:59Z"
+
+# Range query examples
+- prompt: "Find events where bytes transferred greater than 100000"
+  query:
+    query:
+      bool:
+        filter:
+          - range:
+              bytes_transferred:
+                gt: 100000
+          - range:
+              "@timestamp":
+                gte: "2017-01-01T00:00:00Z"
+                lte: "2017-12-31T23:59:59Z"
+
+# Boolean logic - OR example
+- prompt: "Show logs with severity high or critical"
   query:
     query:
       bool:
         filter:
           - range:
               "@timestamp":
-                gte: "2017-07-04T00:00:00Z"
-                lte: "2017-07-04T23:59:59Z"
+                gte: "2017-01-01T00:00:00Z"
+                lte: "2017-12-31T23:59:59Z"
+        should:
           - term:
-              label: "malicious"
+              severity.keyword: "high"
+          - term:
+              severity.keyword: "critical"
+        minimum_should_match: 1
 
-- prompt: "Find TCP traffic from a specific IP address"
+# Boolean logic - NOT example (exclusion)
+- prompt: "Find firewall events but exclude user admin"
   query:
     query:
       bool:
         filter:
           - term:
-              src_ip: "192.168.1.10"
-          - term:
-              protocol: "TCP"
-
-- prompt: "Find high-volume data transfers"
-  query:
-    query:
-      bool:
-        filter:
+              log_type.keyword: "firewall"
           - range:
-              bytes_out:
-                gt: 10000
+              "@timestamp":
+                gte: "2017-01-01T00:00:00Z"
+                lte: "2017-12-31T23:59:59Z"
+        must_not:
+          - term:
+              user.keyword: "admin"
 
-- prompt: "Find traffic to multiple ports"
+# Complex boolean - AND with NOT
+- prompt: "Show TCP traffic with bytes over 1000 but not from internal IPs"
+  query:
+    query:
+      bool:
+        filter:
+          - term:
+              protocol.keyword: "TCP"
+          - range:
+              bytes_transferred:
+                gt: 1000
+          - range:
+              "@timestamp":
+                gte: "2017-01-01T00:00:00Z"
+                lte: "2017-12-31T23:59:59Z"
+        must_not:
+          - terms:
+              source_ip: ["10.0.0.1", "192.168.1.1"]
+
+# Multiple values - terms query
+- prompt: "Find traffic to ports 80, 443, or 8080"
   query:
     query:
       bool:
         filter:
           - terms:
-              dst_port: [80, 443, 8080]
+              dest_port: [80, 443, 8080]
+          - range:
+              "@timestamp":
+                gte: "2017-01-01T00:00:00Z"
+                lte: "2017-12-31T23:59:59Z"
 
-- prompt: "Find DNS queries within a time range"
+# Range with multiple conditions
+- prompt: "Show events between 2017-07-01 and 2017-07-31 with severity between 5 and 8"
   query:
     query:
       bool:
@@ -48,8 +116,90 @@
           - range:
               "@timestamp":
                 gte: "2017-07-01T00:00:00Z"
-                lte: "2017-07-02T00:00:00Z"
+                lte: "2017-07-31T23:59:59Z"
+          - range:
+              severity:
+                gte: 5
+                lte: 8
+
+# Keyword vs text field usage
+- prompt: "Find threat detection events with malware classification"
+  query:
+    query:
+      bool:
+        filter:
           - term:
-              dst_port: 53
+              threat_label.keyword: "malware"
           - term:
-              protocol: "UDP"
+              log_type.keyword: "detection"
+          - range:
+              "@timestamp":
+                gte: "2017-01-01T00:00:00Z"
+                lte: "2017-12-31T23:59:59Z"
+
+# Complex nested boolean - AND with OR and NOT
+- prompt: "Show TCP or UDP traffic with high severity but exclude internal network and not user admin"
+  query:
+    query:
+      bool:
+        filter:
+          - range:
+              "@timestamp":
+                gte: "2017-01-01T00:00:00Z"
+                lte: "2017-12-31T23:59:59Z"
+          - term:
+              severity.keyword: "high"
+        should:
+          - term:
+              protocol.keyword: "TCP"
+          - term:
+              protocol.keyword: "UDP"
+        minimum_should_match: 1
+        must_not:
+          - terms:
+              source_ip: ["10.0.0.1", "192.168.1.1", "172.16.0.1"]
+          - term:
+              user.keyword: "admin"
+
+# Advanced aggregation with filters - top threat sources
+- prompt: "Show top 10 source IPs generating threats with port scans or DDoS attacks"
+  query:
+    query:
+      bool:
+        filter:
+          - range:
+              "@timestamp":
+                gte: "2017-01-01T00:00:00Z"
+                lte: "2017-12-31T23:59:59Z"
+        should:
+          - term:
+              attack_type.keyword: "port_scan"
+          - term:
+              attack_type.keyword: "ddos"
+        minimum_should_match: 1
+    aggs:
+      top_threat_sources:
+        terms:
+          field: "source_ip.keyword"
+          size: 10
+          order:
+            _count: desc
+
+# Time-based analysis with multiple conditions
+- prompt: "Find failed login attempts during business hours with more than 5 attempts from same IP"
+  query:
+    query:
+      bool:
+        filter:
+          - term:
+              action.keyword: "failed_login"
+          - range:
+              "@timestamp":
+                gte: "2017-01-01T08:00:00Z"
+                lte: "2017-12-31T18:00:00Z"
+          - range:
+              attempt_count:
+                gt: 5
+        must_not:
+          - term:
+              user_type.keyword: "service_account"

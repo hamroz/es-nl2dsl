@@ -219,6 +219,124 @@ def enhance_prompt_with_field_matching(task_prompt, index_name):
         logger.warning(f"Failed to enhance prompt with field matching: {e}")
         return task_prompt
 
+def _build_enhanced_field_context(field_catalog, catalog_info, analyzer, index):
+    """
+    Build enhanced field context with grouping, samples, and relationships
+    """
+    context = ""
+    
+    # Group fields by type
+    field_groups = {
+        'Timestamp Fields': [],
+        'Text/Keyword Fields': [],
+        'Numeric Fields': [],
+        'IP Address Fields': [],
+        'Port Fields': [],
+        'Boolean Fields': [],
+        'Other Fields': []
+    }
+    
+    for field_name, field_info in field_catalog.items():
+        field_type = field_info.get('type', 'unknown')
+        description = field_info.get('description', '')
+        
+        if field_type == 'date':
+            field_groups['Timestamp Fields'].append((field_name, field_info))
+        elif 'ip' in field_name.lower() or 'address' in field_name.lower():
+            field_groups['IP Address Fields'].append((field_name, field_info))
+        elif 'port' in field_name.lower():
+            field_groups['Port Fields'].append((field_name, field_info))
+        elif field_type in ['keyword', 'text']:
+            field_groups['Text/Keyword Fields'].append((field_name, field_info))
+        elif field_type in ['integer', 'long', 'float', 'double']:
+            field_groups['Numeric Fields'].append((field_name, field_info))
+        elif field_type == 'boolean':
+            field_groups['Boolean Fields'].append((field_name, field_info))
+        else:
+            field_groups['Other Fields'].append((field_name, field_info))
+    
+    # Build organized field display
+    total_fields = len(field_catalog)
+    context += f"INDEX SCHEMA ({total_fields} fields organized by type):\n\n"
+    
+    for group_name, fields in field_groups.items():
+        if not fields:
+            continue
+            
+        context += f"{group_name} ({len(fields)} fields):\n"
+        
+        # Show all fields if not too many, otherwise show important ones
+        fields_to_show = fields[:15] if len(fields) > 15 else fields
+        
+        for field_name, field_info in fields_to_show:
+            field_type = field_info.get('type', 'unknown')
+            description = field_info.get('description', f'Field of type {field_type}')
+            
+            # Add usage hints for important field types
+            usage_hint = ""
+            if field_name.endswith('.keyword'):
+                usage_hint = " [USE FOR EXACT MATCH]"
+            elif field_type == 'text':
+                usage_hint = " [USE FOR FULL-TEXT SEARCH]"
+            elif field_type == 'date':
+                usage_hint = " [USE FOR TIME RANGES]"
+            elif field_type in ['integer', 'long', 'float', 'double']:
+                usage_hint = " [USE FOR NUMERIC RANGES]"
+            
+            context += f"  • {field_name} ({field_type}): {description}{usage_hint}\n"
+        
+        if len(fields) > 15:
+            context += f"  ... and {len(fields) - 15} more {group_name.lower()}\n"
+        
+        context += "\n"
+    
+    # Add sample values section for key fields
+    context += "SAMPLE VALUES FOR KEY FIELDS:\n"
+    
+    # Get sample values for important categorical fields
+    key_fields = [
+        'log_type', 'log_type.keyword', 'action', 'action.keyword',
+        'protocol', 'protocol.keyword', 'status', 'status.keyword',
+        'threat_label', 'threat_label.keyword', 'attack_type'
+    ]
+    
+    sample_count = 0
+    for field_name in key_fields:
+        if field_name in field_catalog and sample_count < 5:  # Limit to 5 sample fields
+            try:
+                # Get sample values if analyzer is available
+                if analyzer:
+                    stats = analyzer.get_field_statistics(index, field_name, max_samples=3)
+                    samples = stats.get('samples', [])
+                    if samples:
+                        context += f"  • {field_name}: {', '.join(str(s) for s in samples[:3])}\n"
+                        sample_count += 1
+            except Exception:
+                # Skip if can't get samples
+                pass
+    
+    if sample_count == 0:
+        context += "  (Sample values not available)\n"
+    
+    context += "\n"
+    
+    # Add field usage recommendations
+    context += "FIELD USAGE RECOMMENDATIONS:\n"
+    context += "• Use .keyword fields (e.g., log_type.keyword) for exact matching and aggregations\n"
+    context += "• Use text fields for full-text search and partial matching\n"
+    context += "• Use numeric fields with range queries (gt, lt, gte, lte)\n"
+    context += "• Always include a timestamp range for performance\n"
+    
+    # Add specific field mapping hints
+    if 'log_type.keyword' in field_catalog:
+        context += "• For 'log type': ALWAYS use 'log_type.keyword' field\n"
+    if 'action.keyword' in field_catalog:
+        context += "• For 'action': ALWAYS use 'action.keyword' field\n"
+    
+    context += "\n"
+    
+    return context
+
 # Common field mapping errors from LLMs (maps incorrect field names to correct ones)
 FIELD_CORRECTIONS = {
     # ECS-style fields to actual fields
@@ -372,28 +490,19 @@ def build_prompt(task_prompt, index=None):
         # Get timestamp field
         timestamp_field = catalog_info.get('primary_timestamp', '@timestamp')
         
-        # Include ALL fields (or up to a reasonable limit)
-        prompt += "ALL AVAILABLE FIELDS:\n"
+        # PHASE 4: Enhanced field organization and context
+        prompt += _build_enhanced_field_context(field_catalog, catalog_info, analyzer, index)
         
-        # If too many fields, use the sample query fields
-        if len(field_catalog) > 50:
-            important_fields = analyzer.get_sample_query_fields(index, limit=40)
-            for field_info in important_fields:
-                prompt += f"- {field_info['name']} ({field_info['type']}): {field_info['description']}\n"
-            prompt += f"... and {len(field_catalog) - len(important_fields)} more fields available\n"
-        else:
-            # Include all fields if reasonable number
-            for field_name, field_info in field_catalog.items():
-                prompt += f"- {field_name} ({field_info['type']}): {field_info['description']}\n"
-        
-        prompt += "\n"
-        
-        # Add field patterns if found
+        # Add field relationships and patterns
         if catalog_info.get('common_patterns'):
-            prompt += "Field patterns detected:\n"
+            prompt += "FIELD RELATIONSHIPS & PATTERNS:\n"
             for pattern_type, fields in catalog_info['common_patterns'].items():
                 if fields:
-                    prompt += f"- {pattern_type}: {', '.join(fields[:5])}\n"
+                    pattern_name = pattern_type.replace('_', ' ').title()
+                    prompt += f"- {pattern_name}: {', '.join(fields[:5])}"
+                    if len(fields) > 5:
+                        prompt += f" (+{len(fields)-5} more)"
+                    prompt += "\n"
             prompt += "\n"
     
     # Fallback to old dynamic info if new analyzer didn't work
