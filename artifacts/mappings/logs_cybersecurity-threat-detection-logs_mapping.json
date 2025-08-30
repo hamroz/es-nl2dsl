@@ -1,6 +1,6 @@
 {
   "index_name": "logs_cybersecurity-threat-detection-logs",
-  "created_at": 1756577937.211104,
+  "created_at": 1756581947.7348511,
   "schema": {
     "format": "csv",
     "total_columns": 10,

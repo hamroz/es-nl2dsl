@@ -691,7 +691,14 @@ def execute_elasticsearch_query(query: Dict[str, Any], index: str, max_size: int
         
         # Execute the query with size limit
         start_time = time.time()
-        response = es.search(index=index, body=query, size=max_size, track_total_hits=True)
+        
+        # Handle size parameter conflict - if query has size, don't override it
+        if "size" in query:
+            # Query already has size specified, use it as-is
+            response = es.search(index=index, body=query, track_total_hits=True)
+        else:
+            # No size in query, add our limit
+            response = es.search(index=index, body=query, size=max_size, track_total_hits=True)
         execution_time = time.time() - start_time
         logger.info(f"⏱️ Query executed in {execution_time:.3f} seconds")
         

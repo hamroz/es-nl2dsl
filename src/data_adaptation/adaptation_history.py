@@ -78,36 +78,67 @@ class AdaptationHistory:
         self.load_history()
     
     def load_history(self) -> None:
-        """Load history from file"""
+        """Load history from file with error recovery"""
         try:
             if self.history_file.exists():
                 with open(self.history_file, 'r') as f:
                     data = json.load(f)
-                    self.records = {
-                        record_id: AdaptationRecord.from_dict(record_data)
-                        for record_id, record_data in data.items()
-                    }
+                    
+                # Validate and load records
+                self.records = {}
+                for record_id, record_data in data.items():
+                    try:
+                        record = AdaptationRecord.from_dict(record_data)
+                        self.records[record_id] = record
+                    except Exception as record_error:
+                        logger.warning(f"Skipping corrupted record {record_id}: {record_error}")
+                        
                 logger.info(f"Loaded {len(self.records)} adaptation records")
             else:
                 self.records = {}
                 logger.info("No existing history file found, starting fresh")
+        except json.JSONDecodeError as json_error:
+            logger.error(f"JSON decode error in adaptation history: {json_error}")
+            logger.warning("Creating backup of corrupted file and starting fresh")
+            
+            # Backup corrupted file
+            if self.history_file.exists():
+                backup_file = self.history_file.with_suffix('.corrupted.backup')
+                self.history_file.rename(backup_file)
+                logger.info(f"Corrupted file backed up to {backup_file}")
+            
+            self.records = {}
+            self.save_history()  # Create a fresh, empty file
         except Exception as e:
             logger.error(f"Error loading adaptation history: {e}")
             self.records = {}
     
     def save_history(self) -> bool:
-        """Save history to file"""
+        """Save history to file with atomic write"""
         try:
             data = {
                 record_id: record.to_dict()
                 for record_id, record in self.records.items()
             }
-            with open(self.history_file, 'w') as f:
-                json.dump(data, f, indent=2)
+            
+            # Atomic write: write to temp file first, then rename
+            temp_file = self.history_file.with_suffix('.tmp')
+            with open(temp_file, 'w') as f:
+                json.dump(data, f, indent=2, default=str)  # Add default=str to handle any serialization issues
+            
+            # Verify the file is valid JSON before replacing
+            with open(temp_file, 'r') as f:
+                json.load(f)  # This will raise an exception if JSON is invalid
+            
+            # Replace the original file
+            temp_file.replace(self.history_file)
             logger.info(f"Saved {len(self.records)} adaptation records")
             return True
         except Exception as e:
             logger.error(f"Error saving adaptation history: {e}")
+            # Clean up temp file if it exists
+            if 'temp_file' in locals() and temp_file.exists():
+                temp_file.unlink()
             return False
     
     def create_record(
@@ -223,12 +254,14 @@ class AdaptationHistory:
         }
 
 
-# Singleton instance
+# Singleton instance with refresh capability
 _history_instance = None
 
-def get_adaptation_history() -> AdaptationHistory:
+def get_adaptation_history(force_refresh: bool = False) -> AdaptationHistory:
     """Get singleton instance of AdaptationHistory"""
     global _history_instance
-    if _history_instance is None:
+    if _history_instance is None or force_refresh:
         _history_instance = AdaptationHistory()
+        _history_instance.load_history()  # Force reload from file
+        logger.info(f"Loaded adaptation history: {len(_history_instance.records)} records")
     return _history_instance

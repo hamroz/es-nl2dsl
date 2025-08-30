@@ -1,0 +1,16 @@
+{
+  "adapt_1756580896_c9696988": {
+    "id": "adapt_1756580896_c9696988",
+    "timestamp": 1756580896.763401,
+    "file_name": "cybersecurity-threat-detection-logs.csv",
+    "file_format": "csv",
+    "index_name": "",
+    "status": "analyzed",
+    "schema": {
+      "format": "csv",
+      "total_columns": 10,
+      "sample_records": 1000,
+      "fields": {
+        "timestamp": {
+          "type": "object",
+          "non_null_count": 

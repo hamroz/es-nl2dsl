@@ -329,6 +329,10 @@ def render_data_ingestion_tab():
                 st.session_state.ingested_index = index_name
                 st.session_state.ingestion_result = result
                 
+                # Wait a moment for Elasticsearch to process the bulk ingestion
+                import time
+                time.sleep(2)  # Allow time for documents to be indexed
+                
                 # Quick verification using get_index_info instead
                 try:
                     index_info = adapter.get_index_info(index_name)
@@ -458,41 +462,121 @@ def render_query_generation_tab():
         key="query_gen_model"
     )
     
-    if st.button("🚀 Generate Queries", type="primary") and user_request:
-        model_name = ai_model  # Keep the full model name with emoji prefix
-        
-        with st.spinner("Generating queries with AI..."):
-            from src.data_adaptation.ai_assistant import AIAssistant
-            ai_assistant = AIAssistant()
-            query_result = ai_assistant.generate_sample_queries(schema, user_request, model_name)
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        if st.button("🎯 Enhanced AI Queries", type="primary") and user_request:
+            model_name = ai_model  # Keep the full model name with emoji prefix
             
-            if query_result["success"]:
-                st.session_state.generated_queries = query_result["generated_queries"]
-                st.success(f"✅ Generated {len(query_result['generated_queries'])} queries!")
+            with st.spinner("Generating enhanced queries with AI..."):
+                from src.data_adaptation.ai_assistant import AIAssistant
+                ai_assistant = AIAssistant()
                 
-                # Update history record with generated queries
-                if hasattr(st.session_state, 'current_adaptation_id'):
-                    from src.data_adaptation.adaptation_history import get_adaptation_history
-                    history = get_adaptation_history()
-                    history.update_record(
-                        st.session_state.current_adaptation_id,
-                        generated_queries=query_result["generated_queries"],
-                        status="completed"
-                    )
-            else:
-                st.error(f"Query generation failed: {query_result.get('error', 'Unknown error')}")
+                # Use enhanced query generation
+                query_result = ai_assistant.generate_enhanced_queries(schema, user_request, model_name)
+                
+                if query_result["success"]:
+                    st.session_state.generated_queries = query_result["generated_queries"]
+                    st.session_state.query_context = query_result.get("schema_context", {})
+                    
+                    st.success(f"✅ Generated {len(query_result['generated_queries'])} enhanced queries!")
+                    
+                    # Show domain detection
+                    domain = query_result.get("schema_context", {}).get("domain", "general")
+                    st.info(f"🎯 Detected domain: **{domain.title()}** - queries optimized for this context")
+                    
+                    # Update history record with generated queries
+                    if hasattr(st.session_state, 'current_adaptation_id'):
+                        from src.data_adaptation.adaptation_history import get_adaptation_history
+                        history = get_adaptation_history()
+                        history.update_record(
+                            st.session_state.current_adaptation_id,
+                            generated_queries=query_result["generated_queries"],
+                            status="completed"
+                        )
+                else:
+                    st.error(f"Query generation failed: {query_result.get('error', 'Unknown error')}")
+    
+    with col2:
+        if st.button("⚡ Smart Query Suggestions", type="secondary"):
+            with st.spinner("Generating field-aware suggestions..."):
+                from src.data_adaptation.ai_assistant import AIAssistant
+                ai_assistant = AIAssistant()
+                
+                # Generate field-aware suggestions
+                suggestions = ai_assistant.suggest_field_aware_queries(schema)
+                
+                if suggestions:
+                    st.session_state.generated_queries = suggestions
+                    st.session_state.query_context = {"source": "field_aware_suggestions"}
+                    
+                    st.success(f"✅ Generated {len(suggestions)} smart suggestions!")
+                    
+                    # Show suggestion categories
+                    categories = set(q.get('category', 'general') for q in suggestions)
+                    st.info(f"📊 Categories: {', '.join(categories)}")
     
     # Display generated queries
     if hasattr(st.session_state, 'generated_queries'):
         st.markdown("---")
         st.markdown("### 📝 Generated Queries")
         
+        # Query source info
+        if hasattr(st.session_state, 'query_context'):
+            context = st.session_state.query_context
+            if context.get("source") == "field_aware_suggestions":
+                st.info("💡 These are smart field-aware suggestions based on your data schema")
+            elif context.get("domain"):
+                st.info(f"🎯 AI-generated queries for **{context['domain']}** domain")
+        
         for i, query in enumerate(st.session_state.generated_queries):
-            with st.expander(f"Query {i+1}: {query.get('name', 'Unnamed')}"):
-                st.markdown(f"**Description:** {query.get('description', 'No description')}")
+            # Enhanced query header with category and complexity
+            query_name = query.get('name', f'Query {i+1}')
+            category = query.get('category', '')
+            complexity = query.get('complexity', '')
+            
+            header_parts = [query_name]
+            if category:
+                header_parts.append(f"[{category}]")
+            if complexity:
+                header_parts.append(f"({complexity})")
+            
+            header = " ".join(header_parts)
+            
+            with st.expander(f"🔍 {header}"):
+                col1, col2 = st.columns([3, 1])
+                
+                with col1:
+                    st.markdown(f"**Description:** {query.get('description', 'No description')}")
+                    
+                    # Show use case if available
+                    if query.get('use_case'):
+                        st.markdown(f"**Use Case:** {query['use_case']}")
+                    
+                    # Show performance hints if available
+                    if query.get('performance_hints'):
+                        st.markdown("**💡 Performance Hints:**")
+                        for hint in query['performance_hints']:
+                            st.info(f"💡 {hint}")
+                
+                with col2:
+                    if query.get('category'):
+                        st.markdown(f"**📊 Category:** `{query['category']}`")
+                    if query.get('complexity'):
+                        complexity_colors = {
+                            'basic': '🟢',
+                            'intermediate': '🟡', 
+                            'advanced': '🔴'
+                        }
+                        icon = complexity_colors.get(query['complexity'], '⚪')
+                        st.markdown(f"**🎯 Complexity:** {icon} `{query['complexity']}`")
+                
+                # Query DSL
+                st.markdown("**Elasticsearch DSL:**")
                 st.code(json.dumps(query.get('dsl', {}), indent=2), language="json")
                 
-                if st.button(f"🧪 Test Query {i+1}", key=f"test_{i}"):
+                # Test button
+                if st.button(f"🧪 Test Query", key=f"test_{i}"):
                     test_query_on_index(query.get('dsl', {}), index_name)
 
 
@@ -502,7 +586,19 @@ def render_history_tab():
     st.markdown("View and manage your data adaptation sessions")
     
     from src.data_adaptation.adaptation_history import get_adaptation_history
-    history = get_adaptation_history()
+    
+    # Add refresh button to force reload
+    col1, col2 = st.columns([3, 1])
+    with col2:
+        if st.button("🔄 Refresh History"):
+            history = get_adaptation_history(force_refresh=True)
+            st.success(f"History refreshed! Found {len(history.records)} sessions")
+        else:
+            history = get_adaptation_history(force_refresh=True)  # Always force refresh on tab load
+    
+    # Add debug info
+    with col1:
+        st.info(f"📂 History file: `artifacts/adaptation_history.json` | Records loaded: {len(history.records)}")
     
     # Get summary stats
     stats = history.get_summary_stats()
@@ -567,7 +663,13 @@ def render_history_tab():
                 st.markdown(f"**Created:** {datetime.fromtimestamp(record.timestamp).strftime('%Y-%m-%d %H:%M')}")
                 
                 # Action buttons
-                if record.status == "completed" and record.index_name:
+                # Show load button for different session states
+                if record.status == "analyzed":
+                    if st.button(f"🔄 Load Schema", key=f"load_{record.id}"):
+                        load_session_to_current(record)
+                        st.success("Schema loaded! You can now proceed to ingestion.")
+                        st.rerun()
+                elif record.status in ["ingested", "completed"] and record.index_name:
                     if st.button(f"🔄 Load Session", key=f"load_{record.id}"):
                         load_session_to_current(record)
                         st.success("Session loaded! You can now work with this data.")
@@ -605,18 +707,27 @@ def load_session_to_current(record):
     """Load a historical session into current session state"""
     st.session_state.analyzed_schema = record.schema
     st.session_state.uploaded_file_name = record.file_name
-    st.session_state.ai_analysis = record.ai_analysis
-    st.session_state.ingested_index = record.index_name
-    st.session_state.generated_queries = record.generated_queries
     st.session_state.current_adaptation_id = record.id
     
-    # Simulate ingestion result for consistency
-    st.session_state.ingestion_result = {
-        "success": True,
-        "successful": record.document_count,
-        "total_docs": record.document_count,
-        "errors": 0
-    }
+    # Load AI analysis if available
+    if record.ai_analysis:
+        st.session_state.ai_analysis = record.ai_analysis
+    
+    # Load ingestion data if available
+    if record.index_name:
+        st.session_state.ingested_index = record.index_name
+        
+        # Simulate ingestion result for consistency
+        st.session_state.ingestion_result = {
+            "success": True,
+            "successful": record.document_count,
+            "total_docs": record.document_count,
+            "errors": 0
+        }
+    
+    # Load generated queries if available
+    if record.generated_queries:
+        st.session_state.generated_queries = record.generated_queries
 
 
 def display_schema_analysis(schema):
@@ -701,8 +812,8 @@ def test_query_on_index(query, index_name):
         from gui.utils.backend_interface import execute_elasticsearch_query
         
         with st.spinner("Testing query..."):
-            # Execute query
-            is_valid, result = execute_elasticsearch_query(json.dumps(query), index_name)
+            # Execute query - pass the query dict directly, not as JSON string
+            is_valid, result = execute_elasticsearch_query(query, index_name)
             
             if is_valid:
                 if isinstance(result, dict) and 'hits' in result:

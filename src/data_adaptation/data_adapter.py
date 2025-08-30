@@ -271,6 +271,12 @@ class DataAdapter:
         """Get information about a specific index"""
         try:
             auth = ('elastic', 'ChangeMe_123')  # Use admin credentials
+            
+            # Force refresh the index to ensure documents are visible
+            refresh_response = requests.post(f"{self.es_url}/{index_name}/_refresh", auth=auth)
+            if refresh_response.status_code not in [200, 201]:
+                logger.warning(f"Index refresh failed with status {refresh_response.status_code}")
+            
             # Get index stats
             stats_response = requests.get(f"{self.es_url}/{index_name}/_stats", auth=auth)
             mapping_response = requests.get(f"{self.es_url}/{index_name}/_mapping", auth=auth)
