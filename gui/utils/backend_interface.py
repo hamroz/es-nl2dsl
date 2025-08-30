@@ -22,18 +22,51 @@ if not logging.getLogger().handlers:
     )
 logger = logging.getLogger(__name__)
 
-# Import GUI logging utilities for user action tracking
-from gui.utils.logging_utils import get_gui_logger
+# Lazy loading for GUI logger to avoid Streamlit session state issues during import
+backend_logger = None
 
-# Initialize backend logger for user activity tracking
-backend_logger = get_gui_logger("backend_interface")
+def get_backend_logger():
+    """Get or initialize the backend logger with lazy loading"""
+    global backend_logger
+    if backend_logger is None:
+        try:
+            from gui.utils.logging_utils import get_gui_logger
+            backend_logger = get_gui_logger("backend_interface")
+        except Exception as e:
+            # If logging import fails, create a minimal fallback logger
+            import logging
+            backend_logger = logging.getLogger("backend_interface_fallback")
+            get_backend_logger().warning(f"Failed to initialize GUI logger: {e}")
+            # Create basic methods for compatibility
+            get_backend_logger().log_system_operation = lambda msg, **kwargs: get_backend_logger().info(f"SYSTEM: {msg}")
+            get_backend_logger().log_success = lambda msg, **kwargs: get_backend_logger().info(f"SUCCESS: {msg}")
+            get_backend_logger().log_error = lambda msg, error, **kwargs: get_backend_logger().error(f"ERROR {msg}: {error}")
+            get_backend_logger().log_warning = lambda msg, warning, **kwargs: get_backend_logger().warning(f"WARNING {msg}: {warning}")
+            get_backend_logger().log_status = lambda msg, details, **kwargs: get_backend_logger().info(f"STATUS {msg}: {details}")
+            get_backend_logger().log_query_generation = lambda method, model, length, **kwargs: get_backend_logger().info(f"QUERY_GEN: {method} {model}")
+            get_backend_logger().log_query_execution = lambda index, query_type, **kwargs: get_backend_logger().info(f"QUERY_EXEC: {index} {query_type}")
+            get_backend_logger().log_user_action = lambda action, **kwargs: get_backend_logger().info(f"USER: {action}")
+    return backend_logger
 
 # Add project root to path for imports
 project_root = Path(__file__).parent.parent.parent
 sys.path.append(str(project_root))
 
-# Import from new structure
-from src.utils.config import get_es_client_config, ES_ADMIN_CREDS, ES_READER_CREDS
+# Import from new structure with defensive import
+try:
+    from src.utils.config import get_es_client_config, ES_ADMIN_CREDS, ES_READER_CREDS
+except ImportError as e:
+    logger.warning(f"Config import failed: {e}")
+    # Fallback configuration
+    def get_es_client_config(use_admin=False):
+        creds = ("elastic", "ChangeMe_123") if use_admin else ("reader", "ReaderPwd_123")
+        return {
+            'hosts': [{'host': 'localhost', 'port': 9200, 'scheme': 'http'}],
+            'basic_auth': creds,
+            'verify_certs': False
+        }
+    ES_ADMIN_CREDS = {'user': 'elastic', 'password': 'ChangeMe_123'}
+    ES_READER_CREDS = {'user': 'reader', 'password': 'ReaderPwd_123'}
 
 def get_elasticsearch_client(read_only=False):
     """Get Elasticsearch client instance"""
@@ -43,7 +76,7 @@ def get_elasticsearch_client(read_only=False):
 
 def check_system_status() -> Dict[str, any]:
     """Check the status of all system components"""
-    backend_logger.log_system_operation("System status check initiated")
+    get_backend_logger().log_system_operation("System status check initiated")
     status = {
         "elasticsearch": False,
         "ollama": False,
@@ -61,12 +94,12 @@ def check_system_status() -> Dict[str, any]:
         ], capture_output=True, text=True, timeout=10)
         status["elasticsearch"] = result.stdout.strip() == "200"
         if status["elasticsearch"]:
-            backend_logger.log_success("Elasticsearch connectivity verified")
+            get_backend_logger().log_success("Elasticsearch connectivity verified")
         else:
-            backend_logger.log_warning("Elasticsearch status check", f"HTTP response: {result.stdout.strip()}")
+            get_backend_logger().log_warning("Elasticsearch status check", f"HTTP response: {result.stdout.strip()}")
     except Exception as e:
         status["elasticsearch"] = False
-        backend_logger.log_error("Elasticsearch connectivity check failed", str(e))
+        get_backend_logger().log_error("Elasticsearch connectivity check failed", str(e))
     
     # Check Ollama
     try:
@@ -81,12 +114,12 @@ def check_system_status() -> Dict[str, any]:
                 if line.strip():
                     models.append(line.split()[0])
             status["models"] = models
-            backend_logger.log_success("Ollama service verified", model_count=len(models))
+            get_backend_logger().log_success("Ollama service verified", model_count=len(models))
         else:
-            backend_logger.log_warning("Ollama status check", f"Return code: {result.returncode}")
+            get_backend_logger().log_warning("Ollama status check", f"Return code: {result.returncode}")
     except Exception as e:
         status["ollama"] = False
-        backend_logger.log_error("Ollama connectivity check failed", str(e))
+        get_backend_logger().log_error("Ollama connectivity check failed", str(e))
     
     # Count indices
     if status["elasticsearch"]:
@@ -98,12 +131,12 @@ def check_system_status() -> Dict[str, any]:
             if result.returncode == 0:
                 indices = json.loads(result.stdout)
                 status["indices"] = len([idx for idx in indices if idx["index"].startswith("logs_net")])
-                backend_logger.log_status("Index count", f"Found {status['indices']} log indices")
+                get_backend_logger().log_status("Index count", f"Found {status['indices']} log indices")
         except Exception as e:
-            backend_logger.log_error("Index count check failed", str(e))
+            get_backend_logger().log_error("Index count check failed", str(e))
             pass
     
-    backend_logger.log_success("System status check",
+    get_backend_logger().log_success("System status check",
         elasticsearch=status["elasticsearch"],
         ollama=status["ollama"],
         indices=status["indices"],
@@ -123,7 +156,7 @@ def run_query_generation(prompt: str, method: str = "constrained",
     logger.info(f"📝 Prompt: {prompt[:100]}..." if len(prompt) > 100 else f"📝 Prompt: {prompt}")
     
     # Log user activity
-    backend_logger.log_query_generation(method, model or "default", len(prompt), 
+    get_backend_logger().log_query_generation(method, model or "default", len(prompt), 
                                       index=index, task_id=task_id)
     
     # Check if using external LLM (external LLMs can only be used with constrained method currently)
@@ -204,11 +237,11 @@ def run_query_generation(prompt: str, method: str = "constrained",
             logger.error(f"❌ Command failed with return code {result.returncode}")
             logger.error(f"STDERR: {result.stderr}")
             logger.info(f"STDOUT: {result.stdout}")
-            backend_logger.log_error("Query generation command failed", result.stderr,
+            get_backend_logger().log_error("Query generation command failed", result.stderr,
                                    method=method, model=model, task_id=task_id)
         else:
             logger.info(f"✅ Command completed successfully")
-            backend_logger.log_success("Query generation command completed",
+            get_backend_logger().log_success("Query generation command completed",
                 method=method,
                 model=model, 
                 task_id=task_id,
@@ -510,12 +543,12 @@ def delete_elasticsearch_index(index_name: str) -> Tuple[bool, str]:
         # Delete the index
         response = es.indices.delete(index=index_name)
         
-        backend_logger.log_success("Index deleted", index_name=index_name)
+        get_backend_logger().log_success("Index deleted", index_name=index_name)
         return True, f"Index '{index_name}' deleted successfully"
         
     except Exception as e:
         error_msg = f"Error deleting index '{index_name}': {str(e)}"
-        backend_logger.log_error("Index deletion failed", str(e), index_name=index_name)
+        get_backend_logger().log_error("Index deletion failed", str(e), index_name=index_name)
         return False, error_msg
 
 def create_dp_index(base_index: str, dp_ratio: float = 0.1) -> Tuple[bool, str]:
@@ -534,12 +567,12 @@ def create_dp_index(base_index: str, dp_ratio: float = 0.1) -> Tuple[bool, str]:
             ], capture_output=True, text=True, timeout=120)
             
             if result.returncode == 0:
-                backend_logger.log_success("DP index created", 
+                get_backend_logger().log_success("DP index created", 
                     base_index=base_index, dp_index=dp_index_name, ratio=dp_ratio)
                 return True, f"DP index '{dp_index_name}' created successfully"
             else:
                 error_msg = f"DP index creation failed: {result.stderr}"
-                backend_logger.log_error("DP index creation failed", result.stderr,
+                get_backend_logger().log_error("DP index creation failed", result.stderr,
                                        base_index=base_index, dp_index=dp_index_name)
                 return False, error_msg
         else:
@@ -589,13 +622,13 @@ def create_dp_index(base_index: str, dp_ratio: float = 0.1) -> Tuple[bool, str]:
                 except:
                     break
             
-            backend_logger.log_success("DP index created via sampling", 
+            get_backend_logger().log_success("DP index created via sampling", 
                 base_index=base_index, dp_index=dp_index_name, docs_copied=docs_copied)
             return True, f"DP index '{dp_index_name}' created with {docs_copied} documents"
             
     except Exception as e:
         error_msg = f"Error creating DP index: {str(e)}"
-        backend_logger.log_error("DP index creation error", str(e), base_index=base_index)
+        get_backend_logger().log_error("DP index creation error", str(e), base_index=base_index)
         return False, error_msg
 
 def create_drift_index(base_index: str, drift_type: str = "temporal") -> Tuple[bool, str]:
@@ -661,14 +694,14 @@ def create_drift_index(base_index: str, drift_type: str = "temporal") -> Tuple[b
             except:
                 break
         
-        backend_logger.log_success("Drift index created", 
+        get_backend_logger().log_success("Drift index created", 
             base_index=base_index, drift_index=drift_index_name, 
             drift_type=drift_type, docs_copied=docs_copied)
         return True, f"Drift index '{drift_index_name}' created with {docs_copied} documents"
         
     except Exception as e:
         error_msg = f"Error creating drift index: {str(e)}"
-        backend_logger.log_error("Drift index creation error", str(e), 
+        get_backend_logger().log_error("Drift index creation error", str(e), 
                                base_index=base_index, drift_type=drift_type)
         return False, error_msg
 
@@ -679,7 +712,7 @@ def execute_elasticsearch_query(query: Dict[str, Any], index: str, max_size: int
     logger.debug(f"🔧 Query details: {json.dumps(query, indent=2)}")
     
     # Log user query execution activity
-    backend_logger.log_query_execution(index, "user_generated", max_size=max_size)
+    get_backend_logger().log_query_execution(index, "user_generated", max_size=max_size)
     
     try:
         # Import config here to avoid circular imports
@@ -713,7 +746,7 @@ def execute_elasticsearch_query(query: Dict[str, Any], index: str, max_size: int
         logger.info(f"📈 Query results: {total_hits} total hits, {len(hits)} returned in {took}ms")
         
         # Log successful query execution with results
-        backend_logger.log_success("Elasticsearch query executed",
+        get_backend_logger().log_success("Elasticsearch query executed",
             index=index,
             total_hits=total_hits,
             returned_hits=len(hits),
@@ -735,7 +768,7 @@ def execute_elasticsearch_query(query: Dict[str, Any], index: str, max_size: int
         aggregations = response.get("aggs", {})
         if aggregations:
             logger.info(f"📊 Query includes aggregations: {list(aggregations.keys())}")
-            backend_logger.log_status("Query aggregations", f"Found {len(aggregations)} aggregation types")
+            get_backend_logger().log_status("Query aggregations", f"Found {len(aggregations)} aggregation types")
         
         return True, {
             "total_hits": total_hits,
@@ -750,7 +783,7 @@ def execute_elasticsearch_query(query: Dict[str, Any], index: str, max_size: int
     except Exception as e:
         logger.error(f"❌ Elasticsearch query failed: {str(e)}")
         logger.debug(f"🔧 Failed query: {json.dumps(query, indent=2)}")
-        backend_logger.log_error("Elasticsearch query execution failed", str(e), 
+        get_backend_logger().log_error("Elasticsearch query execution failed", str(e), 
                                index=index, max_size=max_size)
         return False, {"error": str(e), "query": query, "index": index}
 
@@ -758,7 +791,7 @@ def export_results_as_csv(results_data: Dict[str, Any]) -> str:
     """Convert query results to CSV format"""
     try:
         if not results_data.get("results"):
-            backend_logger.log_warning("CSV export", "No results to export")
+            get_backend_logger().log_warning("CSV export", "No results to export")
             return "No results to export"
         
         # Convert results to DataFrame
@@ -768,7 +801,7 @@ def export_results_as_csv(results_data: Dict[str, Any]) -> str:
         output = io.StringIO()
         df.to_csv(output, index=False)
         
-        backend_logger.log_success("CSV export completed",
+        get_backend_logger().log_success("CSV export completed",
             record_count=len(results_data["results"]),
             column_count=len(df.columns)
         )
@@ -776,7 +809,7 @@ def export_results_as_csv(results_data: Dict[str, Any]) -> str:
         return output.getvalue()
         
     except Exception as e:
-        backend_logger.log_error("CSV export failed", str(e))
+        get_backend_logger().log_error("CSV export failed", str(e))
         return f"Error exporting to CSV: {e}"
 
 def export_results_as_json(results_data: Dict[str, Any]) -> str:
@@ -784,14 +817,14 @@ def export_results_as_json(results_data: Dict[str, Any]) -> str:
     try:
         json_output = json.dumps(results_data, indent=2, default=str)
         
-        backend_logger.log_success("JSON export completed",
+        get_backend_logger().log_success("JSON export completed",
             record_count=len(results_data.get("results", [])),
             has_aggregations=bool(results_data.get("aggregations"))
         )
         
         return json_output
     except Exception as e:
-        backend_logger.log_error("JSON export failed", str(e))
+        get_backend_logger().log_error("JSON export failed", str(e))
         return f"Error exporting to JSON: {e}"
 
 def get_index_profile_info(index_name: str) -> Dict[str, Any]:
