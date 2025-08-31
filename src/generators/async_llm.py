@@ -14,13 +14,8 @@ from pathlib import Path
 import subprocess
 from concurrent.futures import ThreadPoolExecutor
 
-# Import existing caching system
-try:
-    from ..performance.caching import get_global_cache, cache_query_result, cached_query_generation
-    CACHING_AVAILABLE = True
-except ImportError:
-    CACHING_AVAILABLE = False
-    print("Warning: Caching system not available for async LLM calls")
+# Caching system removed
+CACHING_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 
