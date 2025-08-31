@@ -18,7 +18,7 @@ sys.path.append(str(project_root))
 from src.generators.constrained import (
     call_local_model, validate_against_schema, load_fewshot_examples,
     check_security_violations, ALLOWED_OPERATORS, AMBIGUOUS_TERMS,
-    correct_field_mappings, FIELD_CORRECTIONS
+    correct_field_mappings_with_index_awareness, FIELD_CORRECTIONS
 )
 from src.data_adaptation.mapping_storage import MappingStorage
 
@@ -35,20 +35,27 @@ def build_enhanced_prompt(task_prompt, index=None):
     """Build an enhanced prompt using dynamic index profiles"""
     prompt = "You are an Elasticsearch DSL query generator for cybersecurity log analysis.\n\n"
     
-    # Get dynamic index information - use IndexProfiler directly for reliability
+    # Get dynamic index information - use IndexAnalyzer for complete field discovery (including .keyword fields)
     try:
         from src.index_profiler import IndexProfiler
+        from src.generators.index_analyzer import get_index_analyzer
+        
+        # Use IndexAnalyzer for complete field discovery (finds .keyword fields)
+        analyzer = get_index_analyzer()
+        field_catalog = analyzer.get_index_fields(index)
+        catalog_info = analyzer.build_field_catalog(index)
+        
+        # Use IndexProfiler for date ranges and timestamp field detection
         profiler = IndexProfiler()
         index_profile = profiler.analyze_index(index)
         
-        # Extract info from IndexProfiler 
+        # Extract info combining both systems
         date_range = {
             "min_date": index_profile.date_range["min_date"],
             "max_date": index_profile.date_range["max_date"]
         }
         timestamp_field = index_profile.primary_timestamp_field
-        field_catalog = profiler.get_field_catalog_for_index(index)
-        all_fields = list(index_profile.fields.keys())
+        all_fields = list(field_catalog.keys())  # Use IndexAnalyzer fields (includes .keyword)
         
         # Create field_mapping structure for compatibility
         field_mapping = {
@@ -62,7 +69,15 @@ def build_enhanced_prompt(task_prompt, index=None):
         mapping_storage = MappingStorage()
         field_mapping = mapping_storage.get_field_mapping_for_query_generation(index)
         date_range = mapping_storage.get_dynamic_date_range(index)
-        field_catalog = mapping_storage.get_field_catalog_for_index(index)
+        
+        # Try to use IndexAnalyzer for field discovery even in fallback
+        try:
+            from src.generators.index_analyzer import get_index_analyzer
+            analyzer = get_index_analyzer()
+            field_catalog = analyzer.get_index_fields(index)
+        except:
+            field_catalog = mapping_storage.get_field_catalog_for_index(index)
+            
         timestamp_field = field_mapping.get("primary_timestamp", "@timestamp") if field_mapping else "@timestamp"
     
     # Add index-specific information
@@ -329,8 +344,8 @@ def generate_enhanced_query(
             # Parse JSON
             query_json = json.loads(result)
             
-            # Apply field corrections
-            corrected_query = correct_field_mappings(query_json)
+            # Apply field corrections with index awareness
+            corrected_query = correct_field_mappings_with_index_awareness(query_json, index)
             
             # Validate schema if provided
             if schema_path and Path(schema_path).exists():

@@ -928,7 +928,22 @@ def correct_field_mappings_with_index_awareness(query_json, index=None):
                                 else:
                                     corrected_value[field] = field_value
                             else:
-                                corrected_value[field] = field_value
+                                # Handle .keyword suffix intelligently
+                                if field.endswith('.keyword') and dynamic_info and dynamic_info.get("field_catalog"):
+                                    base_field = field[:-8]  # Remove '.keyword' suffix
+                                    available_fields = set(dynamic_info["field_catalog"].keys())
+                                    field_catalog = dynamic_info["field_catalog"]
+                                    
+                                    # If base field exists and is already keyword type, use base field
+                                    if (base_field in available_fields and 
+                                        field not in available_fields and
+                                        field_catalog.get(base_field, {}).get('type') == 'keyword'):
+                                        print(f"Field correction: '{field}' → '{base_field}' (base field is already keyword)")
+                                        corrected_value[base_field] = field_value
+                                    else:
+                                        corrected_value[field] = field_value
+                                else:
+                                    corrected_value[field] = field_value
                         corrected[key] = corrected_value
                     else:
                         corrected[key] = correct_field_mappings_with_index_awareness(value, index)

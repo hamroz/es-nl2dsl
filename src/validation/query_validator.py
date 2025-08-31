@@ -18,6 +18,7 @@ sys.path.append(str(project_root))
 
 from src.utils.config import get_es_client_config
 from src.index_profiler import IndexProfiler
+from src.generators.index_analyzer import get_index_analyzer
 from elasticsearch import Elasticsearch
 
 logger = logging.getLogger(__name__)
@@ -57,7 +58,8 @@ class QueryValidator:
     
     def __init__(self):
         self.es = None
-        self.profiler = IndexProfiler()
+        self.profiler = IndexProfiler()  # Keep for date ranges
+        self.analyzer = get_index_analyzer()  # Use for field discovery
     
     def _get_es_client(self) -> Elasticsearch:
         """Get Elasticsearch client"""
@@ -209,9 +211,18 @@ class QueryValidator:
         warnings = []
         
         try:
-            # Get index profile to check field existence
+            # Get complete field catalog including .keyword fields using IndexAnalyzer
+            # Force refresh cache to ensure we have latest field mappings
+            field_catalog = self.analyzer.get_index_fields(index, force_refresh=True)
+            available_fields = set(field_catalog.keys())
+            
+            # Debug logging for field discovery
+            logger.debug(f"Available fields in {index}: {sorted(available_fields)}")
+            keyword_fields = [f for f in available_fields if '.keyword' in f]
+            logger.debug(f"Keyword fields found: {keyword_fields}")
+            
+            # Also get index profile for other validation (dates, etc.)
             profile = self.profiler.analyze_index(index)
-            available_fields = set(profile.fields.keys())
             
             # Extract field references from query
             referenced_fields = self._extract_field_references(query)
@@ -226,9 +237,15 @@ class QueryValidator:
                         issues.append(f"Field '{field}' does not exist in index {index}")
                 else:
                     # Field exists, check if it's actually searchable
-                    field_info = profile.fields[field]
-                    if not field_info.is_searchable:
-                        warnings.append(f"Field '{field}' may not be searchable (type: {field_info.type})")
+                    # Use IndexAnalyzer field info if available, fallback to IndexProfiler
+                    if field in field_catalog:
+                        field_info = field_catalog[field]
+                        if not field_info.get('is_searchable', True):
+                            warnings.append(f"Field '{field}' may not be searchable")
+                    elif field in profile.fields:
+                        field_info = profile.fields[field]
+                        if not field_info.is_searchable:
+                            warnings.append(f"Field '{field}' may not be searchable (type: {field_info.type})")
         
         except Exception as e:
             warnings.append(f"Could not validate fields: {e}")
