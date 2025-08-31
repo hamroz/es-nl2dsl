@@ -1,8 +1,29 @@
 #!/usr/bin/env python3
 """
-External LLM Manager for integrating OpenAI, Google, DeepSeek, and Qwen AI.
-- Supports latest OpenAI models including GPT-4o and mini variants.
-- Backwards compatible with legacy openai 0.x SDKs.
+External LLM Manager: Enterprise-grade multi-provider AI integration framework
+
+This module provides comprehensive management and integration capabilities for external Large
+Language Model providers including OpenAI, Google, DeepSeek, and Qwen AI. It offers unified
+API access, configuration management, validation, and fallback mechanisms for reliable
+AI-powered query generation within the ES-NL2DSL system.
+
+Key capabilities:
+- Multi-provider support (OpenAI GPT-4o/o1, Google Gemini, DeepSeek, Qwen)
+- Backward compatibility with legacy OpenAI SDK versions (0.x and 1.x+)
+- Advanced API handling with Responses API and Chat Completions fallback
+- Secure credential management with environment variable integration
+- Configuration persistence with JSON-based storage
+- Real-time validation and health checking for all providers
+- Error handling and graceful degradation mechanisms
+- Token management with adaptive parameter selection
+
+The framework abstracts provider-specific implementations while maintaining full feature
+parity across different AI services, enabling seamless switching between models and
+providers for optimal performance and reliability.
+
+Author: Hamroz Gavharov
+Project: ES-NL2DSL - Natural Language to Elasticsearch DSL Framework
+License: MIT (see LICENSE file)
 """
 
 import json

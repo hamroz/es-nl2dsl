@@ -1,5 +1,30 @@
 #!/usr/bin/env python3
-"""Comprehensive query explanation and interpretability framework"""
+"""
+Query Explainer: Comprehensive interpretability framework for DSL generation
+
+This module provides advanced explainability and interpretability capabilities for the ES-NL2DSL
+system, offering deep insights into query generation decisions and reasoning processes. It analyzes
+natural language prompts, traces decision-making paths, and generates comprehensive explanations
+for generated Elasticsearch DSL queries with confidence scoring and optimization suggestions.
+
+Key capabilities:
+- Multi-level explanation generation (basic, detailed, technical, research)
+- Decision tracing with confidence scoring and rationale
+- Prompt analysis with semantic component extraction
+- Attention weight calculation for input tokens
+- Query structure analysis and complexity assessment
+- Risk assessment for performance, security, and accuracy
+- Optimization suggestions for query improvement
+- Interactive explanations for research and debugging
+
+The framework supports various explanation levels from high-level summaries to deep technical
+analysis, enabling both end-users and researchers to understand system behavior and improve
+query generation quality through interpretable AI techniques.
+
+Author: Hamroz Gavharov
+Project: ES-NL2DSL - Natural Language to Elasticsearch DSL Framework
+License: MIT (see LICENSE file)
+"""
 import json
 import re
 from typing import Dict, List, Any, Optional, Tuple, Union

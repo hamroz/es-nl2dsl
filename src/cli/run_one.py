@@ -1,4 +1,30 @@
 #!/usr/bin/env python3
+"""
+Run One CLI: Single scenario testing and validation utility
+
+This CLI utility provides focused testing capabilities for individual scenarios within
+the ES-NL2DSL system, enabling developers and researchers to test specific prompts,
+validate generated queries, and perform detailed analysis of single query generation
+workflows. It serves as a debugging and development tool for system refinement.
+
+Key capabilities:
+- Single scenario execution with detailed logging and error reporting
+- Query generation testing with configurable parameters (index, seed, model)
+- Real-time validation with rule-based checking and constraint verification
+- Performance measurement with execution timing and resource usage
+- Output formatting with JSON and human-readable result presentation
+- Integration with existing evaluation frameworks and ground truth comparison
+- Debugging support with verbose logging and intermediate result inspection
+- Custom index targeting for multi-dataset testing scenarios
+- Abstain handling with detailed reason reporting for failed generations
+
+The utility is essential for development workflows, enabling rapid iteration
+and testing of individual scenarios without running full evaluation suites.
+
+Author: Hamroz Gavharov
+Project: ES-NL2DSL - Natural Language to Elasticsearch DSL Framework
+License: MIT (see LICENSE file)
+"""
 import json
 import sys
 import argparse

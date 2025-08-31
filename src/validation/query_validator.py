@@ -1,7 +1,27 @@
 #!/usr/bin/env python3
 """
-Query Validator: Comprehensive validation system for generated Elasticsearch queries.
-Ensures queries are syntactically correct, semantically meaningful, and return useful results.
+Query Validator: Advanced validation and optimization for Elasticsearch queries
+
+This module provides comprehensive validation capabilities for the ES-NL2DSL system,
+performing multi-layer analysis of generated Elasticsearch queries to ensure syntactic
+correctness, semantic validity, performance efficiency, and result quality. It combines
+static analysis with live execution testing to deliver production-ready query validation.
+
+Key validation layers:
+- Syntax validation: JSON structure and Elasticsearch DSL compliance
+- Schema validation: Field existence and type compatibility verification
+- Temporal validation: Date range alignment with actual data boundaries
+- Performance analysis: Query complexity assessment and optimization recommendations
+- Live execution testing: Actual query execution with result verification
+- Quality scoring: Comprehensive 0-100 quality metric with weighted factors
+
+The validator integrates with the index profiler and analyzer to provide context-aware
+validation based on actual index structure, ensuring queries will execute successfully
+and return meaningful results in production environments.
+
+Author: Hamroz Gavharov
+Project: ES-NL2DSL - Natural Language to Elasticsearch DSL Framework
+License: MIT (see LICENSE file)
 """
 import json
 import time
@@ -25,7 +45,27 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class ValidationResult:
-    """Result of query validation"""
+    """
+    Comprehensive query validation result with quality metrics.
+    
+    Encapsulates complete validation analysis including validity determination,
+    quality scoring, identified issues, optimization suggestions, and execution
+    metrics. Provides actionable feedback for query improvement.
+    
+    Attributes:
+        is_valid: Boolean indicating if query passes all critical validations
+        score: Quality score 0-100, with weighted factors for different aspects
+        issues: List of critical problems that must be fixed
+        warnings: List of non-critical issues that should be addressed
+        suggestions: List of optimization recommendations
+        execution_time_ms: Query execution time in milliseconds (if tested)
+        result_count: Number of documents returned (if executed)
+        sample_results: Sample of actual query results for verification
+        
+    Methods:
+        to_dict: Serialize validation result for storage
+        get_status_emoji: Visual status indicator for UI display
+    """
     is_valid: bool
     score: float  # 0-100, higher is better
     issues: List[str]
@@ -54,7 +94,36 @@ class ValidationResult:
             return "🔴"
 
 class QueryValidator:
-    """Comprehensive query validation and optimization system"""
+    """
+    Comprehensive query validation and optimization system.
+    
+    Provides multi-layer validation of Elasticsearch queries including syntax checking,
+    schema validation, performance analysis, and live execution testing. Integrates
+    with index profiling to deliver context-aware validation based on actual data
+    characteristics.
+    
+    Validation Layers:
+        1. Syntax: JSON structure and DSL compliance
+        2. Schema: Field existence and type compatibility
+        3. Temporal: Date range alignment with data
+        4. Logic: Query structure and operator usage
+        5. Performance: Complexity and optimization analysis
+        6. Execution: Live testing with result verification
+        
+    Features:
+        - Context-aware validation using index profiles
+        - Performance analysis with optimization suggestions
+        - Live execution testing with configurable limits
+        - Quality scoring with weighted metrics
+        - Detailed issue reporting with actionable feedback
+        - Support for multiple index types and schemas
+        
+    Architecture:
+        - Lazy Elasticsearch connection initialization
+        - Integration with IndexProfiler and IndexAnalyzer
+        - Modular validation components for extensibility
+        - Comprehensive error handling and recovery
+    """
     
     def __init__(self):
         self.es = None

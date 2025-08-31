@@ -1,11 +1,28 @@
-"""Query Generator Component for Streamlit GUI
+"""
+Query Generator Component: Interactive Streamlit interface for query generation
 
-User Experience Improvements:
-- Fixed display format selectbox to respond reliably on first click
-- Improved session state management for consistent UI behavior
-- Eliminated race conditions in widget state updates
-- Fixed slider value validation to prevent browser console errors
-- Fixed example query buttons to work immediately on first click
+This module provides the primary user interface for the ES-NL2DSL system, enabling
+natural language to Elasticsearch DSL query generation through an intuitive web-based
+interface. It combines real-time query generation with advanced features including
+multi-index support, query execution, result visualization, and data export capabilities.
+
+Key features:
+- Interactive natural language query input with intelligent examples
+- Dynamic index selection with real-time schema discovery
+- Multiple generation methods (enhanced constrained, rules-based, zero-shot)
+- Real-time query execution with configurable result limits
+- Multiple result display formats (table, JSON, raw data) with syntax highlighting
+- One-click data export (CSV, JSON) with proper formatting
+- Performance monitoring with execution metrics and timing
+- External LLM integration with provider selection
+- Comprehensive error handling and user feedback
+
+This component serves as the main entry point for end users and integrates with
+the backend processing pipeline to deliver a complete query generation experience.
+
+Author: Hamroz Gavharov
+Project: ES-NL2DSL - Natural Language to Elasticsearch DSL Framework
+License: MIT (see LICENSE file)
 """
 import streamlit as st
 import json
@@ -31,7 +48,20 @@ from gui.utils.backend_interface import (
 )
 
 def get_external_llm_models():
-    """Get list of enabled external LLM models"""
+    """
+    Retrieve list of configured and enabled external LLM providers.
+    
+    Queries the external LLM manager to obtain a list of all configured
+    language model providers that are currently enabled and available
+    for query generation.
+    
+    Returns:
+        List[str]: Names of enabled external LLM providers (OpenAI, Anthropic, 
+                  Google, Cohere, etc.), empty list if none configured or on error
+                  
+    Used for populating the LLM selection dropdown in the advanced options
+    section of the query generator interface.
+    """
     try:
         manager = get_external_llm_manager()
         llms = manager.list_llms(enabled_only=True)
@@ -40,7 +70,32 @@ def get_external_llm_models():
         return []
 
 def render_query_generator():
-    """Render the query generator interface"""
+    """
+    Render the main query generator interface with full interactive capabilities.
+    
+    This function creates and manages the complete user interface for natural language
+    to Elasticsearch DSL query generation, including input forms, configuration options,
+    result display, and export functionality. It handles user interactions, state management,
+    and integration with backend processing systems.
+    
+    Interface Components:
+        - Natural language input with example queries and smart suggestions
+        - Index selection dropdown with real-time availability checking
+        - Generation method selection (enhanced constrained, rules, zero-shot)
+        - Advanced configuration options (models, validation, examples)
+        - Query execution controls with configurable result limits
+        - Multi-format result display (table, JSON, raw data)
+        - Export functionality (CSV, JSON) with one-click downloads
+        - Performance metrics and execution timing
+        - Error handling and user feedback systems
+        
+    Features:
+        - Session state management for consistent user experience
+        - Real-time validation and feedback
+        - Intelligent example query suggestions
+        - External LLM provider integration
+        - Comprehensive logging for debugging and analytics
+    """
     query_logger.log_page_load("Query Generator component loaded")
     st.header("🤖 Query Generator")
     st.write("Generate Elasticsearch DSL queries from natural language descriptions")

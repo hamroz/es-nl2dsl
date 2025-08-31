@@ -1,4 +1,31 @@
-"""Backend interface utilities for GUI integration"""
+"""
+Backend Interface: Streamlit GUI integration and system connectivity layer
+
+This module provides comprehensive backend integration capabilities for the ES-NL2DSL
+Streamlit GUI, serving as the primary bridge between the web interface and core system
+components. It handles query generation, system monitoring, data management, and external
+service integration while maintaining proper error handling and logging throughout.
+
+Key capabilities:
+- Query generation pipeline integration with multiple methods (enhanced, rules, zero-shot)
+- Elasticsearch connectivity with health monitoring and error recovery
+- System status monitoring with component availability checking
+- Data export functionality with CSV and JSON formatting
+- External LLM provider management and integration
+- Index management with creation, deletion, and profiling capabilities
+- File upload and processing with progress tracking
+- Security validation and red team testing integration
+- Performance monitoring with execution timing and metrics
+- Comprehensive logging with GUI-specific formatting
+
+The interface abstracts complex backend operations into simple function calls for
+the GUI components, ensuring consistent error handling, logging, and user feedback
+across all system interactions.
+
+Author: Hamroz Gavharov
+Project: ES-NL2DSL - Natural Language to Elasticsearch DSL Framework
+License: MIT (see LICENSE file)
+"""
 import subprocess
 import json
 import sys
@@ -183,8 +210,8 @@ def run_query_generation(prompt: str, method: str = "constrained",
     elif method == "constrained":
         logger.info(f"🔄 Using enhanced constrained generation method")
         
-        # Use the enhanced constrained generator with Phase 5 processing pipeline
-        logger.info(f"🎯 Using enhanced constrained generation with Phase 5 processing pipeline")
+        # Use the enhanced constrained generator with advanced processing pipeline
+        logger.info(f"🎯 Using enhanced constrained generation with advanced processing pipeline")
         cmd = [
             sys.executable, "src/generators/enhanced_constrained.py",
             "--prompt", prompt,

@@ -1,4 +1,31 @@
-"""Enhanced Evaluation Dashboard with CIC-IDS2017 Support and Model Selection"""
+"""
+Evaluation Dashboard: Advanced query generation performance analysis interface
+
+This module provides a comprehensive evaluation and benchmarking interface for the ES-NL2DSL
+system through an interactive Streamlit dashboard. It enables systematic evaluation of query
+generation methods, model performance analysis, and detailed comparison of different approaches
+with support for multiple datasets including CIC-IDS2017 cybersecurity data.
+
+Key capabilities:
+- Multi-model evaluation with external LLM provider support
+- Scenario-based testing with customizable evaluation frameworks  
+- Real-time performance metrics with interactive visualizations
+- Comparative analysis between generation methods (enhanced, rules, zero-shot)
+- Statistical significance testing with confidence interval reporting
+- Dataset-specific evaluation including CIC-IDS2017 integration
+- Interactive charts and graphs using Plotly for detailed analysis
+- Export functionality for evaluation reports and research publications
+- Parallel evaluation processing for improved performance
+- Historical results tracking and trend analysis
+
+The dashboard serves as the primary tool for researchers and developers to assess
+system performance, conduct A/B testing, and generate publication-ready evaluation
+reports with comprehensive statistical analysis and visualization capabilities.
+
+Author: Hamroz Gavharov
+Project: ES-NL2DSL - Natural Language to Elasticsearch DSL Framework
+License: MIT (see LICENSE file)
+"""
 import streamlit as st
 import pandas as pd
 import plotly.express as px

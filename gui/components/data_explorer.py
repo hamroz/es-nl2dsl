@@ -1,5 +1,30 @@
 """
-Data Explorer component for viewing raw Elasticsearch data
+Data Explorer Panel: Interactive Elasticsearch data browsing and analysis interface
+
+This module provides comprehensive data exploration capabilities for the ES-NL2DSL system
+through an interactive Streamlit interface. It enables direct browsing, filtering, and
+analysis of Elasticsearch indices with real-time data visualization, export functionality,
+and advanced querying capabilities for cybersecurity data analysis.
+
+Key capabilities:
+- Interactive index browsing with real-time data retrieval
+- Advanced filtering with field-specific search capabilities
+- Dynamic field discovery with type-aware filtering options
+- Real-time data visualization with customizable chart types
+- Export functionality for CSV and JSON formats with formatting options
+- Sample data inspection with expandable document views
+- Index statistics and health monitoring with performance metrics
+- Custom query builder with DSL generation and validation
+- Time-series data analysis with temporal filtering and aggregations
+- Integration with query generation pipeline for seamless workflow
+
+The panel serves as the primary tool for data analysts and cybersecurity researchers
+to explore and understand their data before generating complex queries, enabling
+informed query construction and data-driven security analysis.
+
+Author: Hamroz Gavharov
+Project: ES-NL2DSL - Natural Language to Elasticsearch DSL Framework
+License: MIT (see LICENSE file)
 """
 
 import streamlit as st

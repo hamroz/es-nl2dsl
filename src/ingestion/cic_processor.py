@@ -1,6 +1,31 @@
 #!/usr/bin/env python3
 """
-Process CIC-IDS2017 CSV files and convert to Elasticsearch-compatible format
+CIC-IDS2017 Processor: Advanced cybersecurity dataset transformation pipeline
+
+This module provides specialized processing capabilities for the CIC-IDS2017 cybersecurity
+dataset, transforming raw CSV network traffic data into Elasticsearch-compatible format.
+It handles the complex structure of the CIC dataset with 86 fields, performs data
+cleaning, attack classification, and generates consistent document IDs for reproducible
+analysis.
+
+Key processing capabilities:
+- Field name normalization and Elasticsearch compatibility
+- Attack type classification with hierarchical categorization
+- Timestamp parsing and temporal alignment
+- Data type conversion and validation
+- Deterministic document ID generation for consistency
+- Sampling support for development and testing
+- Memory-efficient streaming processing for large files
+
+The processor specifically handles the CIC-IDS2017 dataset structure including:
+- Network flow features (source/destination IPs, ports, protocols)
+- Traffic statistics (packets, bytes, flow duration)
+- TCP flag counts and packet size distributions
+- Attack labels and classification
+
+Author: Hamroz Gavharov
+Project: ES-NL2DSL - Natural Language to Elasticsearch DSL Framework
+License: MIT (see LICENSE file)
 """
 
 import argparse
@@ -33,7 +58,29 @@ def parse_timestamp(timestamp_str, filename):
         return datetime(2017, 7, 3).isoformat()
 
 def classify_attack(label):
-    """Classify the attack type from the label"""
+    """
+    Classify attack type from CIC-IDS2017 label into hierarchical categories.
+    
+    Maps specific attack labels to broader attack categories for easier
+    analysis and querying. Maintains both specific and general classifications.
+    
+    Args:
+        label: Raw attack label from CIC dataset
+        
+    Returns:
+        Tuple[str, str]: (attack_category, specific_label)
+        - attack_category: Broad category (normal, dos, scan, bruteforce, web_attack)
+        - specific_label: Original specific attack label
+        
+    Categories:
+        - normal: Benign traffic
+        - dos: Denial of Service attacks (DoS, DDoS)
+        - scan: Network scanning and reconnaissance
+        - bruteforce: Password and authentication attacks
+        - web_attack: Web application attacks (XSS, SQL injection)
+        - infiltration: System infiltration attempts
+        - botnet: Bot network activity
+    """
     label = label.strip()
     if label == 'BENIGN':
         return 'normal', 'BENIGN'

@@ -1,7 +1,26 @@
 #!/usr/bin/env python3
 """
-Enhanced Constrained Generator: An improved version of the constrained generator 
-that uses dynamic index profiles while maintaining the proven prompt structure.
+Enhanced Constrained Generator: Production-ready query generation with dynamic adaptation
+
+This module provides the primary production query generation capability for the ES-NL2DSL 
+system. It combines dynamic index profiling, comprehensive security validation, and a 
+sophisticated processing pipeline to generate optimized Elasticsearch DSL queries from 
+natural language inputs.
+
+Key features:
+- Dynamic index schema discovery and field cataloging
+- Real-time security validation with adversarial prompt detection
+- Comprehensive preprocessing and postprocessing pipeline
+- Multi-LLM support with fallback mechanisms
+- Performance optimization with intelligent field mapping
+- Context-aware prompt generation based on actual index structure
+
+This module serves as the main entry point for production query generation and integrates
+with the broader ES-NL2DSL framework's security, validation, and processing systems.
+
+Author: Hamroz Gavharov
+Project: ES-NL2DSL - Natural Language to Elasticsearch DSL Framework
+License: MIT (see LICENSE file)
 """
 import json
 import sys
@@ -35,7 +54,29 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 def build_enhanced_prompt(task_prompt, index=None):
-    """Build an enhanced prompt using dynamic index profiles"""
+    """
+    Build an enhanced prompt using dynamic index profiles and field discovery.
+    
+    This function creates a comprehensive prompt by analyzing the target Elasticsearch
+    index to discover available fields, data types, value ranges, and temporal patterns.
+    It integrates information from both IndexAnalyzer and IndexProfiler to provide
+    accurate, context-aware prompts that lead to better query generation.
+    
+    Args:
+        task_prompt (str): The natural language query prompt from the user
+        index (str, optional): Target Elasticsearch index name. Defaults to None.
+        
+    Returns:
+        str: Enhanced prompt containing index schema information, field mappings,
+             examples, and generation rules tailored to the specific index
+             
+    Features:
+        - Dynamic field discovery including .keyword variants
+        - Real-time date range detection from actual data
+        - Intelligent field prioritization based on cybersecurity relevance
+        - Fallback mechanisms for offline or inaccessible indices
+        - Context-specific examples based on available fields
+    """
     prompt = "You are an Elasticsearch DSL query generator for cybersecurity log analysis.\n\n"
     
     # Get dynamic index information - use IndexAnalyzer for complete field discovery (including .keyword fields)
@@ -208,7 +249,30 @@ def build_enhanced_prompt(task_prompt, index=None):
     return prompt
 
 def get_enhanced_examples(index, field_mapping, timestamp_field, date_range):
-    """Get examples tailored to the index"""
+    """
+    Generate context-aware example queries based on actual index structure.
+    
+    Creates intelligent example queries that demonstrate proper usage patterns
+    for the specific index being queried, using actual field names and realistic
+    date ranges from the target dataset.
+    
+    Args:
+        index: Target Elasticsearch index name
+        field_mapping: Dictionary containing field information and metadata
+        timestamp_field: Primary timestamp field name for the index
+        date_range: Dictionary with min_date and max_date from actual data
+        
+    Returns:
+        List of example dictionaries, each containing:
+        - 'prompt': Natural language example query
+        - 'query': Corresponding Elasticsearch DSL structure
+        
+    Features:
+        - Dynamic date selection from actual data ranges
+        - Intelligent field selection based on available schema
+        - Cybersecurity-focused example patterns
+        - Fallback examples for minimal field sets
+    """
     examples = []
     
     # Determine sample date range
@@ -307,14 +371,45 @@ def generate_enhanced_query(
     max_retries: int = 3,
     enable_processing_pipeline: bool = True
 ) -> Dict[str, Any]:
-    """Generate query using enhanced constrained approach with processing pipeline"""
+    """
+    Generate optimized Elasticsearch DSL query using enhanced constrained approach.
+    
+    This is the main production function for query generation, combining dynamic index
+    analysis, security validation, and comprehensive processing pipelines to produce
+    high-quality Elasticsearch queries from natural language input.
+    
+    Args:
+        prompt: Natural language query description
+        index: Target Elasticsearch index name for schema-aware generation
+        model: LLM model identifier for query generation
+        schema_path: Path to Elasticsearch DSL schema file for validation
+        rules_path: Optional path to additional validation rules (unused)
+        max_retries: Maximum generation attempts before failing
+        enable_processing_pipeline: Whether to use the comprehensive processing pipeline
+        
+    Returns:
+        Dictionary containing either:
+        - Valid Elasticsearch DSL query structure for successful generation
+        - Abstain response with reason for failed/blocked generation
+        
+    Features:
+        - Multi-layer security validation with adversarial prompt detection
+        - Dynamic field mapping and correction based on actual index structure
+        - Comprehensive preprocessing and postprocessing with audit trails
+        - Intelligent retry logic with progressive refinement
+        - Schema validation against Elasticsearch DSL specifications
+        
+    Raises:
+        json.JSONDecodeError: When generated query is not valid JSON
+        Exception: For various generation or processing errors
+    """
     
     logger.info(f"🎯 Generating enhanced query for {index}")
     
     # Initialize processing pipeline
     processor = QueryProcessor(enable_logging=True) if enable_processing_pipeline else None
     
-    # Phase 5: Preprocess the prompt
+    # Preprocess the prompt using the processing pipeline
     if processor:
         processed_prompt, prompt_changes = processor.preprocess_prompt(prompt, index)
         if prompt_changes:
@@ -361,7 +456,7 @@ def generate_enhanced_query(
             # Parse JSON
             query_json = json.loads(result)
             
-            # Phase 5: Apply complete processing pipeline to query
+            # Apply comprehensive postprocessing pipeline to the generated query
             if processor:
                 # Use the new processing pipeline for comprehensive postprocessing
                 processing_result = processor.process_complete_pipeline(processed_prompt, index, query_json)
@@ -394,7 +489,27 @@ def generate_enhanced_query(
     return {"abstain": True, "reason": "Unexpected error"}
 
 def main():
-    """CLI interface for enhanced constrained generator"""
+    """
+    Command-line interface for the enhanced constrained query generator.
+    
+    Provides a CLI wrapper for the enhanced query generation functionality,
+    allowing direct command-line usage for batch processing, testing, and
+    integration with external systems.
+    
+    Command-line Arguments:
+        --prompt: Natural language query prompt (required)
+        --index: Target Elasticsearch index name (default: logs_net)
+        --model: LLM model identifier (default: llama3.1:latest)
+        --schema: Path to Elasticsearch DSL schema file (default: artifacts/esdsl_schema.json)
+        --task-id: Optional task identifier for output file naming
+        
+    Output:
+        Saves generated query to artifacts/generated/ directory as JSON file.
+        Exits with code 1 if generation fails or is blocked by security.
+        
+    Example:
+        python enhanced_constrained.py --prompt "Find malicious traffic" --index logs_cic_ids2017
+    """
     parser = argparse.ArgumentParser(description="Generate enhanced constrained Elasticsearch queries")
     parser.add_argument("--prompt", required=True, help="Natural language query prompt")
     parser.add_argument("--index", default="logs_net", help="Target Elasticsearch index")

@@ -1,5 +1,31 @@
 #!/usr/bin/env python3
-"""Startup script for ES-NL2DSL GUI with system checks and setup"""
+"""
+GUI Startup Script: System initialization and pre-flight checking utility
+
+This script serves as the primary launch point for the ES-NL2DSL Streamlit GUI application,
+performing comprehensive system checks, dependency validation, and environment setup
+before launching the web interface. It ensures optimal system readiness and provides
+detailed diagnostic information for troubleshooting startup issues.
+
+Key capabilities:
+- Comprehensive dependency checking with detailed package validation
+- Elasticsearch connectivity testing with health verification
+- Ollama service availability checking with model status validation
+- System environment verification with configuration validation
+- Port availability checking with conflict resolution guidance
+- Automatic service startup with intelligent retry mechanisms
+- Detailed logging with startup performance metrics
+- Error diagnostics with troubleshooting recommendations
+- Command-line options for debugging and customization
+
+The script ensures a smooth user experience by identifying and resolving
+common startup issues before launching the main application, providing
+clear feedback and guidance for system administrators and end users.
+
+Author: Hamroz Gavharov
+Project: ES-NL2DSL - Natural Language to Elasticsearch DSL Framework
+License: MIT (see LICENSE file)
+"""
 import subprocess
 import sys
 import time

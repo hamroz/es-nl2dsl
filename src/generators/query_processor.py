@@ -1,15 +1,29 @@
 #!/usr/bin/env python3
 """
-Query Processing Pipeline: Centralized preprocessing and postprocessing for query generation.
+Query Processing Pipeline: Comprehensive preprocessing and postprocessing framework
 
-This module consolidates scattered processing logic into a clean, observable pipeline that:
-- Preprocesses user prompts to extract constraints
-- Postprocesses generated queries to fix fields and types
-- Adds default constraints when missing
-- Optimizes query structure for performance
-- Provides comprehensive logging of all transformations
+This module provides the centralized processing pipeline for the ES-NL2DSL system,
+implementing sophisticated preprocessing of natural language prompts and postprocessing
+of generated queries. It consolidates field mapping, constraint extraction, type
+validation, and optimization logic into a clean, observable pipeline with full
+audit trail capabilities.
 
-Created for Phase 5 of the ES-NL2DSL enhancement project.
+Key processing capabilities:
+- Prompt preprocessing with field normalization and constraint extraction
+- Query postprocessing with intelligent field corrections and type validation
+- Default constraint injection for temporal boundaries and security
+- Query structure optimization for performance and efficiency
+- Comprehensive audit logging with step-by-step transformation tracking
+- Index-aware field mapping with dynamic schema adaptation
+- Error recovery with graceful degradation
+
+The processor serves as the transformation layer between raw user input and
+production-ready Elasticsearch queries, ensuring consistency, correctness,
+and optimal performance.
+
+Author: Hamroz Gavharov
+Project: ES-NL2DSL - Natural Language to Elasticsearch DSL Framework
+License: MIT (see LICENSE file)
 """
 
 import json
@@ -34,7 +48,20 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class ProcessingStep:
-    """Records a single processing step for debugging and logging"""
+    """
+    Records a single transformation step in the processing pipeline.
+    
+    Captures detailed information about each processing operation for
+    debugging, auditing, and performance analysis.
+    
+    Attributes:
+        step_name: Descriptive name of the processing step
+        input_data: Data state before processing
+        output_data: Data state after processing
+        changes_made: List of specific modifications applied
+        timestamp: ISO timestamp when step was executed
+        duration_ms: Processing time in milliseconds
+    """
     step_name: str
     input_data: Any
     output_data: Any
@@ -44,7 +71,23 @@ class ProcessingStep:
 
 @dataclass
 class ProcessingResult:
-    """Complete result of query processing with full audit trail"""
+    """
+    Complete processing pipeline result with comprehensive audit trail.
+    
+    Encapsulates the entire transformation journey from original prompt
+    to final query, including all intermediate steps and metrics.
+    
+    Attributes:
+        original_prompt: User's original natural language input
+        processed_prompt: Normalized prompt after preprocessing
+        original_query: Initial generated query before postprocessing
+        processed_query: Final optimized query ready for execution
+        steps: List of all ProcessingStep objects in execution order
+        success: Boolean indicating overall pipeline success
+        errors: List of error messages if processing failed
+        total_duration_ms: Total pipeline execution time
+        metrics: Dictionary of processing metrics and statistics
+    """
     original_prompt: str
     processed_prompt: str
     original_query: Optional[Dict[str, Any]]
@@ -56,10 +99,49 @@ class ProcessingResult:
     warnings: List[str]
 
 class QueryProcessor:
-    """Centralized query processing pipeline"""
+    """
+    Centralized query processing pipeline with comprehensive transformation capabilities.
+    
+    Implements a sophisticated multi-stage processing pipeline that transforms raw
+    natural language prompts into optimized Elasticsearch queries. Provides full
+    observability with detailed audit trails and performance metrics.
+    
+    Pipeline Stages:
+        1. Prompt Preprocessing:
+           - Field name normalization and standardization
+           - Constraint extraction (dates, IPs, ports)
+           - Context enhancement with index metadata
+           
+        2. Query Postprocessing:
+           - Field mapping corrections based on index schema
+           - Type validation and coercion
+           - Default constraint injection
+           - Structure optimization
+           
+        3. Complete Pipeline:
+           - End-to-end processing with all transformations
+           - Error recovery and fallback mechanisms
+           - Performance monitoring and metrics collection
+           
+    Features:
+        - Index-aware processing with dynamic schema adaptation
+        - Intelligent field mapping with fuzzy matching
+        - Comprehensive audit trail with step-by-step logging
+        - Performance optimization with caching
+        - Graceful error handling with fallback strategies
+        
+    Usage:
+        processor = QueryProcessor(enable_logging=True)
+        result = processor.process_complete_pipeline(prompt, index, query)
+    """
     
     def __init__(self, enable_logging: bool = True):
-        """Initialize the query processor"""
+        """
+        Initialize the query processor with optional logging.
+        
+        Args:
+            enable_logging: Whether to enable detailed processing logs
+        """
         self.enable_logging = enable_logging
         self.analyzer = get_index_analyzer()
         self.profiler = IndexProfiler()

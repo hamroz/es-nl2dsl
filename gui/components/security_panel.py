@@ -1,4 +1,31 @@
-"""Enhanced Security Testing Panel with CIC-IDS2017 and Model Selection"""
+"""
+Security Testing Panel: Advanced red team testing and security validation interface
+
+This module provides comprehensive security testing capabilities for the ES-NL2DSL system
+through an interactive Streamlit interface. It enables red team testing, adversarial prompt
+evaluation, and security boundary validation to ensure system robustness against malicious
+inputs while maintaining legitimate functionality for cybersecurity professionals.
+
+Key capabilities:
+- Red team testing with adversarial prompt libraries and custom attack scenarios
+- Security boundary validation with configurable threat level assessment
+- Real-time security filter testing with detailed violation reporting
+- Multi-model security evaluation across different LLM providers
+- Statistical security analysis with abstain rate monitoring
+- Interactive security metric visualization with trend analysis
+- Batch security testing with parallel processing for performance
+- Security report generation with detailed vulnerability assessments
+- Custom prompt injection testing with payload customization
+- Integration with CIC-IDS2017 for realistic security scenario testing
+
+The panel serves as the primary tool for security researchers and system administrators
+to validate system security posture, conduct penetration testing, and ensure robust
+defense against adversarial inputs and malicious query attempts.
+
+Author: Hamroz Gavharov
+Project: ES-NL2DSL - Natural Language to Elasticsearch DSL Framework
+License: MIT (see LICENSE file)
+"""
 import streamlit as st
 import pandas as pd
 import plotly.express as px

@@ -1,4 +1,31 @@
 #!/usr/bin/env python3
+"""
+Ground Truth Generator CLI: Expert query validation and benchmark creation utility
+
+This CLI utility provides comprehensive ground truth generation capabilities for the
+ES-NL2DSL evaluation framework, enabling creation of validated query benchmarks from
+expert-crafted Elasticsearch DSL queries. It executes expert queries against live data
+to generate authoritative result sets for evaluation and validation purposes.
+
+Key capabilities:
+- Automated ground truth generation from expert-crafted DSL queries
+- Large-scale query execution with configurable result limits and pagination
+- Document ID collection with deterministic sorting for reproducible benchmarks
+- Sample result extraction with metadata preservation for validation
+- Batch processing with progress tracking and error handling
+- Index-specific ground truth generation for multi-dataset scenarios
+- Statistical analysis with result count validation and distribution analysis
+- Output formatting with structured JSON and human-readable reporting
+- Integration with evaluation frameworks for seamless benchmark creation
+
+The utility is essential for maintaining evaluation quality and creating reliable
+benchmarks for system validation, research, and performance assessment across
+different datasets and query complexity levels.
+
+Author: Hamroz Gavharov
+Project: ES-NL2DSL - Natural Language to Elasticsearch DSL Framework
+License: MIT (see LICENSE file)
+"""
 import json
 import yaml
 import argparse

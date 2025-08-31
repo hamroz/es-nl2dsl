@@ -1,5 +1,32 @@
 #!/usr/bin/env python3
-"""Comprehensive monitoring script for ES-NL2DSL system"""
+"""
+System Monitor: Real-time monitoring and diagnostics utility
+
+This script provides comprehensive real-time monitoring capabilities for the ES-NL2DSL
+system, enabling continuous surveillance of system components, log analysis, performance
+tracking, and health monitoring. It serves as the central monitoring hub for system
+administrators and DevOps teams to maintain optimal system performance.
+
+Key capabilities:
+- Multi-file log monitoring with real-time tail functionality
+- System health monitoring with component status tracking
+- Performance metrics collection with resource usage analysis
+- Error detection and alerting with intelligent pattern recognition
+- Process monitoring with automatic restart capabilities
+- Network connectivity monitoring for external dependencies
+- Storage usage monitoring with disk space alerts
+- Service availability checking with downtime detection
+- Concurrent monitoring with multi-threaded processing
+- Signal handling for graceful shutdown and process management
+
+The monitor provides essential visibility into system operations and enables
+proactive maintenance through continuous monitoring and intelligent alerting
+of potential issues before they impact system performance.
+
+Author: Hamroz Gavharov
+Project: ES-NL2DSL - Natural Language to Elasticsearch DSL Framework
+License: MIT (see LICENSE file)
+"""
 
 import subprocess
 import sys

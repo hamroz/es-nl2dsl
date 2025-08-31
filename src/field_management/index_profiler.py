@@ -1,5 +1,26 @@
 """
-Index Profiler - Dynamically discovers and caches index schemas and field information
+Field Management Index Profiler: Advanced field discovery and relationship analysis
+
+This module provides sophisticated field profiling capabilities specifically designed
+for the field management subsystem of ES-NL2DSL. It performs deep analysis of
+Elasticsearch indices to discover field relationships, usage patterns, and semantic
+meanings, enabling intelligent field-aware query generation.
+
+Key capabilities:
+- Dynamic field discovery with type inference and validation
+- Field relationship mapping and correlation analysis
+- Usage pattern detection from sample data
+- Semantic field categorization (temporal, geographic, numeric, etc.)
+- Value distribution analysis for optimization hints
+- Caching mechanism with TTL for performance optimization
+- Support for complex nested and object field structures
+
+The profiler serves as the intelligence layer for field management, providing
+contextual understanding of field semantics beyond simple type information.
+
+Author: Hamroz Gavharov
+Project: ES-NL2DSL - Natural Language to Elasticsearch DSL Framework
+License: MIT (see LICENSE file)
 """
 
 import json
@@ -16,7 +37,27 @@ import pickle
 logger = logging.getLogger(__name__)
 
 class IndexProfiler:
-    """Profiles Elasticsearch indices to discover field schemas and metadata."""
+    """
+    Advanced field profiling system with relationship analysis.
+    
+    Provides deep field analysis beyond basic type information, discovering
+    semantic relationships, usage patterns, and optimization opportunities
+    for intelligent query generation.
+    
+    Features:
+        - Multi-level caching (memory and disk) with TTL management
+        - Field relationship detection through correlation analysis
+        - Semantic categorization based on field names and values
+        - Value distribution analysis for query optimization
+        - Support for nested and complex field structures
+        - Incremental profiling for large indices
+        
+    Architecture:
+        - Elasticsearch client integration for live analysis
+        - Two-tier caching system for performance
+        - Lazy connection initialization
+        - Graceful degradation on connection failures
+    """
     
     def __init__(self, es_client: Elasticsearch = None, cache_dir: str = "data/index_profiles"):
         self.es_client = es_client

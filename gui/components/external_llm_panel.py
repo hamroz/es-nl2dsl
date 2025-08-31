@@ -1,5 +1,30 @@
 """
-External LLM Management Panel for System Administration
+External LLM Management Panel: Multi-provider AI model configuration interface
+
+This module provides comprehensive management capabilities for external Large Language Model
+providers within the ES-NL2DSL system through an intuitive Streamlit interface. It enables
+configuration, validation, and monitoring of multiple AI providers including OpenAI, Google,
+DeepSeek, and Qwen, with secure credential management and real-time health checking.
+
+Key capabilities:
+- Multi-provider LLM configuration with credential management
+- Real-time model validation and health checking across all providers
+- Secure API key management with environment variable integration
+- Interactive model selection with availability status monitoring
+- Provider-specific parameter configuration (temperature, tokens, endpoints)
+- Bulk model testing with parallel validation processing
+- Performance monitoring with response time and success rate tracking
+- Configuration export/import for deployment automation
+- Error diagnostics with detailed provider-specific troubleshooting
+- Integration with query generation pipeline for seamless model switching
+
+The panel serves as the central configuration hub for AI model management,
+enabling administrators to maintain reliable access to multiple AI providers
+while ensuring optimal performance and secure credential handling.
+
+Author: Hamroz Gavharov
+Project: ES-NL2DSL - Natural Language to Elasticsearch DSL Framework
+License: MIT (see LICENSE file)
 """
 
 import streamlit as st

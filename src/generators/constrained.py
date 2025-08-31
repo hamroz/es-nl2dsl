@@ -1,4 +1,28 @@
 #!/usr/bin/env python3
+"""
+Constrained Query Generator: Foundation query generation with validation and optimization
+
+This module provides the original constrained query generation functionality that serves
+as the foundation for the ES-NL2DSL system. It implements rule-based query construction
+with schema validation, security checking, and performance optimizations including async
+processing and intelligent field mapping.
+
+Key capabilities:
+- Schema-aware query generation with field catalog integration
+- Multi-layer security validation and input sanitization
+- Performance optimizations with async LLM processing and field mapping caching
+- Comprehensive validation against Elasticsearch DSL schema
+- Retry logic with progressive refinement
+- Integration with external LLMs and local Ollama models
+
+This module maintains backward compatibility while supporting advanced features through
+optional imports and graceful degradation when optimizations are unavailable.
+
+Author: Hamroz Gavharov
+Project: ES-NL2DSL - Natural Language to Elasticsearch DSL Framework
+License: MIT (see LICENSE file)
+"""
+
 import json
 import sys
 import argparse
@@ -967,7 +991,7 @@ try:
     from .optimized_field_mapping import correct_field_mappings_with_index_awareness_optimized
     from .async_llm import call_local_model_async, get_async_llm_manager
     OPTIMIZATIONS_AVAILABLE = True
-    print("✅ Phase 2 optimizations available: async LLM + optimized field mapping")
+    print("✅ Performance optimizations available: async LLM + optimized field mapping")
 except (ImportError, ValueError) as e:
     # Try absolute imports (when run directly or from different context)
     try:
@@ -982,10 +1006,10 @@ except (ImportError, ValueError) as e:
         from optimized_field_mapping import correct_field_mappings_with_index_awareness_optimized
         from async_llm import call_local_model_async, get_async_llm_manager
         OPTIMIZATIONS_AVAILABLE = True
-        print("✅ Phase 2 optimizations available: async LLM + optimized field mapping (absolute imports)")
+        print("✅ Performance optimizations available: async LLM + optimized field mapping")
     except ImportError as e2:
         OPTIMIZATIONS_AVAILABLE = False
-        print(f"⚠️ Phase 2 optimizations not available: {e2}")
+        print(f"⚠️ Performance optimizations not available: {e2}")
         print("   Falling back to original sync processing...")
 
 async def generate_with_retries_async(task_prompt, schema_path, rules_path, max_retries=2, index=None, model="llama3.1:latest"):
@@ -1144,7 +1168,34 @@ def generate_with_retries_smart(task_prompt, schema_path, rules_path, max_retrie
         return generate_with_retries(task_prompt, schema_path, rules_path, max_retries, index, model)
 
 def generate_with_retries(task_prompt, schema_path, rules_path, max_retries=2, index=None, model="llama3.1:latest"):
-    """Generate query with validation and retries"""
+    """
+    Generate Elasticsearch DSL query with comprehensive validation and retry logic.
+    
+    This is the core synchronous generation function that combines LLM-based query
+    generation with schema validation, field mapping corrections, and intelligent
+    retry mechanisms to produce reliable Elasticsearch queries.
+    
+    Args:
+        task_prompt: Natural language description of the desired query
+        schema_path: Path to Elasticsearch DSL schema file for validation
+        rules_path: Path to validation rules configuration (currently unused)
+        max_retries: Maximum number of generation attempts before failing
+        index: Target Elasticsearch index name for context-aware generation
+        model: LLM model identifier for query generation
+        
+    Returns:
+        Dictionary containing either:
+        - Valid Elasticsearch DSL query structure for successful generation
+        - Abstain response with reason and metrics for failed generation
+        
+    Features:
+        - Schema validation against Elasticsearch DSL specifications
+        - Automatic field mapping corrections based on index structure
+        - Performance optimizations when async/caching modules available
+        - Comprehensive error handling and retry logic
+        - Security validation for input sanitization
+        - Metrics collection for performance analysis
+    """
     start_time = time.time()
     metrics = {
         "attempts": 0,
@@ -1254,9 +1305,9 @@ def generate_with_retries(task_prompt, schema_path, rules_path, max_retries=2, i
     metrics["latency_seconds"] = time.time() - start_time
     return {"abstain": True, "reason": "Max retries exceeded", "metrics": metrics}
 
-def get_phase2_performance_stats():
-    """Get Phase 2 performance optimization statistics"""
-    stats = {"phase2_enabled": OPTIMIZATIONS_AVAILABLE}
+def get_performance_optimization_stats():
+    """Get performance optimization statistics for async and caching systems"""
+    stats = {"optimizations_enabled": OPTIMIZATIONS_AVAILABLE}
     
     if OPTIMIZATIONS_AVAILABLE:
         # Get async LLM manager stats
@@ -1276,8 +1327,8 @@ def get_phase2_performance_stats():
     
     return stats
 
-def clear_phase2_caches():
-    """Clear all Phase 2 optimization caches"""
+def clear_optimization_caches():
+    """Clear all performance optimization caches"""
     if OPTIMIZATIONS_AVAILABLE:
         try:
             # Clear async LLM manager stats
@@ -1289,16 +1340,38 @@ def clear_phase2_caches():
             field_mapper = get_optimized_field_mapper()
             field_mapper.clear_cache()
             
-            print("✅ Phase 2 caches cleared")
+            print("✅ Performance optimization caches cleared")
             return True
         except Exception as e:
-            print(f"⚠️ Error clearing Phase 2 caches: {e}")
+            print(f"⚠️ Error clearing optimization caches: {e}")
             return False
     else:
-        print("⚠️ Phase 2 optimizations not available")
+        print("⚠️ Performance optimizations not available")
         return False
 
 def main():
+    """
+    Command-line interface for the constrained query generator.
+    
+    Provides CLI access to the foundational query generation system with support
+    for schema validation, security checking, and performance optimizations.
+    Serves as a reliable entry point for batch processing and testing.
+    
+    Command-line Arguments:
+        --prompt: Natural language query prompt (required)
+        --schema: Path to Elasticsearch DSL schema file (default: artifacts/esdsl_schema.json)
+        --index: Target Elasticsearch index name (default: logs_net)
+        --model: LLM model identifier (default: llama3.1:latest)
+        --task-id: Optional task identifier for result storage
+        --async: Enable asynchronous processing when available
+        
+    Output:
+        Saves generated query to artifacts/generated/ directory as JSON file.
+        Returns performance statistics and validation results.
+        
+    Example:
+        python constrained.py --prompt "Find suspicious network activity" --index logs_net --async
+    """
     parser = argparse.ArgumentParser(description="Generate constrained ES DSL queries")
     parser.add_argument("--prompt", required=True, help="Query prompt")
     parser.add_argument("--task-id", help="Task ID for output naming")

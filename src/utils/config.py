@@ -1,5 +1,29 @@
 #!/usr/bin/env python3
-"""Configuration loader for ES-NL2DSL using .env file"""
+"""
+Configuration Manager: Centralized system configuration and credential management
+
+This module provides centralized configuration management for the ES-NL2DSL system,
+handling environment variables, credential management, and connection parameters
+for Elasticsearch and other system components. It ensures secure credential handling
+with environment-based configuration and provides consistent connection settings
+across all system modules.
+
+Key capabilities:
+- Environment-based configuration with .env file support
+- Secure credential management with role-based access (admin/reader)
+- Elasticsearch connection configuration with SSL/TLS support
+- Default index and system parameter management
+- Centralized configuration access for all system components
+- Development and production environment support
+
+The module implements security best practices by loading sensitive credentials
+from environment variables and providing appropriate access levels for different
+system operations (admin for index management, reader for query execution).
+
+Author: Hamroz Gavharov
+Project: ES-NL2DSL - Natural Language to Elasticsearch DSL Framework
+License: MIT (see LICENSE file)
+"""
 
 import os
 from pathlib import Path

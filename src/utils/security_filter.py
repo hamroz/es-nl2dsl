@@ -1,8 +1,30 @@
 #!/usr/bin/env python3
 """
-Sophisticated Security Filter for Query Generation
-Implements context-aware, intelligent filtering to distinguish between
-legitimate security analysis queries and actual malicious attempts.
+Security Filter: Advanced threat detection and content filtering system
+
+This module provides sophisticated security filtering capabilities for the ES-NL2DSL system,
+implementing context-aware analysis to distinguish between legitimate cybersecurity research
+queries and potentially malicious attempts. It performs multi-layered threat assessment
+with pattern matching, context analysis, and risk scoring to protect against security
+violations while enabling legitimate security analysis workflows.
+
+Key capabilities:
+- Multi-tier threat classification (Safe, Low, Medium, High, Critical)
+- Context-aware analysis with legitimate use case recognition
+- Pattern-based detection for SQL injection, command injection, and bypass attempts
+- Time-constraint and target-specific mitigation factors
+- Security analysis terminology recognition for research contexts
+- Detailed threat scoring with explanation and mitigation tracking
+- Dynamic threat level adjustment based on contextual factors
+- Comprehensive analysis reporting for security auditing
+
+The system balances security protection with usability, ensuring that legitimate
+cybersecurity professionals can perform necessary analysis while preventing
+actual malicious attempts and system abuse.
+
+Author: Hamroz Gavharov
+Project: ES-NL2DSL - Natural Language to Elasticsearch DSL Framework
+License: MIT (see LICENSE file)
 """
 
 import re

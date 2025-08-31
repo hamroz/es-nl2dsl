@@ -1,6 +1,29 @@
 #!/usr/bin/env python3
 """
-Enhanced prompt processing for better field extraction and query generation
+Prompt Enhancer: Advanced natural language processing for query intent extraction
+
+This module provides sophisticated natural language processing capabilities for enhancing
+user prompts and extracting structured query intent from conversational input. It performs
+semantic analysis, constraint extraction, and prompt augmentation to improve DSL query
+generation accuracy and reduce ambiguity in the ES-NL2DSL system.
+
+Key capabilities:
+- Semantic field mapping with extensive alias recognition
+- Attack type classification with cybersecurity domain knowledge
+- IP address and port number extraction with context awareness
+- Numeric constraint parsing with operator recognition
+- Temporal condition extraction (dates, times, weekdays)
+- Structured constraint representation for query generation
+- Prompt enhancement with explicit constraint specification
+- Context-aware field disambiguation (source vs destination)
+
+The enhancer bridges the gap between conversational language and structured queries,
+enabling users to express complex cybersecurity analysis needs in natural language
+while ensuring precise translation to Elasticsearch DSL queries.
+
+Author: Hamroz Gavharov
+Project: ES-NL2DSL - Natural Language to Elasticsearch DSL Framework
+License: MIT (see LICENSE file)
 """
 
 import re

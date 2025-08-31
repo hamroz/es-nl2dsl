@@ -1,7 +1,27 @@
 #!/usr/bin/env python3
 """
-Index Profiler: Dynamically analyzes Elasticsearch indices to discover schemas, 
-date ranges, and field patterns for intelligent query generation.
+Index Profiler: Advanced Elasticsearch index analysis and schema discovery
+
+This module provides comprehensive index profiling capabilities for the ES-NL2DSL system,
+enabling dynamic discovery of index schemas, field patterns, temporal characteristics,
+and data distributions. It performs deep analysis of Elasticsearch indices to extract
+metadata crucial for context-aware query generation and validation.
+
+Key capabilities:
+- Automatic schema discovery with field type detection and mapping analysis
+- Temporal profiling to identify date ranges and timestamp fields
+- Statistical analysis of field values including distributions and patterns
+- Sample data extraction for context-aware prompt generation
+- Field relationship detection and categorization
+- Performance-optimized with caching and incremental updates
+- Support for large-scale indices with millions of documents
+
+The profiler serves as the foundation for dynamic query generation, enabling the system
+to adapt to any Elasticsearch index structure without manual configuration.
+
+Author: Hamroz Gavharov
+Project: ES-NL2DSL - Natural Language to Elasticsearch DSL Framework
+License: MIT (see LICENSE file)
 """
 import json
 import time
@@ -25,7 +45,25 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class FieldProfile:
-    """Profile information for a single field"""
+    """
+    Comprehensive profile data for an individual Elasticsearch field.
+    
+    Captures detailed metadata about a field including its type, searchability,
+    value distributions, patterns, and statistical characteristics. Used for
+    understanding field semantics and generating appropriate query constraints.
+    
+    Attributes:
+        name: Field name as it appears in the index
+        type: Elasticsearch data type (text, keyword, date, integer, etc.)
+        is_searchable: Whether field supports full-text search operations
+        sample_values: Representative sample of actual field values
+        common_values: Frequency distribution of most common values
+        min_value: Minimum value for numeric/date fields
+        max_value: Maximum value for numeric/date fields
+        null_count: Number of documents with null/missing values
+        total_count: Total number of documents analyzed
+        patterns: Detected regex patterns for text fields
+    """
     name: str
     type: str  # Elasticsearch field type
     is_searchable: bool
@@ -50,7 +88,27 @@ class FieldProfile:
 
 @dataclass 
 class IndexProfile:
-    """Complete profile of an Elasticsearch index"""
+    """
+    Complete analytical profile of an Elasticsearch index.
+    
+    Aggregates comprehensive metadata about an entire index including field
+    profiles, temporal characteristics, data distributions, and structural
+    information. Serves as the primary data structure for index intelligence.
+    
+    Attributes:
+        index_name: Name of the profiled Elasticsearch index
+        created_at: Timestamp when profile was generated
+        document_count: Total number of documents in the index
+        fields: Dictionary mapping field names to their FieldProfile objects
+        date_range: Temporal bounds with min and max dates
+        primary_timestamp_field: Main timestamp field for temporal queries
+        field_categories: Categorized fields by type (temporal, ip, numeric, etc.)
+        sample_size: Number of documents sampled for profiling
+        
+    Methods:
+        to_dict: Serialize profile to dictionary for storage
+        from_dict: Deserialize profile from stored dictionary
+    """
     index_name: str
     created_at: float
     document_count: int
@@ -75,7 +133,35 @@ class IndexProfile:
         return cls(**data)
 
 class IndexProfiler:
-    """Intelligent index analysis and profiling system"""
+    """
+    Intelligent index analysis and profiling system with caching.
+    
+    Provides comprehensive analysis of Elasticsearch indices to extract schema,
+    field patterns, temporal characteristics, and data distributions. Implements
+    intelligent caching to avoid redundant analysis and supports incremental
+    updates for evolving indices.
+    
+    Features:
+        - Automatic field type detection and mapping analysis
+        - Temporal profiling with date range discovery
+        - Statistical sampling for large indices
+        - Pattern detection for text fields
+        - Field categorization by semantic type
+        - Performance optimization with result caching
+        - Support for multiple Elasticsearch authentication methods
+        
+    Architecture:
+        - Connects directly to Elasticsearch for real-time analysis
+        - Caches profiles locally for offline operation
+        - Supports incremental updates for changed indices
+        - Handles authentication and connection management
+        
+    Usage:
+        profiler = IndexProfiler()
+        profile = profiler.analyze_index("logs_net")
+        date_range = profile.date_range
+        fields = profile.fields
+    """
     
     def __init__(self, cache_dir: str = "artifacts/index_profiles"):
         self.cache_dir = Path(cache_dir)

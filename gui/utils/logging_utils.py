@@ -1,6 +1,29 @@
-"""Simplified logging utilities for GUI components
+"""
+GUI Logging Utilities: Comprehensive logging framework for Streamlit interface
 
-Provides clean, simple logging for user actions and system operations.
+This module provides specialized logging capabilities designed specifically for the
+ES-NL2DSL Streamlit GUI application, offering structured logging with user action
+tracking, system operation monitoring, and detailed event recording. It maintains
+separation between user-visible events and system-level diagnostics.
+
+Key capabilities:
+- Multi-level logging with GUI-specific formatting and file organization
+- User action tracking with session state integration and timing metrics
+- System operation monitoring with performance and error tracking
+- Component-specific loggers with organized namespace management
+- File-based logging with automatic directory creation and rotation
+- JSON-structured logging for machine-readable event analysis
+- Real-time log streaming integration with monitoring utilities
+- Error tracking with stack trace capture and user-friendly formatting
+- Performance monitoring with request timing and resource usage metrics
+
+The framework provides essential visibility into GUI operations and user interactions,
+enabling debugging, performance analysis, and user behavior insights while maintaining
+clean separation between development and production logging levels.
+
+Author: Hamroz Gavharov
+Project: ES-NL2DSL - Natural Language to Elasticsearch DSL Framework
+License: MIT (see LICENSE file)
 """
 
 import logging

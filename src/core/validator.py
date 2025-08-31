@@ -1,4 +1,28 @@
 #!/usr/bin/env python3
+"""
+Core Validator: Rule-based validation system for Elasticsearch DSL queries
+
+This module provides the foundational validation system for the ES-NL2DSL framework,
+implementing rule-based validation against configurable constraints. It ensures queries
+meet security requirements, field restrictions, time window limits, and cost controls
+defined in validation rules configuration.
+
+Key validation capabilities:
+- Time window enforcement: Ensures queries include proper temporal boundaries
+- Field validation: Verifies only whitelisted fields are used
+- Cost control: Prevents expensive queries exceeding document limits
+- Type checking: Validates range queries only on appropriate field types
+- Aggregation validation: Ensures aggregations have proper selectivity
+- Security constraints: Enforces security policies and access controls
+
+The validator serves as a critical security and performance gateway, preventing
+malformed or potentially harmful queries from reaching the Elasticsearch cluster.
+
+Author: Hamroz Gavharov
+Project: ES-NL2DSL - Natural Language to Elasticsearch DSL Framework
+License: MIT (see LICENSE file)
+"""
+
 import argparse, json, math, re, datetime as dt, orjson, yaml
 import sys
 import os
@@ -221,6 +245,32 @@ def _validate_safe_aggregations(aggs, dsl):
     return validate_agg_structure(aggs)
 
 def main():
+    """
+    Command-line interface for rule-based query validation.
+    
+    Provides CLI access to the validation system for testing and batch processing
+    of Elasticsearch DSL queries against configured validation rules.
+    
+    Command-line Arguments:
+        --index: Target Elasticsearch index (default: from config)
+        --dsl: Path to JSON file containing query to validate (required)
+        --rules: Path to YAML validation rules file (default: artifacts/validator_rules.yaml)
+        --user: Elasticsearch username for connection (default: from config)
+        --password: Elasticsearch password (default: from config)
+        
+    Exit Codes:
+        0: Query is valid and passes all rules
+        1: Query validation failed with errors
+        
+    Output:
+        Prints validation results to stdout, including:
+        - Pass/fail status
+        - Detailed error messages for failures
+        - Document count estimation (if successful)
+        
+    Example:
+        python validator.py --dsl query.json --rules rules.yaml --index logs_net
+    """
     ap = argparse.ArgumentParser()
     ap.add_argument("--index", default=ES_DEFAULT_INDEX)
     ap.add_argument("--dsl", required=True, help="Path to DSL JSON to validate")

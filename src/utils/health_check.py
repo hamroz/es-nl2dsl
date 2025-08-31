@@ -1,5 +1,30 @@
 #!/usr/bin/env python3
-"""Health check utilities for ES-NL2DSL system"""
+"""
+Health Check: System monitoring and diagnostic utilities
+
+This module provides comprehensive health monitoring and diagnostic capabilities for the
+ES-NL2DSL system, enabling real-time assessment of system components including Elasticsearch
+connectivity, index availability, data integrity, and field mapping validation. It supports
+both programmatic health checks and interactive diagnostic reporting.
+
+Key capabilities:
+- Elasticsearch connectivity testing with credential validation
+- Index existence and mapping verification
+- Data availability and sample query testing
+- Field discovery and schema validation
+- Error reporting with detailed diagnostic information
+- Support for multiple indices and connection configurations
+- Command-line diagnostic interface for system administration
+- Integration with system monitoring and alerting frameworks
+
+The module serves as the foundation for system reliability monitoring and helps
+administrators quickly identify and troubleshoot connectivity issues, data problems,
+and configuration errors across the ES-NL2DSL infrastructure.
+
+Author: Hamroz Gavharov
+Project: ES-NL2DSL - Natural Language to Elasticsearch DSL Framework
+License: MIT (see LICENSE file)
+"""
 from elasticsearch import Elasticsearch
 
 # Support both module and direct execution

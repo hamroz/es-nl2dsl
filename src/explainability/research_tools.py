@@ -1,5 +1,30 @@
 #!/usr/bin/env python3
-"""Advanced research tools for hypothesis testing and experimental analysis"""
+"""
+Research Tools: Advanced statistical analysis and hypothesis testing framework
+
+This module provides comprehensive research capabilities for experimental analysis and hypothesis
+testing within the ES-NL2DSL system. It enables systematic evaluation of query generation
+methods, model performance comparisons, and statistical validation of research findings with
+rigorous experimental design and analysis methodologies.
+
+Key capabilities:
+- Automated hypothesis generation based on available data
+- Statistical experimental design (CRD, RBD, factorial, repeated measures)
+- Comprehensive statistical testing (t-test, ANOVA, Mann-Whitney, correlation)
+- Power analysis and effect size calculation
+- Practical significance assessment with Cohen's conventions
+- Advanced visualization generation for research publications
+- Complete research study automation from data to conclusions
+- Support for multiple data formats and research paradigms
+
+The framework implements best practices in experimental statistics including proper
+randomization, blocking factor identification, multiple comparison corrections, and
+comprehensive reporting suitable for peer review and publication.
+
+Author: Hamroz Gavharov
+Project: ES-NL2DSL - Natural Language to Elasticsearch DSL Framework
+License: MIT (see LICENSE file)
+"""
 import json
 import numpy as np
 import pandas as pd

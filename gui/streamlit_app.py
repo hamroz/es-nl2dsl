@@ -1,4 +1,31 @@
-"""ES-NL2DSL Streamlit GUI Application"""
+"""
+ES-NL2DSL Streamlit Application: Main web interface entry point
+
+This module serves as the primary entry point for the ES-NL2DSL web-based graphical
+user interface, providing a comprehensive Streamlit application that integrates all
+system components into a unified platform for natural language to Elasticsearch DSL
+query generation, evaluation, and system management.
+
+Key capabilities:
+- Multi-component navigation with organized sidebar interface
+- Real-time system status monitoring with health indicators
+- Interactive query generation with advanced configuration options
+- Comprehensive evaluation dashboard with statistical analysis
+- Security testing panel with red team capabilities
+- Privacy analysis tools with differential privacy support
+- System administration interface with full management capabilities
+- Data exploration tools with interactive visualization
+- Multi-modal data adaptation with AI-powered assistance
+- Responsive web design with professional styling and UX
+
+The application serves as the central hub for all ES-NL2DSL functionality,
+providing both end-users and administrators with intuitive access to the
+complete system capabilities through a modern web interface.
+
+Author: Hamroz Gavharov
+Project: ES-NL2DSL - Natural Language to Elasticsearch DSL Framework
+License: MIT (see LICENSE file)
+"""
 import streamlit as st
 import sys
 from pathlib import Path

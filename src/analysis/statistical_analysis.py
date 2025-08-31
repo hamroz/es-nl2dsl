@@ -1,5 +1,29 @@
 #!/usr/bin/env python3
-"""Statistical analysis module for rigorous evaluation"""
+"""
+Statistical Analysis: Rigorous evaluation framework with confidence metrics
+
+This module provides comprehensive statistical analysis capabilities for the ES-NL2DSL
+system, enabling scientifically rigorous evaluation of query generation performance.
+It implements multiple statistical tests, confidence intervals, effect size calculations,
+and visualization support for research and production validation.
+
+Key analysis capabilities:
+- Multi-run evaluation with confidence intervals and significance testing
+- Parametric and non-parametric statistical tests (t-test, Mann-Whitney U)
+- Effect size calculation (Cohen's d) for practical significance
+- Bootstrap confidence intervals for robust estimation
+- Cross-method comparison with multiple testing correction
+- Performance stability analysis and outlier detection
+- Comprehensive reporting with publication-ready statistics
+
+The module supports both basic analysis (numpy-only) and advanced analysis
+(with scipy) through graceful degradation, ensuring functionality across
+different deployment environments.
+
+Author: Hamroz Gavharov
+Project: ES-NL2DSL - Natural Language to Elasticsearch DSL Framework
+License: MIT (see LICENSE file)
+"""
 import numpy as np
 import json
 from typing import List, Dict, Tuple, Any, Optional
@@ -16,7 +40,23 @@ except ImportError:
 
 @dataclass
 class StatisticalResult:
-    """Results of statistical analysis"""
+    """
+    Comprehensive statistical analysis results with significance metrics.
+    
+    Encapsulates statistical measures including central tendency, dispersion,
+    confidence intervals, and hypothesis testing results for rigorous
+    performance evaluation.
+    
+    Attributes:
+        mean: Arithmetic mean of the metric
+        std: Standard deviation measuring dispersion
+        median: Median value (robust to outliers)
+        confidence_interval_95: 95% CI for the mean
+        sample_size: Number of samples analyzed
+        p_value: Probability value from hypothesis testing
+        significant: Whether result is statistically significant (p < 0.05)
+        effect_size: Cohen's d or other effect size measure
+    """
     mean: float
     std: float
     median: float

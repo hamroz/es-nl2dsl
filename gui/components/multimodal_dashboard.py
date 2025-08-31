@@ -1,5 +1,32 @@
 #!/usr/bin/env python3
-"""Simplified Multi-Modal Queries Dashboard for Data Adaptation"""
+"""
+Multi-Modal Data Adaptation Dashboard: AI-powered data integration interface
+
+This module provides advanced multi-modal data adaptation capabilities for the ES-NL2DSL
+system through an intelligent Streamlit interface. It enables automatic adaptation to new
+log formats and data sources using AI-powered schema analysis, field mapping, and ingestion
+workflows to extend system capabilities beyond predefined datasets.
+
+Key capabilities:
+- AI-powered data source analysis with automatic schema discovery
+- Multi-format data ingestion (CSV, JSON, Syslog, custom formats)
+- Intelligent field mapping with semantic analysis and suggestions
+- Real-time data profiling with statistical analysis and validation
+- Custom index creation with optimized mappings for new data sources
+- Interactive data preview with quality assessment and anomaly detection
+- Automated ingestion pipelines with progress monitoring and error handling
+- Historical adaptation tracking with configuration management
+- Integration testing with existing query generation pipelines
+- Documentation generation for new data sources and field mappings
+
+The dashboard serves as the primary tool for system administrators and data engineers
+to rapidly integrate new data sources into the ES-NL2DSL system, enabling seamless
+expansion of cybersecurity analysis capabilities across diverse log formats.
+
+Author: Hamroz Gavharov
+Project: ES-NL2DSL - Natural Language to Elasticsearch DSL Framework
+License: MIT (see LICENSE file)
+"""
 import streamlit as st
 import json
 import sys

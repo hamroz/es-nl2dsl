@@ -1,5 +1,29 @@
 #!/usr/bin/env python3
-"""Field mapping storage for newly adapted data"""
+"""
+Mapping Storage: Intelligent field mapping management for dynamic data adaptation
+
+This module provides persistent storage and retrieval of field mappings for dynamically
+adapted indices in the ES-NL2DSL system. It manages the relationship between semantic
+field names and actual index fields, enabling the system to adapt to new data sources
+without manual configuration.
+
+Key capabilities:
+- Persistent storage of index field mappings and metadata
+- Dynamic date range calculation from actual index data
+- Field catalog generation with type and searchability information
+- Semantic mapping between logical and physical field names
+- Integration with index profiling for real-time schema discovery
+- Caching mechanism for performance optimization
+- Support for multiple index types and schemas
+
+The storage system maintains a unified interface for accessing field information
+across different data sources, enabling consistent query generation regardless
+of the underlying index structure.
+
+Author: Hamroz Gavharov
+Project: ES-NL2DSL - Natural Language to Elasticsearch DSL Framework
+License: MIT (see LICENSE file)
+"""
 import json
 import os
 from typing import Dict, List, Any, Optional
@@ -14,7 +38,27 @@ sys.path.append(str(project_root))
 logger = logging.getLogger(__name__)
 
 class MappingStorage:
-    """Store and retrieve field mappings for adapted data indices"""
+    """
+    Intelligent storage system for index field mappings and metadata.
+    
+    Manages persistent storage of field mappings discovered through dynamic
+    adaptation, providing a unified interface for accessing index structure
+    information across the ES-NL2DSL system.
+    
+    Features:
+        - Persistent JSON storage of mapping information
+        - Lazy loading of index profiler to avoid circular imports
+        - Dynamic field catalog generation from stored mappings
+        - Real-time date range calculation from index data
+        - Semantic field mapping for query generation
+        - Fallback mechanisms for missing or corrupted data
+        
+    Architecture:
+        - File-based storage in artifacts/mappings directory
+        - Integration with IndexProfiler for live data analysis
+        - Caching for frequently accessed mappings
+        - Automatic schema evolution handling
+    """
     
     def __init__(self, storage_path: str = "artifacts/mappings"):
         self.storage_path = Path(storage_path)

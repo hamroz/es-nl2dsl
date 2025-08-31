@@ -1,4 +1,30 @@
 #!/usr/bin/env python3
+"""
+Evaluation Executor: Query execution and result comparison for accuracy assessment
+
+This module provides the execution evaluation capabilities for the ES-NL2DSL system,
+comparing generated queries against ground truth by executing both and computing
+similarity metrics on their result sets. It enables quantitative assessment of
+query generation accuracy through various metrics including Jaccard similarity,
+F1-score, precision, and recall.
+
+Key evaluation capabilities:
+- Parallel query execution with error handling and classification
+- Document ID extraction for result set comparison
+- Jaccard similarity computation for set overlap analysis
+- Precision, recall, and F1-score calculation
+- Enhanced metrics including semantic similarity (when available)
+- Comprehensive error tracking with typed error classification
+- Performance monitoring with execution timing
+
+The executor serves as the empirical validation layer, providing objective metrics
+on how well generated queries match the intended ground truth results.
+
+Author: Hamroz Gavharov
+Project: ES-NL2DSL - Natural Language to Elasticsearch DSL Framework
+License: MIT (see LICENSE file)
+"""
+
 import argparse, json, time, pathlib, orjson
 import sys
 import os
@@ -7,7 +33,12 @@ from enum import Enum
 import elasticsearch.exceptions as es_exceptions
 
 class ErrorType(Enum):
-    """Types of errors that can occur during query execution"""
+    """
+    Enumeration of error types for query execution failure classification.
+    
+    Provides structured error categorization to enable proper error handling
+    and debugging of query execution failures.
+    """
     FIELD_VALIDATION = "field_validation"
     SYNTAX_ERROR = "syntax_error"
     TIMEOUT = "timeout"
@@ -43,7 +74,31 @@ except ImportError:
     from src.utils.config import get_es_client_config, ES_READER_CREDS, ES_DEFAULT_INDEX
 
 def run_query(es, index, dsl: dict, size=10000):
-    """Execute a query with proper error handling and error classification."""
+    """
+    Execute Elasticsearch query with comprehensive error handling.
+    
+    Runs a query against Elasticsearch and extracts document IDs for comparison,
+    with detailed error classification for debugging failed queries.
+    
+    Args:
+        es: Elasticsearch client instance
+        index: Target index name
+        dsl: Dictionary containing Elasticsearch DSL query
+        size: Maximum number of documents to retrieve (default: 10000)
+        
+    Returns:
+        Tuple[Set[str], Optional[QueryExecutionError]]: 
+        - Set of document IDs from successful execution
+        - Error object if execution failed, None otherwise
+        
+    Error Types Handled:
+        - Field validation errors (unknown fields)
+        - Syntax errors (malformed DSL)
+        - Timeout errors (query too expensive)
+        - Connection errors (Elasticsearch unavailable)
+        - Permission errors (insufficient privileges)
+        - Index not found errors
+    """
     error_info = None
     try:
         # Remove 'size' from dsl if it exists to avoid conflict

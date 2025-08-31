@@ -1,6 +1,27 @@
 #!/usr/bin/env python3
 """
-Ingest large JSONL files into Elasticsearch with chunking and progress tracking
+Bulk Ingestion: High-performance data loading for large-scale datasets
+
+This module provides enterprise-grade bulk data ingestion capabilities for the ES-NL2DSL
+system, enabling efficient loading of large datasets (millions of documents) into
+Elasticsearch. It implements streaming processing with chunking, progress tracking,
+and error recovery to handle production-scale data volumes reliably.
+
+Key capabilities:
+- Streaming ingestion of JSONL/JSON files with memory-efficient chunking
+- Real-time progress tracking with throughput metrics
+- Automatic index creation with custom mappings
+- Error handling with retry logic and failed document tracking
+- Support for both standard documents and Elasticsearch bulk format
+- Performance optimization with configurable batch sizes
+- Detailed ingestion statistics and reporting
+
+The module is designed for production workloads, supporting datasets like CIC-IDS2017
+with 2.8M+ records while maintaining consistent performance and reliability.
+
+Author: Hamroz Gavharov
+Project: ES-NL2DSL - Natural Language to Elasticsearch DSL Framework
+License: MIT (see LICENSE file)
 """
 
 import argparse
@@ -11,7 +32,19 @@ from elasticsearch import Elasticsearch, helpers
 import time
 
 def create_index(es, index_name, mapping_file):
-    """Create an index with the specified mapping"""
+    """
+    Create Elasticsearch index with custom mapping configuration.
+    
+    Args:
+        es: Elasticsearch client instance
+        index_name: Name of the index to create
+        mapping_file: Path to JSON file containing index mapping
+        
+    Returns:
+        bool: True if index created successfully, False otherwise
+        
+    Handles existing index detection and proper error reporting.
+    """
     try:
         if es.indices.exists(index=index_name):
             print(f"Index {index_name} already exists")
@@ -33,7 +66,25 @@ def count_lines(file_path):
         return sum(1 for _ in f)
 
 def read_jsonl_chunks(file_path, chunk_size=5000):
-    """Read JSONL file in chunks"""
+    """
+    Stream-read JSONL file in memory-efficient chunks.
+    
+    Generator function that reads large JSONL files in configurable chunks
+    to prevent memory overflow while processing multi-GB datasets.
+    
+    Args:
+        file_path: Path to JSONL file to process
+        chunk_size: Number of documents per chunk (default: 5000)
+        
+    Yields:
+        List of documents ready for bulk indexing
+        
+    Features:
+        - Handles both standard documents and Elasticsearch bulk format
+        - Automatic document ID preservation
+        - Error recovery for malformed JSON lines
+        - Memory-efficient streaming processing
+    """
     with open(file_path, 'r') as f:
         chunk = []
         for line_num, line in enumerate(f):

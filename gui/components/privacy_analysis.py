@@ -1,9 +1,30 @@
-"""Privacy Analysis Component for Streamlit GUI
+"""
+Privacy Analysis Panel: Differential privacy evaluation and data protection interface
 
-User Experience Improvements:
-- Tab navigation preserved when using Select All/Clear All buttons
-- No unnecessary page reruns that would reset user's current tab
-- Toast notifications provide feedback without disrupting workflow
+This module provides comprehensive differential privacy analysis capabilities for the
+ES-NL2DSL system through an interactive Streamlit interface. It enables privacy-preserving
+query analysis, differential privacy budget management, and privacy-utility trade-off
+evaluation to ensure data protection compliance while maintaining analytical capabilities.
+
+Key capabilities:
+- Differential privacy index creation with configurable noise parameters
+- Privacy budget management with real-time tracking and allocation
+- Privacy-utility trade-off analysis with interactive visualizations
+- Noise injection testing with statistical validation
+- Privacy compliance reporting with regulatory framework alignment
+- Interactive privacy metric dashboards with trend analysis
+- Batch privacy evaluation with parallel processing capabilities
+- Privacy-preserving query execution with result validation
+- Custom privacy parameter configuration with expert guidance
+- Integration with existing indices for privacy enhancement
+
+The panel serves as the primary tool for privacy officers and compliance teams
+to ensure data protection requirements are met while enabling legitimate
+cybersecurity analysis and research activities.
+
+Author: Hamroz Gavharov
+Project: ES-NL2DSL - Natural Language to Elasticsearch DSL Framework
+License: MIT (see LICENSE file)
 """
 import streamlit as st
 import pandas as pd

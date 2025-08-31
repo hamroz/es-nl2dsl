@@ -1,5 +1,31 @@
 #!/usr/bin/env python3
-"""Live log viewer for ES-NL2DSL GUI"""
+"""
+Log Watcher: Real-time log monitoring and analysis utility
+
+This utility provides real-time log file monitoring capabilities for the ES-NL2DSL system,
+enabling developers and administrators to monitor system activity, debug issues, and track
+application behavior through live log streaming. It offers cross-platform compatibility
+with intelligent log parsing and filtering capabilities.
+
+Key capabilities:
+- Real-time log file monitoring with automatic updates
+- Cross-platform compatibility (macOS, Linux, Windows)
+- Automatic log file creation and directory management
+- Intelligent log parsing with timestamp and level extraction
+- Color-coded output for different log levels and components
+- Multi-file monitoring with concurrent stream processing
+- Pattern filtering for focused debugging and analysis
+- Historical log replay with configurable line limits
+- Signal handling for graceful shutdown and cleanup
+
+The utility is essential for development workflows and production monitoring,
+providing immediate visibility into system behavior and enabling rapid
+troubleshooting of issues as they occur.
+
+Author: Hamroz Gavharov
+Project: ES-NL2DSL - Natural Language to Elasticsearch DSL Framework
+License: MIT (see LICENSE file)
+"""
 
 import subprocess
 import sys

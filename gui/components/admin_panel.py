@@ -1,4 +1,30 @@
-"""System Administration Panel Component for Streamlit GUI - Fixed Version"""
+"""
+System Administration Panel: Comprehensive system management interface
+
+This module provides a complete administrative interface for the ES-NL2DSL system through
+a Streamlit-based web GUI. It offers centralized management capabilities for system
+monitoring, data management, index operations, and external service configuration,
+enabling administrators to maintain and monitor the entire ES-NL2DSL infrastructure
+from a unified dashboard.
+
+Key capabilities:
+- Real-time system health monitoring with component status tracking
+- Comprehensive data management with CSV upload and CIC-IDS2017 integration
+- Index management with creation, deletion, and drift detection capabilities
+- External LLM provider configuration and credential management
+- System maintenance tools with cleanup and optimization features
+- Log monitoring and system diagnostics with real-time updates
+- Interactive data visualization and export functionality
+- Multi-tab interface with organized administrative workflows
+
+The panel serves as the central command center for ES-NL2DSL system administrators,
+providing intuitive access to all critical system management functions through
+a professional web-based interface with comprehensive logging and error handling.
+
+Author: Hamroz Gavharov
+Project: ES-NL2DSL - Natural Language to Elasticsearch DSL Framework
+License: MIT (see LICENSE file)
+"""
 import streamlit as st
 import pandas as pd
 import subprocess
