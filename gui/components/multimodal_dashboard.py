@@ -33,6 +33,7 @@ import sys
 from pathlib import Path
 import tempfile
 from datetime import datetime
+from typing import Dict, List, Any, Optional
 
 # Add project root to path
 project_root = Path(__file__).parent.parent.parent
@@ -45,10 +46,11 @@ def render_multimodal_dashboard():
     st.markdown("Adapt the system to new log data from any source with AI assistance")
     
     # Main workflow tabs
-    tab1, tab2, tab3 = st.tabs([
+    tab1, tab2, tab3, tab4 = st.tabs([
         "📁 Data Analysis", 
         "🔄 Data Ingestion", 
-        "📚 History"
+        "📚 History",
+        "🔍 Diagnostics"
     ])
     
     with tab1:
@@ -59,6 +61,9 @@ def render_multimodal_dashboard():
     
     with tab3:
         render_history_tab()
+    
+    with tab4:
+        render_diagnostics_tab()
 
 
 def render_data_analysis_tab():
@@ -416,19 +421,36 @@ def render_data_ingestion_tab():
                     # Field rejection errors
                     if error_details.get('field_rejections'):
                         st.error("🚫 Field Rejection Errors:")
-                        for error in error_details['field_rejections']:
+                        for error in error_details['field_rejections'][:3]:  # Show first 3
                             st.code(f"Field '{error['field']}' was rejected: {error['reason']}")
+                        
+                        if len(error_details['field_rejections']) > 3:
+                            st.info(f"Showing 3 of {len(error_details['field_rejections'])} field rejection errors")
                     
                     # Mapping errors
                     if error_details.get('mapping_errors'):
                         st.error("📝 Mapping Errors:")
-                        for error in error_details['mapping_errors']:
+                        for error in error_details['mapping_errors'][:3]:  # Show first 3
                             st.code(f"Mapping error: {error['reason']}")
+                        
+                        if len(error_details['mapping_errors']) > 3:
+                            st.info(f"Showing 3 of {len(error_details['mapping_errors'])} mapping errors")
                     
                     # Other errors
                     if error_details.get('other_errors'):
                         with st.expander("Other Error Details"):
-                            st.json(error_details['other_errors'])
+                            st.json(error_details['other_errors'][:3])  # Show first 3
+                    
+                    # Link to diagnostics tab for detailed analysis
+                    total_errors = len(error_details.get('all_errors', []))
+                    if total_errors > 0:
+                        st.info(f"💡 **{total_errors} total errors detected.** Go to the **🔍 Diagnostics** tab for detailed error analysis and troubleshooting recommendations.")
+                        
+                        # Quick diagnostic button
+                        if st.button("🚀 Run Quick Diagnosis", key="quick_diagnosis"):
+                            # Store the error details for diagnostics
+                            st.session_state.last_ingestion_errors = error_details
+                            st.info("✅ Error data stored. Switch to the **🔍 Diagnostics** tab to view the analysis.")
         
         # Clean up
         Path(temp_path).unlink(missing_ok=True)
@@ -683,3 +705,404 @@ def test_query_on_index(query, index_name):
                 
     except Exception as e:
         st.error(f"❌ Error testing query: {e}")
+
+
+def render_diagnostics_tab():
+    """Render diagnostics tab for ingestion error analysis"""
+    st.subheader("🔍 Ingestion Diagnostics")
+    st.markdown("Analyze and troubleshoot data ingestion issues")
+    
+    # Check for last ingestion errors from current session
+    if 'last_ingestion_errors' in st.session_state:
+        st.warning("⚠️ **Recent ingestion errors detected from current session!**")
+        if st.button("🔍 Analyze Current Session Errors", type="primary"):
+            analyze_session_errors()
+        st.divider()
+    
+    # Quick diagnostic buttons
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        if st.button("🚀 Run Full Diagnosis", type="primary", use_container_width=True):
+            run_full_diagnosis()
+    
+    with col2:
+        if st.button("📊 View Recent Errors", use_container_width=True):
+            show_recent_errors()
+    
+    with col3:
+        if st.button("🔄 Refresh Data", use_container_width=True):
+            st.rerun()
+    
+    # Display session error analysis if available
+    if 'session_error_analysis' in st.session_state:
+        display_session_error_analysis(st.session_state.session_error_analysis)
+    
+    # Display diagnosis results if available
+    if 'diagnosis_results' in st.session_state:
+        display_diagnosis_results(st.session_state.diagnosis_results)
+    
+    # Display recent errors if available
+    if 'recent_errors_data' in st.session_state:
+        display_recent_errors(st.session_state.recent_errors_data)
+
+
+def analyze_session_errors():
+    """Analyze errors from the current session"""
+    with st.spinner("Analyzing current session errors..."):
+        try:
+            from src.data_adaptation.data_adapter import DataAdapter
+            adapter = DataAdapter()
+            
+            error_details = st.session_state.last_ingestion_errors
+            all_errors = error_details.get('all_errors', [])
+            
+            if all_errors:
+                analysis = adapter._analyze_error_patterns(all_errors)
+                recommendations = adapter._generate_error_recommendations(analysis)
+                
+                session_analysis = {
+                    "error_analysis": analysis,
+                    "recommendations": recommendations,
+                    "error_details": error_details,
+                    "timestamp": datetime.now().isoformat()
+                }
+                
+                st.session_state.session_error_analysis = session_analysis
+                st.success(f"✅ Analyzed {len(all_errors)} errors from current session!")
+            else:
+                st.warning("No detailed error information available")
+                
+        except Exception as e:
+            st.error(f"❌ Session error analysis failed: {e}")
+
+
+def run_full_diagnosis():
+    """Run comprehensive ingestion diagnosis"""
+    with st.spinner("Running comprehensive diagnosis..."):
+        try:
+            # Clear module cache to ensure we get the latest version
+            import importlib
+            import sys
+            if 'src.data_adaptation.data_adapter' in sys.modules:
+                importlib.reload(sys.modules['src.data_adaptation.data_adapter'])
+            
+            from src.data_adaptation.data_adapter import DataAdapter
+            adapter = DataAdapter()
+            
+            # Verify methods exist
+            if not hasattr(adapter, 'diagnose_ingestion_issues'):
+                st.error("❌ Method 'diagnose_ingestion_issues' not found. Please restart Streamlit.")
+                return
+            
+            # Get index name from session if available
+            index_name = getattr(st.session_state, 'ingested_index', None)
+            
+            diagnosis = adapter.diagnose_ingestion_issues(index_name)
+            st.session_state.diagnosis_results = diagnosis
+            
+            st.success("✅ Diagnosis completed!")
+            
+        except Exception as e:
+            st.error(f"❌ Diagnosis failed: {e}")
+            st.error(f"Error details: {str(e)}")
+            import traceback
+            st.code(traceback.format_exc())
+
+
+def show_recent_errors():
+    """Show recent ingestion errors"""
+    with st.spinner("Loading recent errors..."):
+        try:
+            # Clear module cache to ensure we get the latest version
+            import importlib
+            import sys
+            if 'src.data_adaptation.data_adapter' in sys.modules:
+                importlib.reload(sys.modules['src.data_adaptation.data_adapter'])
+            
+            from src.data_adaptation.data_adapter import DataAdapter
+            adapter = DataAdapter()
+            
+            # Verify methods exist
+            if not hasattr(adapter, 'get_recent_ingestion_errors'):
+                st.error("❌ Method 'get_recent_ingestion_errors' not found. Please restart Streamlit.")
+                return
+            
+            recent_errors = adapter.get_recent_ingestion_errors(10)
+            st.session_state.recent_errors_data = recent_errors
+            
+            if recent_errors:
+                st.success(f"✅ Found {len(recent_errors)} recent error logs")
+            else:
+                st.info("ℹ️ No recent error logs found")
+                
+        except Exception as e:
+            st.error(f"❌ Failed to load errors: {e}")
+            st.error(f"Error details: {str(e)}")
+            import traceback
+            st.code(traceback.format_exc())
+
+
+def display_session_error_analysis(session_analysis: Dict[str, Any]):
+    """Display analysis results for current session errors"""
+    st.markdown("### 🎯 Current Session Error Analysis")
+    
+    error_analysis = session_analysis.get("error_analysis", {})
+    error_details = session_analysis.get("error_details", {})
+    
+    # Quick summary
+    total_errors = error_analysis.get("total_errors", 0)
+    st.info(f"📊 Analyzing **{total_errors} errors** from your recent ingestion attempt")
+    
+    # Summary metrics
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        field_rejections = error_analysis.get("field_rejection_analysis", {})
+        st.metric("Field Rejections", f"{field_rejections.get('count', 0)} ({field_rejections.get('percentage', 0):.1f}%)")
+    
+    with col2:
+        mapping_issues = error_analysis.get("mapping_issues", {})
+        st.metric("Mapping Issues", f"{mapping_issues.get('count', 0)} ({mapping_issues.get('percentage', 0):.1f}%)")
+    
+    with col3:
+        problematic_fields = error_analysis.get("most_problematic_fields", {})
+        st.metric("Problematic Fields", len(problematic_fields))
+    
+    # Most problematic fields
+    if problematic_fields:
+        st.markdown("#### ⚠️ Fields Causing Issues")
+        for field, count in sorted(problematic_fields.items(), key=lambda x: x[1], reverse=True)[:5]:
+            st.write(f"• **{field}**: {count} errors")
+    
+    # Recommendations
+    recommendations = session_analysis.get("recommendations", [])
+    if recommendations:
+        st.markdown("#### 💡 Immediate Action Items")
+        for i, rec in enumerate(recommendations, 1):
+            st.markdown(f"{i}. {rec}")
+    
+    # Show sample errors
+    all_errors = error_details.get('all_errors', [])
+    if all_errors:
+        with st.expander(f"🔍 Sample Error Details ({len(all_errors)} total errors)"):
+            # Group by error type and show samples
+            errors_by_type = {}
+            for error in all_errors:
+                error_type = error.get('type', 'unknown')
+                if error_type not in errors_by_type:
+                    errors_by_type[error_type] = []
+                errors_by_type[error_type].append(error)
+            
+            for error_type, type_errors in errors_by_type.items():
+                st.markdown(f"**{error_type}** ({len(type_errors)} errors):")
+                for error in type_errors[:2]:  # Show first 2 of each type
+                    st.code(f"Document {error.get('document_id', 'unknown')}: {error.get('reason', 'No reason')}")
+                if len(type_errors) > 2:
+                    st.caption(f"... and {len(type_errors) - 2} more {error_type} errors")
+
+
+def display_diagnosis_results(diagnosis: Dict[str, Any]):
+    """Display comprehensive diagnosis results"""
+    st.markdown("### 📋 Diagnosis Results")
+    
+    # Elasticsearch status
+    es_status = diagnosis.get("elasticsearch_status", {})
+    if es_status.get("connected"):
+        st.success(f"✅ Elasticsearch Connected - Cluster: {es_status.get('cluster_name', 'unknown')}")
+    else:
+        st.error(f"❌ Elasticsearch Connection Failed: {es_status.get('error', 'Unknown error')}")
+    
+    # Error analysis
+    error_analysis = diagnosis.get("error_analysis", {})
+    if error_analysis:
+        st.markdown("### 📊 Error Analysis")
+        
+        # Summary metrics
+        col1, col2, col3, col4 = st.columns(4)
+        
+        with col1:
+            st.metric("Total Errors", error_analysis.get("total_errors", 0))
+        
+        with col2:
+            field_rejections = error_analysis.get("field_rejection_analysis", {})
+            st.metric("Field Rejections", f"{field_rejections.get('count', 0)} ({field_rejections.get('percentage', 0):.1f}%)")
+        
+        with col3:
+            mapping_issues = error_analysis.get("mapping_issues", {})
+            st.metric("Mapping Issues", f"{mapping_issues.get('count', 0)} ({mapping_issues.get('percentage', 0):.1f}%)")
+        
+        with col4:
+            problematic_fields = error_analysis.get("most_problematic_fields", {})
+            st.metric("Problematic Fields", len(problematic_fields))
+        
+        # Error type distribution
+        if error_analysis.get("error_type_distribution"):
+            st.markdown("#### 📈 Error Type Distribution")
+            error_types = error_analysis["error_type_distribution"]
+            
+            # Create a simple bar chart using columns
+            for error_type, count in sorted(error_types.items(), key=lambda x: x[1], reverse=True):
+                percentage = (count / error_analysis["total_errors"]) * 100
+                st.write(f"**{error_type}**: {count} errors ({percentage:.1f}%)")
+                st.progress(percentage / 100)
+        
+        # Most problematic fields
+        if problematic_fields:
+            st.markdown("#### ⚠️ Most Problematic Fields")
+            for field, count in sorted(problematic_fields.items(), key=lambda x: x[1], reverse=True)[:10]:
+                st.write(f"• **{field}**: {count} errors")
+    
+    # Recommendations
+    recommendations = diagnosis.get("recommendations", [])
+    if recommendations:
+        st.markdown("### 💡 Recommendations")
+        for i, rec in enumerate(recommendations, 1):
+            st.markdown(f"{i}. {rec}")
+    
+    # Index information if available
+    index_info = diagnosis.get("index_info", {})
+    if index_info and "error" not in index_info:
+        st.markdown("### 📊 Current Index Status")
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            st.metric("Documents", index_info.get("document_count", 0))
+        with col2:
+            st.metric("Fields", index_info.get("field_count", 0))
+        with col3:
+            size_mb = index_info.get("size_bytes", 0) / (1024 * 1024)
+            st.metric("Size (MB)", f"{size_mb:.2f}")
+
+
+def display_recent_errors(recent_errors: List[Dict[str, Any]]):
+    """Display recent error logs with detailed breakdown"""
+    st.markdown("### 📝 Recent Error Logs")
+    
+    if not recent_errors:
+        st.info("No recent error logs found")
+        return
+    
+    # Summary of all recent errors
+    total_errors = sum(error_data.get("total_errors", 0) for error_data in recent_errors)
+    st.info(f"Found {len(recent_errors)} error log files with {total_errors} total errors")
+    
+    # Display each error log
+    for i, error_data in enumerate(recent_errors):
+        timestamp = error_data.get("timestamp", "Unknown")
+        source_file = error_data.get("source_file", "Unknown")
+        total_errors_in_file = error_data.get("total_errors", 0)
+        
+        with st.expander(f"📄 Error Log {i+1}: {total_errors_in_file} errors from {Path(source_file).name if source_file != 'Unknown' else 'Unknown'} ({timestamp[:19]})"):
+            
+            # Error summary
+            error_summary = error_data.get("error_summary", {})
+            if error_summary:
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    st.markdown("**Error Types:**")
+                    for error_type, count in error_summary.get("error_types", {}).items():
+                        st.write(f"• {error_type}: {count}")
+                
+                with col2:
+                    st.markdown("**Field Issues:**")
+                    field_issues = error_summary.get("field_issues", {})
+                    if field_issues:
+                        for field, count in sorted(field_issues.items(), key=lambda x: x[1], reverse=True)[:5]:
+                            st.write(f"• {field}: {count} errors")
+                    else:
+                        st.write("No field-specific issues detected")
+                
+                # Top errors
+                top_errors = error_summary.get("top_errors", [])
+                if top_errors:
+                    st.markdown("**Most Common Errors:**")
+                    for error_reason, count in top_errors[:3]:
+                        st.code(f"{error_reason} ({count} occurrences)")
+            
+            # Show detailed errors button
+            if st.button(f"🔍 Show All {total_errors_in_file} Errors", key=f"show_errors_{i}"):
+                st.session_state[f"show_detailed_errors_{i}"] = True
+                st.rerun()
+            
+            # Display detailed errors if requested (outside of expander to avoid nesting)
+            if st.session_state.get(f"show_detailed_errors_{i}", False):
+                show_detailed_errors_inline(error_data, i)
+
+
+def show_detailed_errors_inline(error_data: Dict[str, Any], file_index: int):
+    """Show detailed error breakdown inline (no nested expanders)"""
+    errors = error_data.get("errors", [])
+    
+    st.markdown(f"### 🔍 Detailed Error Breakdown ({len(errors)} errors)")
+    
+    # Add a close button
+    if st.button(f"❌ Hide Details", key=f"hide_errors_{file_index}"):
+        st.session_state[f"show_detailed_errors_{file_index}"] = False
+        st.rerun()
+    
+    # Group errors by type for better organization
+    errors_by_type = {}
+    for error in errors:
+        error_type = error.get('type', 'unknown')
+        if error_type not in errors_by_type:
+            errors_by_type[error_type] = []
+        errors_by_type[error_type].append(error)
+    
+    # Display errors by type using containers instead of expanders
+    for error_type, type_errors in errors_by_type.items():
+        st.markdown(f"#### 📋 {error_type} ({len(type_errors)} errors)")
+        
+        # Show first 5 errors of this type
+        for i, error in enumerate(type_errors[:5]):
+            with st.container():
+                st.markdown(f"**Error {i+1}:**")
+                col1, col2 = st.columns([1, 2])
+                
+                with col1:
+                    st.write(f"**Document ID:** {error.get('document_id', 'unknown')}")
+                    st.write(f"**Status:** {error.get('status', 'unknown')}")
+                
+                with col2:
+                    st.code(error.get('reason', 'No reason provided'))
+                
+                if i < len(type_errors[:5]) - 1:  # Don't add divider after last item
+                    st.divider()
+        
+        if len(type_errors) > 5:
+            st.info(f"Showing first 5 of {len(type_errors)} {error_type} errors")
+        
+        st.markdown("---")  # Separator between error types
+
+
+def show_detailed_errors(error_data: Dict[str, Any]):
+    """Legacy function - kept for compatibility"""
+    errors = error_data.get("errors", [])
+    st.markdown(f"### 🔍 Detailed Error Breakdown ({len(errors)} errors)")
+    
+    # Group errors by type
+    errors_by_type = {}
+    for error in errors:
+        error_type = error.get('type', 'unknown')
+        if error_type not in errors_by_type:
+            errors_by_type[error_type] = []
+        errors_by_type[error_type].append(error)
+    
+    # Display errors by type using simple containers
+    for error_type, type_errors in errors_by_type.items():
+        st.markdown(f"#### 📋 {error_type} ({len(type_errors)} errors)")
+        
+        # Show first 5 errors of this type
+        for i, error in enumerate(type_errors[:5]):
+            st.markdown(f"**Error {i+1}:** {error.get('reason', 'No reason provided')}")
+        
+        if len(type_errors) > 5:
+            st.info(f"Showing first 5 of {len(type_errors)} {error_type} errors")
+
+
+# Helper function to import required modules
+def get_path_module():
+    """Get Path module for file operations"""
+    from pathlib import Path
+    return Path

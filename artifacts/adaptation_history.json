@@ -1,153 +1,74 @@
 {
-  "adapt_1756581924_3ac50e80": {
-    "id": "adapt_1756581924_3ac50e80",
-    "timestamp": 1756581924.032058,
-    "file_name": "cybersecurity-threat-detection-logs.csv",
+  "adapt_1756683044_9a916840": {
+    "id": "adapt_1756683044_9a916840",
+    "timestamp": 1756683044.5009558,
+    "file_name": "ArtificialPatientTreatment.csv",
     "file_format": "csv",
-    "index_name": "logs_cybersecurity-threat-detection-logs",
+    "index_name": "logs_artificialpatienttreatment",
     "status": "ingested",
     "schema": {
       "format": "csv",
-      "total_columns": 10,
-      "sample_records": 1000,
+      "total_columns": 4,
+      "sample_records": 690,
       "fields": {
-        "timestamp": {
+        "patient": {
           "type": "object",
-          "non_null_count": "1000",
-          "unique_values": 338,
+          "non_null_count": "690",
+          "unique_values": 100,
           "sample_values": [
-            "2024-05-01T00:00:00",
-            "2024-07-18T00:00:00",
-            "2024-04-07T00:00:00",
-            "2024-10-26T00:00:00",
-            "2024-10-31T00:00:00"
+            "patient 0",
+            "patient 0",
+            "patient 0",
+            "patient 0",
+            "patient 0"
           ]
         },
-        "source_ip": {
+        " action": {
           "type": "object",
-          "non_null_count": "1000",
-          "unique_values": 338,
+          "non_null_count": "690",
+          "unique_values": 8,
           "sample_values": [
-            "192.168.1.125",
-            "192.168.1.201",
-            "192.168.1.248",
-            "192.168.1.236",
-            "192.168.1.221"
+            " First consult",
+            " Blood test",
+            " Physical test",
+            " Second consult",
+            " Surgery"
           ]
         },
-        "dest_ip": {
+        " org:resource": {
           "type": "object",
-          "non_null_count": "1000",
-          "unique_values": 250,
+          "non_null_count": "690",
+          "unique_values": 13,
           "sample_values": [
-            "192.168.1.124",
-            "192.168.1.201",
-            "192.168.1.15",
-            "192.168.1.219",
-            "192.168.1.61"
+            " Dr. Anna",
+            " Lab",
+            " Nurse Jesse",
+            " Dr. Anna",
+            " Dr. Charlie"
           ]
         },
-        "protocol": {
+        " DateTime": {
           "type": "object",
-          "non_null_count": "1000",
-          "unique_values": 7,
+          "non_null_count": "690",
+          "unique_values": 690,
           "sample_values": [
-            "TCP",
-            "ICMP",
-            "HTTP",
-            "HTTP",
-            "ICMP"
-          ]
-        },
-        "action": {
-          "type": "object",
-          "non_null_count": "1000",
-          "unique_values": 2,
-          "sample_values": [
-            "blocked",
-            "blocked",
-            "allowed",
-            "allowed",
-            "allowed"
-          ]
-        },
-        "threat_label": {
-          "type": "object",
-          "non_null_count": "1000",
-          "unique_values": 3,
-          "sample_values": [
-            "benign",
-            "benign",
-            "benign",
-            "benign",
-            "benign"
-          ]
-        },
-        "log_type": {
-          "type": "object",
-          "non_null_count": "1000",
-          "unique_values": 3,
-          "sample_values": [
-            "firewall",
-            "application",
-            "application",
-            "application",
-            "application"
-          ]
-        },
-        "bytes_transferred": {
-          "type": "int64",
-          "non_null_count": "1000",
-          "unique_values": 988,
-          "sample_values": [
-            10889,
-            36522,
-            20652,
-            5350,
-            40691
-          ]
-        },
-        "user_agent": {
-          "type": "object",
-          "non_null_count": "1000",
-          "unique_values": 5,
-          "sample_values": [
-            "Nmap Scripting Engine",
-            "Nmap Scripting Engine",
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/535.11 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36",
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-          ]
-        },
-        "request_path": {
-          "type": "object",
-          "non_null_count": "1000",
-          "unique_values": 67,
-          "sample_values": [
-            "/",
-            "/",
-            "/login",
-            "/login",
-            "/"
+            " 2017-01-02 11:40:11",
+            " 2017-01-02 12:47:33",
+            " 2017-01-02 12:53:50",
+            " 2017-01-02 16:21:06",
+            " 2017-01-05 13:23:09"
           ]
         }
       },
       "detected_patterns": {
         "timestamp_fields": [
-          "timestamp"
-        ],
-        "ip_fields": [
-          "source_ip",
-          "dest_ip"
-        ],
-        "user_fields": [
-          "user_agent"
+          " DateTime"
         ],
         "status_fields": [
-          "action"
+          " action"
         ],
         "source_fields": [
-          "source_ip"
+          " org:resource"
         ]
       }
     },
@@ -155,45 +76,226 @@
       "success": true,
       "model_used": "\u2601\ufe0f gpt-4o-mini",
       "analysis": {
-        "system_type": "The log data appears to be generated by a network security system, such as a firewall or an application security monitoring tool, which logs traffic and events between source and destination IP addresses, along with the actions taken on those events.",
+        "system_type": "The data appears to be generated by a healthcare management system or electronic health record (EHR) system that logs patient interactions with various healthcare resources.",
         "important_fields": [
-          "timestamp",
-          "source_ip",
-          "dest_ip",
-          "protocol",
+          "patient",
           "action",
-          "threat_label",
-          "bytes_transferred"
+          "org:resource",
+          "DateTime"
         ],
         "recommended_queries": [
-          "Count the number of blocked vs allowed actions over time to identify potential security threats.",
-          "Identify the top source and destination IP addresses by bytes transferred to analyze data flow and potential misuse.",
-          "Analyze the distribution of protocols used in allowed vs blocked actions to understand network behavior.",
-          "Examine user agents associated with blocked actions to identify suspicious activity or bot traffic."
+          "Count the number of unique patients and their corresponding actions over time.",
+          "Identify the most common types of actions taken by patients and the healthcare professionals involved.",
+          "Analyze the frequency of actions per patient to determine patterns in patient engagement.",
+          "Examine the distribution of actions by healthcare provider to identify workload or performance metrics."
         ],
         "insights": [
-          "Frequent blocked actions could indicate attempted breaches or misuse of the network that should be investigated further.",
-          "Patterns in source and destination IPs can highlight potential internal or external threats, and help in reviewing firewall rules.",
-          "A significant amount of traffic from a single IP could point to a compromised machine or a network scanning activity.",
-          "Monitoring user agent strings can help in identifying automated tools or scripts that may be attempting unauthorized access."
+          "The data can help in tracking patient journey and understanding the different stages of care received.",
+          "Identifying bottlenecks in the treatment process based on the frequency of certain actions can lead to improvements in patient flow.",
+          "Monitoring the time intervals between actions could provide insights into the efficiency of the healthcare delivery system.",
+          "Understanding which healthcare provider is most frequently involved in specific actions can help in resource allocation and staffing decisions."
         ]
       },
-      "raw_response": "```json\n{\n    \"system_type\": \"The log data appears to be generated by a network security system, such as a firewall or an application security monitoring tool, which logs traffic and events between source and destination IP addresses, along with the actions taken on those events.\",\n    \"important_fields\": [\"timestamp\", \"source_ip\", \"dest_ip\", \"protocol\", \"action\", \"threat_label\", \"bytes_transferred\"],\n    \"recommended_queries\": [\n        \"Count the number of blocked vs allowed actions over time to identify potential security threats.\",\n        \"Identify the top source and destination IP addresses by bytes transferred to analyze data flow and potential misuse.\",\n        \"Analyze the distribution of protocols used in allowed vs blocked actions to understand network behavior.\",\n        \"Examine user agents associated with blocked actions to identify suspicious activity or bot traffic.\"\n    ],\n    \"insights\": [\n        \"Frequent blocked actions could indicate attempted breaches or misuse of the network that should be investigated further.\",\n        \"Patterns in source and destination IPs can highlight potential internal or external threats, and help in reviewing firewall rules.\",\n        \"A significant amount of traffic from a single IP could point to a compromised machine or a network scanning activity.\",\n        \"Monitoring user agent strings can help in identifying automated tools or scripts that may be attempting unauthorized access.\"\n    ]\n}\n```"
+      "raw_response": "```json\n{\n    \"system_type\": \"The data appears to be generated by a healthcare management system or electronic health record (EHR) system that logs patient interactions with various healthcare resources.\",\n    \"important_fields\": [\"patient\", \"action\", \"org:resource\", \"DateTime\"],\n    \"recommended_queries\": [\n        \"Count the number of unique patients and their corresponding actions over time.\",\n        \"Identify the most common types of actions taken by patients and the healthcare professionals involved.\",\n        \"Analyze the frequency of actions per patient to determine patterns in patient engagement.\",\n        \"Examine the distribution of actions by healthcare provider to identify workload or performance metrics.\"\n    ],\n    \"insights\": [\n        \"The data can help in tracking patient journey and understanding the different stages of care received.\",\n        \"Identifying bottlenecks in the treatment process based on the frequency of certain actions can lead to improvements in patient flow.\",\n        \"Monitoring the time intervals between actions could provide insights into the efficiency of the healthcare delivery system.\",\n        \"Understanding which healthcare provider is most frequently involved in specific actions can help in resource allocation and staffing decisions.\"\n    ]\n}\n```"
     },
     "elasticsearch_mapping": {
       "mappings": {
         "dynamic": "false",
         "properties": {
-          "timestamp": {
+          "patient": {
+            "type": "text",
+            "fields": {
+              "keyword": {
+                "type": "keyword"
+              }
+            }
+          },
+          " action": {
+            "type": "text",
+            "fields": {
+              "keyword": {
+                "type": "keyword"
+              }
+            }
+          },
+          " org:resource": {
+            "type": "text",
+            "fields": {
+              "keyword": {
+                "type": "keyword"
+              }
+            }
+          },
+          " DateTime": {
+            "type": "date"
+          }
+        }
+      }
+    },
+    "document_count": 0,
+    "model_used": "\u2601\ufe0f gpt-4o-mini",
+    "notes": ""
+  },
+  "adapt_1756683268_d974b1cd": {
+    "id": "adapt_1756683268_d974b1cd",
+    "timestamp": 1756683268.4940732,
+    "file_name": "advanced_cybersecurity_data.csv",
+    "file_format": "csv",
+    "index_name": "logs_advanced_cybersecurity_data",
+    "status": "ingested",
+    "schema": {
+      "format": "csv",
+      "total_columns": 8,
+      "sample_records": 1000,
+      "fields": {
+        "Timestamp": {
+          "type": "object",
+          "non_null_count": "1000",
+          "unique_values": 1000,
+          "sample_values": [
+            "2023-01-01 00:00:00",
+            "2023-01-01 00:01:00",
+            "2023-01-01 00:02:00",
+            "2023-01-01 00:03:00",
+            "2023-01-01 00:04:00"
+          ]
+        },
+        "IP_Address": {
+          "type": "object",
+          "non_null_count": "1000",
+          "unique_values": 998,
+          "sample_values": [
+            "202.118.116.11",
+            "38.30.40.178",
+            "209.5.148.15",
+            "211.116.60.71",
+            "170.166.36.145"
+          ]
+        },
+        "Request_Type": {
+          "type": "object",
+          "non_null_count": "1000",
+          "unique_values": 4,
+          "sample_values": [
+            "GET",
+            "DELETE",
+            "POST",
+            "GET",
+            "POST"
+          ]
+        },
+        "Status_Code": {
+          "type": "int64",
+          "non_null_count": "1000",
+          "unique_values": 5,
+          "sample_values": [
+            403,
+            301,
+            500,
+            301,
+            404
+          ]
+        },
+        "Anomaly_Flag": {
+          "type": "int64",
+          "non_null_count": "1000",
+          "unique_values": 2,
+          "sample_values": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "User_Agent": {
+          "type": "object",
+          "non_null_count": "1000",
+          "unique_values": 6,
+          "sample_values": [
+            "Edge",
+            "Bot",
+            "Opera",
+            "Bot",
+            "Firefox"
+          ]
+        },
+        "Session_ID": {
+          "type": "int64",
+          "non_null_count": "1000",
+          "unique_values": 891,
+          "sample_values": [
+            4835,
+            3176,
+            4312,
+            1003,
+            1428
+          ]
+        },
+        "Location": {
+          "type": "object",
+          "non_null_count": "1000",
+          "unique_values": 8,
+          "sample_values": [
+            "Brazil",
+            "China",
+            "China",
+            "France",
+            "Germany"
+          ]
+        }
+      },
+      "detected_patterns": {
+        "timestamp_fields": [
+          "Timestamp"
+        ],
+        "ip_fields": [
+          "IP_Address"
+        ],
+        "user_fields": [
+          "User_Agent"
+        ],
+        "status_fields": [
+          "Status_Code"
+        ]
+      }
+    },
+    "ai_analysis": {
+      "success": true,
+      "model_used": "\u2601\ufe0f gpt-4o-mini",
+      "analysis": {
+        "system_type": "This data appears to be generated by a web server or an application server that logs HTTP requests. The presence of fields like Request_Type, Status_Code, and User_Agent suggests it's tracking user interactions with web resources.",
+        "important_fields": [
+          "Timestamp",
+          "IP_Address",
+          "Request_Type",
+          "Status_Code"
+        ],
+        "recommended_queries": [
+          "Count the number of requests per IP address to identify potential abusive behavior.",
+          "Analyze the distribution of Status_Code to determine the types of responses being returned (e.g., errors, redirects).",
+          "Filter requests with Status_Code 500 or 404 to identify potential issues in the application.",
+          "Group by User_Agent to analyze which browsers or bots are accessing the service most frequently."
+        ],
+        "insights": [
+          "High frequency of certain Status_Codes (like 404 or 500) could indicate problems with the application or misconfigured resources.",
+          "Monitoring IP_Address patterns can help in identifying potential security threats such as DDoS attacks or web scraping activities.",
+          "The presence of the Anomaly_Flag field, although currently showing zeros, suggests there may be future considerations for anomaly detection in request patterns."
+        ]
+      },
+      "raw_response": "```json\n{\n    \"system_type\": \"This data appears to be generated by a web server or an application server that logs HTTP requests. The presence of fields like Request_Type, Status_Code, and User_Agent suggests it's tracking user interactions with web resources.\",\n    \"important_fields\": [\"Timestamp\", \"IP_Address\", \"Request_Type\", \"Status_Code\"],\n    \"recommended_queries\": [\n        \"Count the number of requests per IP address to identify potential abusive behavior.\",\n        \"Analyze the distribution of Status_Code to determine the types of responses being returned (e.g., errors, redirects).\",\n        \"Filter requests with Status_Code 500 or 404 to identify potential issues in the application.\",\n        \"Group by User_Agent to analyze which browsers or bots are accessing the service most frequently.\"\n    ],\n    \"insights\": [\n        \"High frequency of certain Status_Codes (like 404 or 500) could indicate problems with the application or misconfigured resources.\",\n        \"Monitoring IP_Address patterns can help in identifying potential security threats such as DDoS attacks or web scraping activities.\",\n        \"The presence of the Anomaly_Flag field, although currently showing zeros, suggests there may be future considerations for anomaly detection in request patterns.\"\n    ]\n}\n```"
+    },
+    "elasticsearch_mapping": {
+      "mappings": {
+        "dynamic": "false",
+        "properties": {
+          "Timestamp": {
             "type": "date"
           },
-          "source_ip": {
+          "IP_Address": {
             "type": "ip"
           },
-          "dest_ip": {
-            "type": "ip"
-          },
-          "protocol": {
+          "Request_Type": {
             "type": "text",
             "fields": {
               "keyword": {
@@ -201,34 +303,13 @@
               }
             }
           },
-          "action": {
-            "type": "text",
-            "fields": {
-              "keyword": {
-                "type": "keyword"
-              }
-            }
-          },
-          "threat_label": {
-            "type": "text",
-            "fields": {
-              "keyword": {
-                "type": "keyword"
-              }
-            }
-          },
-          "log_type": {
-            "type": "text",
-            "fields": {
-              "keyword": {
-                "type": "keyword"
-              }
-            }
-          },
-          "bytes_transferred": {
+          "Status_Code": {
             "type": "long"
           },
-          "user_agent": {
+          "Anomaly_Flag": {
+            "type": "long"
+          },
+          "User_Agent": {
             "type": "text",
             "fields": {
               "keyword": {
@@ -236,7 +317,408 @@
               }
             }
           },
-          "request_path": {
+          "Session_ID": {
+            "type": "long"
+          },
+          "Location": {
+            "type": "text",
+            "fields": {
+              "keyword": {
+                "type": "keyword"
+              }
+            }
+          }
+        }
+      }
+    },
+    "document_count": 0,
+    "model_used": "\u2601\ufe0f gpt-4o-mini",
+    "notes": ""
+  },
+  "adapt_1756683619_9fb1d830": {
+    "id": "adapt_1756683619_9fb1d830",
+    "timestamp": 1756683619.667427,
+    "file_name": "advanced_cybersecurity_data.csv",
+    "file_format": "csv",
+    "index_name": "logs_advanced_cybersecurity_data",
+    "status": "ingested",
+    "schema": {
+      "format": "csv",
+      "total_columns": 8,
+      "sample_records": 1000,
+      "fields": {
+        "Timestamp": {
+          "type": "object",
+          "non_null_count": "1000",
+          "unique_values": 1000,
+          "sample_values": [
+            "2023-01-01 00:00:00",
+            "2023-01-01 00:01:00",
+            "2023-01-01 00:02:00",
+            "2023-01-01 00:03:00",
+            "2023-01-01 00:04:00"
+          ]
+        },
+        "IP_Address": {
+          "type": "object",
+          "non_null_count": "1000",
+          "unique_values": 998,
+          "sample_values": [
+            "202.118.116.11",
+            "38.30.40.178",
+            "209.5.148.15",
+            "211.116.60.71",
+            "170.166.36.145"
+          ]
+        },
+        "Request_Type": {
+          "type": "object",
+          "non_null_count": "1000",
+          "unique_values": 4,
+          "sample_values": [
+            "GET",
+            "DELETE",
+            "POST",
+            "GET",
+            "POST"
+          ]
+        },
+        "Status_Code": {
+          "type": "int64",
+          "non_null_count": "1000",
+          "unique_values": 5,
+          "sample_values": [
+            403,
+            301,
+            500,
+            301,
+            404
+          ]
+        },
+        "Anomaly_Flag": {
+          "type": "int64",
+          "non_null_count": "1000",
+          "unique_values": 2,
+          "sample_values": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "User_Agent": {
+          "type": "object",
+          "non_null_count": "1000",
+          "unique_values": 6,
+          "sample_values": [
+            "Edge",
+            "Bot",
+            "Opera",
+            "Bot",
+            "Firefox"
+          ]
+        },
+        "Session_ID": {
+          "type": "int64",
+          "non_null_count": "1000",
+          "unique_values": 891,
+          "sample_values": [
+            4835,
+            3176,
+            4312,
+            1003,
+            1428
+          ]
+        },
+        "Location": {
+          "type": "object",
+          "non_null_count": "1000",
+          "unique_values": 8,
+          "sample_values": [
+            "Brazil",
+            "China",
+            "China",
+            "France",
+            "Germany"
+          ]
+        }
+      },
+      "detected_patterns": {
+        "timestamp_fields": [
+          "Timestamp"
+        ],
+        "ip_fields": [
+          "IP_Address"
+        ],
+        "user_fields": [
+          "User_Agent"
+        ],
+        "status_fields": [
+          "Status_Code"
+        ]
+      }
+    },
+    "ai_analysis": {
+      "success": true,
+      "model_used": "\u2601\ufe0f gpt-4o-mini",
+      "analysis": {
+        "system_type": "Web server logs from an online application or website capturing user interactions and requests.",
+        "important_fields": [
+          "Timestamp",
+          "IP_Address",
+          "Request_Type",
+          "Status_Code",
+          "User_Agent"
+        ],
+        "recommended_queries": [
+          "Count the number of requests per IP address to identify potential abusive behavior.",
+          "Analyze the distribution of Status Codes to determine the success and failure rates of requests.",
+          "Identify trends in user activity over time by grouping requests by hour or day.",
+          "Filter out requests flagged as anomalies to investigate potential security threats."
+        ],
+        "insights": [
+          "Monitoring Status Codes can help identify issues with the application, such as server errors (500) or unauthorized access attempts (403).",
+          "Tracking the User_Agent field can provide insights into the types of clients accessing the application, aiding in compatibility and performance optimization.",
+          "Analyzing the geographical distribution of IP addresses can highlight potential regions of high traffic or unusual access patterns, which may require further investigation."
+        ]
+      },
+      "raw_response": "```json\n{\n    \"system_type\": \"Web server logs from an online application or website capturing user interactions and requests.\",\n    \"important_fields\": [\"Timestamp\", \"IP_Address\", \"Request_Type\", \"Status_Code\", \"User_Agent\"],\n    \"recommended_queries\": [\n        \"Count the number of requests per IP address to identify potential abusive behavior.\",\n        \"Analyze the distribution of Status Codes to determine the success and failure rates of requests.\",\n        \"Identify trends in user activity over time by grouping requests by hour or day.\",\n        \"Filter out requests flagged as anomalies to investigate potential security threats.\"\n    ],\n    \"insights\": [\n        \"Monitoring Status Codes can help identify issues with the application, such as server errors (500) or unauthorized access attempts (403).\",\n        \"Tracking the User_Agent field can provide insights into the types of clients accessing the application, aiding in compatibility and performance optimization.\",\n        \"Analyzing the geographical distribution of IP addresses can highlight potential regions of high traffic or unusual access patterns, which may require further investigation.\"\n    ]\n}\n```"
+    },
+    "elasticsearch_mapping": {
+      "mappings": {
+        "dynamic": "false",
+        "properties": {
+          "Timestamp": {
+            "type": "date"
+          },
+          "IP_Address": {
+            "type": "ip"
+          },
+          "Request_Type": {
+            "type": "text",
+            "fields": {
+              "keyword": {
+                "type": "keyword"
+              }
+            }
+          },
+          "Status_Code": {
+            "type": "long"
+          },
+          "Anomaly_Flag": {
+            "type": "long"
+          },
+          "User_Agent": {
+            "type": "text",
+            "fields": {
+              "keyword": {
+                "type": "keyword"
+              }
+            }
+          },
+          "Session_ID": {
+            "type": "long"
+          },
+          "Location": {
+            "type": "text",
+            "fields": {
+              "keyword": {
+                "type": "keyword"
+              }
+            }
+          }
+        }
+      }
+    },
+    "document_count": 0,
+    "model_used": "\u2601\ufe0f gpt-4o-mini",
+    "notes": ""
+  },
+  "adapt_1756683947_3dc137ff": {
+    "id": "adapt_1756683947_3dc137ff",
+    "timestamp": 1756683947.906952,
+    "file_name": "advanced_cybersecurity_data.csv",
+    "file_format": "csv",
+    "index_name": "logs_advanced_cybersecurity_data",
+    "status": "ingested",
+    "schema": {
+      "format": "csv",
+      "total_columns": 8,
+      "sample_records": 1000,
+      "fields": {
+        "Timestamp": {
+          "type": "object",
+          "non_null_count": "1000",
+          "unique_values": 1000,
+          "sample_values": [
+            "2023-01-01 00:00:00",
+            "2023-01-01 00:01:00",
+            "2023-01-01 00:02:00",
+            "2023-01-01 00:03:00",
+            "2023-01-01 00:04:00"
+          ]
+        },
+        "IP_Address": {
+          "type": "object",
+          "non_null_count": "1000",
+          "unique_values": 998,
+          "sample_values": [
+            "202.118.116.11",
+            "38.30.40.178",
+            "209.5.148.15",
+            "211.116.60.71",
+            "170.166.36.145"
+          ]
+        },
+        "Request_Type": {
+          "type": "object",
+          "non_null_count": "1000",
+          "unique_values": 4,
+          "sample_values": [
+            "GET",
+            "DELETE",
+            "POST",
+            "GET",
+            "POST"
+          ]
+        },
+        "Status_Code": {
+          "type": "int64",
+          "non_null_count": "1000",
+          "unique_values": 5,
+          "sample_values": [
+            403,
+            301,
+            500,
+            301,
+            404
+          ]
+        },
+        "Anomaly_Flag": {
+          "type": "int64",
+          "non_null_count": "1000",
+          "unique_values": 2,
+          "sample_values": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "User_Agent": {
+          "type": "object",
+          "non_null_count": "1000",
+          "unique_values": 6,
+          "sample_values": [
+            "Edge",
+            "Bot",
+            "Opera",
+            "Bot",
+            "Firefox"
+          ]
+        },
+        "Session_ID": {
+          "type": "int64",
+          "non_null_count": "1000",
+          "unique_values": 891,
+          "sample_values": [
+            4835,
+            3176,
+            4312,
+            1003,
+            1428
+          ]
+        },
+        "Location": {
+          "type": "object",
+          "non_null_count": "1000",
+          "unique_values": 8,
+          "sample_values": [
+            "Brazil",
+            "China",
+            "China",
+            "France",
+            "Germany"
+          ]
+        }
+      },
+      "detected_patterns": {
+        "timestamp_fields": [
+          "Timestamp"
+        ],
+        "ip_fields": [
+          "IP_Address"
+        ],
+        "user_fields": [
+          "User_Agent"
+        ],
+        "status_fields": [
+          "Status_Code"
+        ]
+      }
+    },
+    "ai_analysis": {
+      "success": true,
+      "model_used": "\u2601\ufe0f gpt-4o-mini",
+      "analysis": {
+        "system_type": "This log data likely originates from a web server or application server that handles HTTP requests and logs user interactions, including IP addresses and user agents.",
+        "important_fields": [
+          "Timestamp",
+          "IP_Address",
+          "Request_Type",
+          "Status_Code"
+        ],
+        "recommended_queries": [
+          "Count the number of requests per IP address to identify potential abuse or high activity users.",
+          "Analyze the distribution of status codes to identify common errors or successful requests.",
+          "Aggregate requests by User Agent to determine the most common browsers or tools accessing the server.",
+          "Trend analysis of requests over time to detect peak usage hours or unusual patterns."
+        ],
+        "insights": [
+          "Monitoring the Status_Code field can help identify security incidents, such as repeated 403 Forbidden or 404 Not Found responses, which might indicate unauthorized access attempts.",
+          "The Anomaly_Flag field, although currently showing no anomalies, can serve as a crucial indicator for future data to mark unusual activity patterns that require investigation."
+        ]
+      },
+      "raw_response": "```json\n{\n    \"system_type\": \"This log data likely originates from a web server or application server that handles HTTP requests and logs user interactions, including IP addresses and user agents.\",\n    \"important_fields\": [\"Timestamp\", \"IP_Address\", \"Request_Type\", \"Status_Code\"],\n    \"recommended_queries\": [\n        \"Count the number of requests per IP address to identify potential abuse or high activity users.\",\n        \"Analyze the distribution of status codes to identify common errors or successful requests.\",\n        \"Aggregate requests by User Agent to determine the most common browsers or tools accessing the server.\",\n        \"Trend analysis of requests over time to detect peak usage hours or unusual patterns.\"\n    ],\n    \"insights\": [\n        \"Monitoring the Status_Code field can help identify security incidents, such as repeated 403 Forbidden or 404 Not Found responses, which might indicate unauthorized access attempts.\",\n        \"The Anomaly_Flag field, although currently showing no anomalies, can serve as a crucial indicator for future data to mark unusual activity patterns that require investigation.\"\n    ]\n}\n```"
+    },
+    "elasticsearch_mapping": {
+      "mappings": {
+        "dynamic": "false",
+        "properties": {
+          "Timestamp": {
+            "type": "date"
+          },
+          "IP_Address": {
+            "type": "ip"
+          },
+          "Request_Type": {
+            "type": "text",
+            "fields": {
+              "keyword": {
+                "type": "keyword"
+              }
+            }
+          },
+          "Status_Code": {
+            "type": "long"
+          },
+          "Anomaly_Flag": {
+            "type": "long"
+          },
+          "User_Agent": {
+            "type": "text",
+            "fields": {
+              "keyword": {
+                "type": "keyword"
+              }
+            }
+          },
+          "Session_ID": {
+            "type": "long"
+          },
+          "Location": {
             "type": "text",
             "fields": {
               "keyword": {
@@ -248,7 +730,6 @@
       }
     },
     "document_count": 10000,
-    "generated_queries": [],
     "model_used": "\u2601\ufe0f gpt-4o-mini",
     "notes": ""
   }

@@ -299,10 +299,10 @@ class SchemaAnalyzer:
         return patterns
     
     def suggest_elasticsearch_mapping(self, schema: Dict[str, Any]) -> Dict[str, Any]:
-        """Suggest Elasticsearch mapping based on analyzed schema"""
+        """Suggest Elasticsearch mapping based on analyzed schema with dynamic field support"""
         mapping = {
             "mappings": {
-                "dynamic": "false",  # Don't index unknown fields but don't reject documents
+                "dynamic": "true",  # Allow new fields to be automatically indexed
                 "properties": {}
             }
         }
