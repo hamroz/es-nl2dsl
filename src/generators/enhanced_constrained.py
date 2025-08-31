@@ -22,6 +22,9 @@ from src.generators.constrained import (
 )
 from src.data_adaptation.mapping_storage import MappingStorage
 
+# Import new processing pipeline
+from src.generators.query_processor import QueryProcessor
+
 # Import new security layer
 try:
     from src.generators.secure_generator import get_secure_generator
@@ -299,14 +302,26 @@ def generate_enhanced_query(
     model: str = "llama3.1:latest",
     schema_path: str = "artifacts/esdsl_schema.json",
     rules_path: Optional[str] = None,
-    max_retries: int = 3
+    max_retries: int = 3,
+    enable_processing_pipeline: bool = True
 ) -> Dict[str, Any]:
-    """Generate query using enhanced constrained approach"""
+    """Generate query using enhanced constrained approach with processing pipeline"""
     
     logger.info(f"🎯 Generating enhanced query for {index}")
     
-    # Build enhanced prompt
-    enhanced_prompt = build_enhanced_prompt(prompt, index)
+    # Initialize processing pipeline
+    processor = QueryProcessor(enable_logging=True) if enable_processing_pipeline else None
+    
+    # Phase 5: Preprocess the prompt
+    if processor:
+        processed_prompt, prompt_changes = processor.preprocess_prompt(prompt, index)
+        if prompt_changes:
+            logger.info(f"🔄 Preprocessed prompt with {len(prompt_changes)} changes")
+    else:
+        processed_prompt = prompt
+    
+    # Build enhanced prompt using processed input
+    enhanced_prompt = build_enhanced_prompt(processed_prompt, index)
     
     # Generate with retries
     for attempt in range(max_retries):
@@ -344,15 +359,27 @@ def generate_enhanced_query(
             # Parse JSON
             query_json = json.loads(result)
             
-            # Apply field corrections with index awareness
-            corrected_query = correct_field_mappings_with_index_awareness(query_json, index)
+            # Phase 5: Apply complete processing pipeline to query
+            if processor:
+                # Use the new processing pipeline for comprehensive postprocessing
+                processing_result = processor.process_complete_pipeline(processed_prompt, index, query_json)
+                if processing_result.success:
+                    final_query = processing_result.processed_query
+                    total_changes = sum(len(step.changes_made) for step in processing_result.steps)
+                    logger.info(f"🔧 Processing pipeline applied {total_changes} transformations")
+                else:
+                    logger.warning(f"Processing pipeline failed, using fallback: {processing_result.errors}")
+                    final_query = correct_field_mappings_with_index_awareness(query_json, index)
+            else:
+                # Fallback to original field corrections
+                final_query = correct_field_mappings_with_index_awareness(query_json, index)
             
             # Validate schema if provided
             if schema_path and Path(schema_path).exists():
-                validate_against_schema(corrected_query, schema_path)
+                validate_against_schema(final_query, schema_path)
             
             logger.info(f"✅ Successfully generated enhanced query for {index}")
-            return corrected_query
+            return final_query
             
         except json.JSONDecodeError as e:
             logger.warning(f"Attempt {attempt + 1}: JSON decode error: {e}")
