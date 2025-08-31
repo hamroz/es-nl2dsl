@@ -36,48 +36,68 @@ ES-NL2DSL enables secure translation of human-readable queries into Elasticsearc
 
 ## 🚀 Quick Start
 
+### **One-Command Setup (Recommended)**
+```bash
+# Complete automated setup
+make setup
+```
+
+### **Manual Setup**
 ```bash
 # 1. Start Elasticsearch
 docker-compose up -d
 
 # 2. Install dependencies
 pip install -r requirements.txt
+pip install -r gui/requirements-gui.txt  # For GUI
 
-# 3. Setup Elasticsearch
+# 3. Initialize system
 ./setup.sh
 
-# 4. Run a single query
-python src/run_one.py --id scan-001 --gen
+# 4. Start GUI (primary interface)
+python gui/start_gui.py
+# Access at http://localhost:8501
 
-# 5. Run full evaluation suite
-./run_suite.sh
+# 5. Or run command line tests
+python src/cli/run_one.py --id scan-001 --gen
 ```
 
 ## 🌐 Web GUI
 
 ES-NL2DSL now includes a comprehensive **Streamlit-based web interface** that provides an intuitive way to interact with all system capabilities through your browser.
 
-### Features
-- **🤖 Interactive Query Generator** - Convert natural language to DSL with real-time validation
-- **📊 Evaluation Dashboard** - Run comprehensive evaluations with parallel processing
-- **🛡️ Security Testing Panel** - Test against adversarial prompts with live monitoring
-- **🔒 Privacy Analysis Tools** - Visualize privacy-utility tradeoffs across epsilon values
-- **⚙️ System Administration** - Complete system monitoring and management
+### **GUI Features (Fully Implemented)**
+- **🤖 Query Generator** - Interactive NL-to-DSL conversion with **query execution** and **data export**
+  - Dynamic index selection from all available Elasticsearch indices
+  - Real-time query execution with 10-10,000 result limits
+  - Multiple display formats (Table, JSON, Raw Data) with syntax highlighting
+  - One-click CSV/JSON export of results
+  - Performance metrics and validation feedback
+- **📊 Evaluation Dashboard** - Scenario comparison and performance analysis
+- **🛡️ Security Testing** - Red team testing with adversarial prompt evaluation
+- **🔒 Privacy Analysis** - Differential privacy tools and visualization
+- **⚙️ System Administration** - Complete system management with 6 specialized tabs:
+  - System health monitoring and diagnostics
+  - Data management (CSV upload, CIC dataset processing)
+  - Index management (creation, deletion, metadata)
+  - External LLM configuration and testing
+  - Maintenance tools and cleanup
+  - Live log monitoring
 
-### Quick Start GUI
+### **Start GUI**
 
 ```bash
-# Option 1: Automatic setup and launch
+# Recommended: Automatic setup with health checks
 python gui/start_gui.py
 
-# Option 2: Docker deployment (full containerized environment)
-python gui/start_gui.py --docker
-
-# Option 3: Direct launch
+# Alternative: Direct launch
 streamlit run gui/streamlit_app.py
+
+# Docker deployment (full containerized environment)
+docker-compose --profile gui up -d
 ```
 
-The GUI will be available at **http://localhost:8501**
+**Access**: http://localhost:8501
 
 📖 **For detailed GUI documentation, see [gui/README.md](gui/README.md)**
 
@@ -89,104 +109,93 @@ The GUI will be available at **http://localhost:8501**
 - **CPU**: 2+ cores recommended
 
 ### Software
-- **Python**: 3.10.1+
-- **Docker & Docker Compose**: Latest stable version
-- **Ollama**: 0.3.x with offline LLMs such as `llama3.1:latest`, `deepseek-r1:14b`, `gpt-oss:20b` (llama3.1 is our primary model)
+- **Python**: 3.10.1+ (required for compatibility)
+- **Docker & Docker Compose**: Latest stable version (required)
+- **Ollama**: 0.3.x with `llama3.1:latest` model (recommended)
 - **Operating System**: macOS 14.5+, Ubuntu 20.04+, or Windows 11 with WSL2
-- **External APIs** (Optional): OpenAI, Google Gemini, DeepSeek, or Qwen API keys for cloud-based models
+- **External APIs** (Optional): OpenAI, Anthropic, Google or Gemini API keys
 
 ### Network
-- **Internet**: Required for initial model download, Docker images, and external LLM APIs
-- **Ports**: 9200 (Elasticsearch), 11434 (Ollama), 8501 (Streamlit GUI)
+- **Internet**: Required for model downloads, Docker images, and external LLM APIs
+- **Ports**: 
+  - 9200, 9300 (Elasticsearch)
+  - 11434 (Ollama) 
+  - 8501 (Streamlit GUI)
 
 ## 🔧 Installation
 
-### Option 1: Using Conda (Recommended)
+### **Super Easy Setup (Recommended)**
 
 ```bash
 # Clone repository
 git clone <repository-url>
 cd es-nl2dsl
 
+# One-command setup - does everything automatically!
+make setup
+```
+
+### **Manual Installation Options**
+
+#### Option 1: Using Conda
+```bash
 # Create environment
 conda env create -f environment.yml
 conda activate es-nl2dsl
 
-# Install Ollama and pull models
+# Install Ollama and pull model
 curl -fsSL https://ollama.ai/install.sh | sh
-ollama pull llama3.1:latest  # Primary model
-# Optional: Pull additional models
-# ollama pull deepseek-r1:14b
-# ollama pull gpt-oss:20b
+ollama pull llama3.1:latest
 ```
 
-### Option 2: Using pip
-
+#### Option 2: Using pip
 ```bash
-# Clone repository
-git clone <repository-url>
-cd es-nl2dsl
-
 # Create virtual environment
 python3.10 -m venv env
 source env/bin/activate  # On Windows: env\\Scripts\\activate
 
 # Install dependencies
 pip install -r requirements.txt
+pip install -r gui/requirements-gui.txt  # For GUI features
 
-# Install Ollama and pull models
+# Install Ollama and pull model
 curl -fsSL https://ollama.ai/install.sh | sh
-ollama pull llama3.1:latest  # Primary model
-# Optional: Pull additional models
-# ollama pull deepseek-r1:14b
-# ollama pull gpt-oss:20b
+ollama pull llama3.1:latest
 ```
 
-### Initial Setup
+### **Docker Deployment Options**
 
 ```bash
-# 1. Start Elasticsearch
+# Basic: Elasticsearch only
 docker-compose up -d
 
-# 2. Wait for Elasticsearch to be ready (30-60 seconds)
-curl -u elastic:ChangeMe_123 http://localhost:9200/_cluster/health
+# Full: Elasticsearch + Ollama
+docker-compose --profile full up -d
 
-# 3. Create indices and users
-python src/create_index.py
-./setup_reader.sh
-
-# 4. Ingest sample data
-python src/ingest.py --file data_raw/sample_extended.csv --index logs_net
-
-# 5. Verify setup
-python src/smoke_es.py
+# Complete: All services including GUI
+docker-compose --profile gui up -d
 ```
 
 ## 🤖 External LLM Setup
 
 The system supports multiple external LLM providers for enhanced accuracy and performance. External LLMs can be managed through the GUI or programmatically.
 
-### Supported Providers
+### **Supported Providers**
 
 #### 🔥 OpenAI
-- **Models**: GPT-4o, GPT-4o-mini, GPT-4-Turbo, o1, o1-mini, o3-mini
+- **Models**: GPT-4o, GPT-4o-mini, GPT-4-Turbo, o1, o1-mini
 - **Best for**: High-quality reasoning, complex query generation
 - **Setup**: Requires `OPENAI_API_KEY` environment variable
 
+#### 🤖 Anthropic
+- **Models**: Claude-3.5-Sonnet, Claude-3-Haiku, Claude-3-Opus
+- **Best for**: Safety, reasoning, code analysis
+- **Setup**: Requires `ANTHROPIC_API_KEY` environment variable
+
 #### ✨ Google Gemini
-- **Models**: Gemini-2.5-Pro, Gemini-2.5-Flash, Gemini-2.0-Flash-Thinking-Exp
-- **Best for**: Multi-modal analysis, agentic use cases, cost-efficiency
+- **Models**: Gemini-1.5-Pro, Gemini-1.5-Flash
+- **Best for**: Multi-modal analysis, cost-efficiency
 - **Setup**: Requires `GOOGLE_API_KEY` environment variable
-
-#### 🧠 DeepSeek
-- **Models**: DeepSeek-Reasoner (R1), DeepSeek-Chat, DeepSeek-Coder
-- **Best for**: Mathematical reasoning, code analysis, chain-of-thought
-- **Setup**: Requires `DEEPSEEK_API_KEY` environment variable
-
-#### 🚀 Qwen
-- **Models**: Qwen-Max, Qwen-Plus, Qwen-Turbo, Qwen-Long
-- **Best for**: Long context, coding tasks, multilingual support
-- **Setup**: Requires `QWEN_API_KEY` environment variable
 
 ### Configuration Methods
 
@@ -194,9 +203,8 @@ The system supports multiple external LLM providers for enhanced accuracy and pe
 ```bash
 # Add to .env file or export directly
 export OPENAI_API_KEY="sk-..."
+export ANTHROPIC_API_KEY="sk-ant-..."
 export GOOGLE_API_KEY="AIza..."
-export DEEPSEEK_API_KEY="sk-..."
-export QWEN_API_KEY="sk-..."
 ```
 
 #### Method 2: GUI Configuration
@@ -204,46 +212,27 @@ export QWEN_API_KEY="sk-..."
 # Launch GUI and navigate to System Administration → External LLMs
 python gui/start_gui.py
 
-# Then:
-# 1. Click "Add New LLM"
-# 2. Select provider and model
-# 3. Enter API key
-# 4. Configure settings (tokens, temperature)
-# 5. Test connection
+# Configure through web interface:
+# 1. Navigate to System Administration tab
+# 2. Go to External LLM Management
+# 3. Add provider credentials
+# 4. Test connections
+# 5. Set default models
 ```
 
-#### Method 3: Programmatic Setup
-```python
-from src.external_llm_manager import get_external_llm_manager
-
-manager = get_external_llm_manager()
-manager.add_llm(
-    name="GPT-4 Production",
-    provider="openai",
-    model_id="gpt-4o",
-    api_key="sk-...",
-    max_tokens=2000,
-    temperature=0.7
-)
-```
-
-### Usage in Query Generation
+### **Usage in Query Generation**
 
 ```bash
-# List available models
-python src/enhanced_evaluation.py --list-models
-
-# Use external LLM for generation
-python src/generate_with_external.py \
+# Generate queries with external models
+python src/generators/external.py \
     --prompt "Find malicious traffic from last 24 hours" \
-    --model "GPT-4 Production" \
+    --provider openai \
+    --model gpt-4o \
     --task-id "external-test"
 
-# Mix local and external models in evaluation
-python src/enhanced_evaluation.py \
-    --dataset standard \
-    --models local,GPT-4,Gemini-Pro \
-    --scenarios scan-001,scan-007
+# Use in GUI (recommended approach)
+python gui/start_gui.py
+# Navigate to Query Generator → Select external model from dropdown
 ```
 
 ### Benefits of External LLMs
@@ -265,42 +254,40 @@ The system includes comprehensive support for the CIC-IDS2017 cybersecurity data
 - **Comprehensive Coverage**: Monday-Friday with different attack scenarios per day
 - **Rich Metadata**: 78+ features including flow statistics, packet timing, protocol analysis
 
-### Quick Setup
+### **Quick Setup**
 
 ```bash
 # 1. Download CIC-IDS2017 dataset (place in data_raw/)
-# Dataset available at: https://www.unb.ca/cic/datasets/ids-2017.html
+# Dataset: https://www.unb.ca/cic/datasets/ids-2017.html
 
-# 2. Process and ingest all CIC files (50k records each)
+# 2. Process and ingest CIC files (via GUI - recommended)
+python gui/start_gui.py
+# Navigate to System Administration → Data Management → CIC-IDS2017 Dataset
+
+# 3. Or use command line batch processing
 ./scripts/ingest_all_cic.sh
 
-# 3. Verify CIC data ingestion
+# 4. Verify ingestion
 curl -u elastic:ChangeMe_123 "localhost:9200/logs_cic_ids2017/_count"
-
-# 4. Run CIC-specific evaluation scenarios
-python src/enhanced_evaluation.py --dataset cic_ids2017
 ```
 
-### CIC-Specific Commands
+### **CIC-Specific Commands**
 
 ```bash
 # Process single CIC file
-python src/process_cic_ids2017.py \
+python src/ingestion/cic_processor.py \
     --input data_raw/Monday-WorkingHours.pcap_ISCX.csv \
     --output data_raw/monday_processed.jsonl \
     --sample 10000
 
-# Batch process selected files
-./scripts/ingest_cic_batch.sh
+# Bulk ingest processed data
+python src/ingestion/bulk.py \
+    --file data_raw/monday_processed.jsonl \
+    --index logs_cic_ids2017 \
+    --chunk-size 5000
 
-# Run CIC evaluation with external LLMs
-python src/enhanced_evaluation.py \
-    --dataset cic_ids2017 \
-    --models local,GPT-4,DeepSeek-Reasoner \
-    --scenarios all
-
-# Test CIC accuracy specifically
-python test_cic_accuracy.py
+# Generate queries against CIC data
+python src/cli/run_one.py --id scan-001 --index logs_cic_ids2017 --gen
 ```
 
 ### CIC Evaluation Scenarios
@@ -318,100 +305,101 @@ The system includes specialized scenarios for CIC-IDS2017:
 
 ## 📖 Basic Usage
 
-### Single Query Translation
+### **Primary Interface: Web GUI**
+```bash
+# Start interactive web interface (recommended)
+python gui/start_gui.py
+# Access: http://localhost:8501
 
+# Features:
+# - Natural language query input
+# - Real-time DSL generation
+# - Query execution with result visualization
+# - Data export (CSV/JSON)
+# - System administration
+```
+
+### **Command Line Interface**
 ```bash
 # Generate and evaluate a single query
-python src/run_one.py --id scan-001 --gen
+python src/cli/run_one.py --id scan-001 --gen
+
+# Test query generation methods
+python src/generators/enhanced_constrained.py --prompt "Find malicious events on July 4, 2017" --task-id test
+python src/generators/rules_based.py --prompt "Find malicious events on July 4, 2017" --task-id test
+python src/generators/zero_shot.py --prompt "Find malicious events on July 4, 2017" --task-id test
+
+# Generate with specific index
+python src/generators/enhanced_constrained.py --prompt "Find DDoS attacks" --task-id cic-test --index logs_cic_ids2017
 ```
 
-### Manual Query Generation
-
+### **Query Validation & Analysis**
 ```bash
-# Using constrained generation with local model (recommended)
-python src/generate_constrained.py --prompt "Find malicious events on July 4, 2017" --task-id test
+# Validate query against security rules
+python src/core/validator.py --dsl artifacts/queries/candidate.json
 
-# Using external LLM
-python src/generate_with_external.py --prompt "Find malicious events on July 4, 2017" --model "GPT-4" --task-id test
+# Compare queries semantically
+python src/core/ast_normalize.py --a artifacts/queries/expert.json --b artifacts/queries/candidate.json
 
-# Using rules baseline
-python src/baseline_rules.py --prompt "Find malicious events on July 4, 2017" --task-id test
-
-# Using zero-shot baseline
-python src/baseline_zeroshot.py --prompt "Find malicious events on July 4, 2017" --task-id test
-
-# Generate with specific index (e.g., CIC dataset)
-python src/generate_constrained.py --prompt "Find DDoS attacks" --task-id cic-test --index logs_cic_ids2017
-```
-
-### Query Validation
-
-```bash
-# Validate a query against security rules
-python src/validator.py --dsl artifacts/queries/candidate.json
-
-# Compare two queries semantically
-python src/ast_normalize.py --a artifacts/queries/expert.json --b artifacts/queries/candidate.json
-```
-
-### Query Evaluation
-
-```bash
 # Execute and compare queries
-python src/eval_exec.py --expert artifacts/queries/expert.json --candidate artifacts/queries/candidate.json --out artifacts/results
+python src/core/eval_exec.py --expert artifacts/queries/expert.json --candidate artifacts/queries/candidate.json --out artifacts/results
 ```
 
 ## 🔬 Advanced Features
 
-### Privacy-Preserving Analysis
+### **Privacy-Preserving Analysis**
 
 ```bash
 # Create DP-perturbed datasets
 python src/create_dp_grid.py
 
 # Run queries on DP data (ε = 0.5, 1.0, 2.0)
-python src/run_one.py --id scan-001 --index logs_net_dp_eps05
-python src/run_one.py --id scan-001 --index logs_net_dp_eps10
-python src/run_one.py --id scan-001 --index logs_net_dp_eps20
+python src/cli/run_one.py --id scan-001 --index logs_net_dp_eps05
+python src/cli/run_one.py --id scan-001 --index logs_net_dp_eps10
+python src/cli/run_one.py --id scan-001 --index logs_net_dp_eps20
+
+# Via GUI: Privacy Analysis tab provides DP visualization
 ```
 
-### Schema Drift Testing
+### **Schema Drift Testing**
 
 ```bash
 # Create schema drift index
 python src/create_drift_index.py
 
 # Test robustness against field renaming
-python src/run_one.py --id scan-001 --index logs_net_drift
+python src/cli/run_one.py --id scan-001 --index logs_net_drift
 ```
 
-### Security Testing
+### **Security Testing**
 
 ```bash
-# Run red team adversarial prompts
+# Run comprehensive red team testing
 python src/redteam_runner.py
 
-# Test ambiguity detection
-python src/generate_constrained.py --prompt "Find events from yesterday" --task-id ambiguous-test
+# Via GUI: Security Panel provides interactive adversarial testing
 ```
 
-### Ground Truth Management
+### **System Testing & Monitoring**
 
 ```bash
-# Generate ground truth for all scenarios
-python src/generate_ground_truth.py
+# Test system connectivity
+python src/smoke_es.py
 
-# View ground truth for a specific scenario
-cat artifacts/ground_truth/scan-001.json
+# Check system status
+make status
+
+# Generate analysis tables
+python src/analysis/tables.py
 ```
 
 ## 🧪 Enhanced Evaluation
 
 The system includes a comprehensive evaluation framework supporting multiple datasets, LLM models, and evaluation methodologies.
 
-### Multi-Dataset Support
+### **Available Test Scenarios**
 
-#### Standard Dataset (12 Scenarios)
+#### **Standard Dataset** (12 Scenarios in `tasks/prompts.yaml`)
 | Scenario | Category | Description |
 |----------|----------|-------------|
 | scan-001 | Basic | Malicious events on specific date |
@@ -427,122 +415,76 @@ The system includes a comprehensive evaluation framework supporting multiple dat
 | scan-011 | Internal-traffic | Subnet-based filtering |
 | scan-012 | Combined-filters | Complex multi-condition queries |
 
-#### CIC-IDS2017 Dataset (6 Attack Categories)
-| Scenario | Attack Type | Description |
-|----------|-------------|-------------|
-| cic-ddos | DDoS | Distributed denial of service detection |
-| cic-bruteforce | SSH/FTP | Brute force login attempts |
-| cic-websql | Web Attack | SQL injection and XSS attacks |
-| cic-infiltration | Advanced | Stealthy network infiltration |
-| cic-portscan | Reconnaissance | Port scanning activities |
-| cic-botnet | Malware | Botnet command & control traffic |
-
-### Multi-Model Evaluation
+### **Evaluation Commands**
 
 ```bash
-# Enhanced evaluation with multiple models
-python src/enhanced_evaluation.py \
-    --dataset standard \
-    --models local,GPT-4,Gemini-Pro,DeepSeek-Reasoner \
-    --methods constrained,rules,zeroshot \
-    --scenarios all
-
-# CIC-specific evaluation
-python src/enhanced_evaluation.py \
-    --dataset cic_ids2017 \
-    --models local,GPT-4 \
-    --scenarios cic-ddos,cic-bruteforce,cic-websql
-
-# Compare local vs external LLMs
-python src/enhanced_evaluation.py \
-    --dataset standard \
-    --models llama3.1:latest,gpt-4o,gemini-2.5-pro \
-    --scenarios scan-001,scan-007,scan-012
-```
-
-### Running Individual Tests
-
-```bash
-# Test specific scenarios with different models
-python src/run_one.py --id scan-001 --gen  # Local model
-python src/run_one.py --id scan-001 --gen --model GPT-4  # External LLM
-
-# CIC-specific tests
-python src/run_one.py --id cic-ddos --gen --index logs_cic_ids2017
-python src/run_one.py --id cic-websql --gen --model DeepSeek-Reasoner
-```
-
-### Advanced Testing Suites
-
-```bash
-# Full evaluation suite (all datasets, all models)
+# Run full evaluation suite
 ./run_suite.sh
 
-# Enhanced evaluation with parallel processing
-python src/enhanced_evaluation.py \
-    --dataset both \
-    --models all \
-    --parallel 4 \
-    --save-results
+# Single scenario testing
+python src/cli/run_one.py --id scan-001 --gen
 
-# Security testing with multiple models
-python src/redteam_runner.py --models local,GPT-4,Gemini-Pro
+# Test specific generator methods
+python src/cli/run_one.py --id scan-007 --gen --method enhanced_constrained
+python src/cli/run_one.py --id scan-007 --gen --method rules_based
 
-# Accuracy comparison tests
-python test_cic_accuracy.py
-python test_enhanced_eval.py
-python test_external_llm.py
-
-# Privacy-utility analysis
-for eps in 05 10 20; do
-  python src/enhanced_evaluation.py \
-    --dataset standard \
-    --index logs_net_dp_eps$eps \
-    --models local,GPT-4
-done
+# Interactive evaluation via GUI
+python gui/start_gui.py
+# Navigate to Evaluation Dashboard for comprehensive analysis
 ```
 
-### Results Analysis
+### **Testing & Monitoring**
 
 ```bash
-# Generate comprehensive results tables
-python src/render_tables.py
+# System health and diagnostics
+make status                                    # Check all components
+python src/smoke_es.py                        # Test Elasticsearch connectivity
 
-# View enhanced evaluation results
-ls artifacts/evaluation_results/
-cat artifacts/evaluation_results/eval_*.json
+# Security and performance testing  
+python src/redteam_runner.py                  # Run security tests
+make security                                  # Security test suite
+make privacy                                   # Privacy analysis
 
-# Check validation events and security metrics
-cat artifacts/results/validator_events.jsonl
-
-# View model comparison metrics
-cat artifacts/results/model_comparison_*.json
-
-# Analyze accuracy improvements
-python src/enhanced_evaluation.py --analyze-results
+# Generate analysis and results
+python src/analysis/tables.py                 # Generate results tables
+make results                                   # Comprehensive results generation
 ```
 
-### Performance Metrics
+### **Results and Artifacts**
 
-The enhanced evaluation framework tracks multiple performance dimensions:
+```bash
+# View generated queries and results
+ls artifacts/generated/                       # Generated DSL queries
+ls artifacts/results/                         # Evaluation results
 
-#### Accuracy Metrics
-- **Structural F1**: AST-based semantic similarity (target ≥0.85)
-- **Execution F1**: Result set overlap accuracy (target ≥0.80)
+# Check validation and security events  
+cat artifacts/results/validator_events.jsonl  # Validation logs
+cat artifacts/results/redteam_results.json    # Security test results
+
+# Ground truth and test data
+ls artifacts/ground_truth/                    # Expert DSL queries
+cat tasks/prompts.yaml                        # Test scenarios
+```
+
+### **Performance Metrics**
+
+The evaluation framework tracks multiple performance dimensions:
+
+#### **Accuracy Metrics**
+- **AST F1**: Semantic query structure similarity
+- **Execution F1**: Result set overlap accuracy  
 - **Jaccard Similarity**: Document overlap coefficient
-- **Precision/Recall**: Fine-grained retrieval metrics
+- **Validation**: Security rule compliance rate
 
-#### Security Metrics
-- **Block Rate**: Adversarial prompt rejection (target ≥95%)
-- **False Positive Rate**: Legitimate query rejection (target ≤3%)
-- **Validation Pass Rate**: Security rule compliance
+#### **Security Metrics**
+- **Adversarial Block Rate**: Malicious prompt rejection
+- **False Positive Rate**: Legitimate query rejection
 - **Threat Detection**: Pattern-based attack identification
 
-#### Performance Metrics
-- **Generation Latency**: Local models (2-5s), External LLMs (1-3s)
+#### **Performance Metrics**
+- **Generation Latency**: Local (2-5s), External LLMs (1-3s)
 - **Success Rate**: Valid query generation percentage
-- **Retry Count**: Average attempts before success
-- **Model Comparison**: Relative performance across providers
+- **System Uptime**: Service availability monitoring
 
 ## 🏗️ Architecture
 
@@ -597,56 +539,69 @@ The enhanced evaluation framework tracks multiple performance dimensions:
 - **Privacy-Enhanced Indices**: Differential privacy with configurable ε values
 - **Schema Adaptation**: Dynamic field mapping across different data sources
 
-### Directory Structure
+### **Directory Structure**
 
 ```
 es-nl2dsl/
 ├── src/                          # Core system code
-│   ├── generate_constrained.py   # Main LLM-based generator
-│   ├── generate_with_external.py # External LLM integration
-│   ├── external_llm_manager.py   # Multi-provider LLM management
-│   ├── security_filter.py        # Enhanced security filtering
-│   ├── enhanced_evaluation.py    # Multi-dataset evaluation framework
-│   ├── process_cic_ids2017.py    # CIC dataset processing
-│   ├── validator.py              # Security rule validation
-│   ├── eval_exec.py              # Query execution and metrics
-│   ├── run_one.py                # Single scenario runner
-│   ├── baseline_*.py             # Baseline implementations
-│   ├── redteam_runner.py         # Security testing
-│   └── *.py                      # Additional utilities
-├── gui/                          # Streamlit web interface
+│   ├── cli/                      # Command line tools
+│   │   ├── run_one.py           # Single scenario runner
+│   │   └── generate_ground_truth.py # Ground truth generator
+│   ├── generators/               # Query generation methods
+│   │   ├── enhanced_constrained.py # Primary generator with dynamic profiling
+│   │   ├── constrained.py       # Original constrained generator
+│   │   ├── rules_based.py       # Pattern-matching generation
+│   │   ├── zero_shot.py         # Pure LLM generation  
+│   │   ├── external.py          # External LLM integration
+│   │   └── query_processor.py   # Preprocessing/postprocessing pipeline
+│   ├── core/                     # Foundation validation & evaluation
+│   │   ├── validator.py         # Rule-based DSL validation
+│   │   ├── eval_exec.py         # Query execution & similarity
+│   │   └── ast_normalize.py     # AST-based semantic comparison
+│   ├── ingestion/                # Data processing pipelines
+│   │   ├── cic_processor.py     # CIC-IDS2017 dataset processor
+│   │   ├── bulk.py              # High-performance bulk ingestion
+│   │   └── base.py              # Common ingestion utilities
+│   ├── security/                 # Security framework
+│   │   ├── security_layer.py    # Multi-layer security validation
+│   │   └── adversarial_evaluator.py # Red team testing
+│   ├── validation/               # Advanced validation systems
+│   │   └── query_validator.py   # Multi-layer validation with live testing
+│   ├── field_management/         # Dynamic field analysis
+│   │   └── field_analytics.py   # Statistical field quality metrics
+│   ├── analysis/                 # Research & evaluation tools
+│   │   ├── tables.py            # Results table generation
+│   │   └── statistical_analysis.py # Statistical evaluation
+│   └── utils/                    # Utilities and helpers
+├── gui/                          # Streamlit web interface  
 │   ├── streamlit_app.py          # Main GUI application
 │   ├── components/               # GUI components
-│   │   ├── query_generator.py    # Interactive query generation
+│   │   ├── query_generator.py    # Interactive query generation with execution
 │   │   ├── evaluation_dashboard.py # Evaluation management
 │   │   ├── security_panel.py     # Security testing interface
-│   │   ├── external_llm_panel.py # LLM configuration
-│   │   └── admin_panel.py        # System administration
+│   │   ├── privacy_analysis.py   # Privacy tools
+│   │   ├── admin_panel.py        # System administration (6 tabs)
+│   │   └── data_explorer.py      # Index exploration
 │   └── utils/                    # GUI utilities
-├── tasks/                        # Test scenarios and examples
-│   ├── prompts.yaml              # 12 standard evaluation scenarios
-│   ├── prompts_cic.yaml          # CIC-IDS2017 specific scenarios
-│   └── fewshot.yaml              # Few-shot examples
-├── artifacts/                    # Generated artifacts and results
+├── artifacts/                    # Configuration and results
 │   ├── mappings.json             # Standard Elasticsearch schema
-│   ├── mappings_cic_enhanced.json # CIC dataset schema
-│   ├── validator_rules.yaml      # Security validation rules
-│   ├── validator_rules_cic.yaml  # CIC-specific rules
-│   ├── cic_ids2017_scenarios.yaml # CIC evaluation scenarios
+│   ├── validator_rules.yaml      # Security validation rules  
 │   ├── ground_truth/             # Expert query results
-│   ├── evaluation_results/       # Enhanced evaluation outputs
 │   ├── generated/                # Generated queries
-│   ├── results/                  # Evaluation metrics
-│   └── redteam.txt               # Adversarial prompts
+│   └── results/                  # Evaluation metrics
+├── tasks/                        # Test scenarios
+│   ├── prompts.yaml              # 12 standard evaluation scenarios
+│   └── fewshot.yaml              # Few-shot examples
 ├── scripts/                      # Automation scripts
-│   ├── ingest_all_cic.sh         # CIC dataset batch ingestion
-│   └── ingest_cic_batch.sh       # CIC selective processing
-├── data_raw/                     # Sample and CIC datasets
-├── docker-compose.yml            # Elasticsearch setup
-├── requirements.txt              # Python dependencies
-├── requirements-gui.txt          # GUI-specific dependencies
-├── environment.yml               # Conda environment
-└── *.sh                          # Setup and execution scripts
+│   └── ingest_all_cic.sh         # CIC dataset batch ingestion
+├── config/schemas/               # Schema definitions
+├── data_raw/                     # Raw datasets (CIC-IDS2017, samples)
+├── docker-compose.yml            # Unified Docker setup with profiles
+├── requirements.txt              # Core Python dependencies
+├── gui/requirements-gui.txt      # GUI-specific dependencies
+├── environment.yml               # Complete Conda environment
+├── Makefile                      # Automation commands
+└── setup.sh                      # System initialization
 ```
 
 ### Configuration
@@ -718,143 +673,139 @@ ES_READER_PASSWORD=ReaderPwd_123
 
 ## 🛠️ Troubleshooting
 
-### Common Issues
+### **Common Issues**
 
 **Elasticsearch won't start:**
 ```bash
-# Check if port 9200 is already in use
+# Check system status
+make status
+
+# Check port usage
 sudo lsof -i :9200
 
-# Reset Elasticsearch data
+# Reset Elasticsearch
 docker-compose down -v
 docker-compose up -d
 ```
 
 **Ollama model errors:**
 ```bash
-# Verify model is available
+# Check available models
 ollama list
 
-# Re-pull model if needed
+# Re-pull primary model
 ollama pull llama3.1:latest
 
-# Check Ollama service
-ollama serve
+# Test Ollama connectivity
+ollama run llama3.1:latest "test"
 ```
 
-**External LLM API errors:**
+**GUI won't start:**
 ```bash
-# Check API key configuration
-echo $OPENAI_API_KEY
-echo $GOOGLE_API_KEY
+# Check dependencies
+pip install -r gui/requirements-gui.txt
 
-# Test external LLM connection
-python test_external_llm.py
+# Start with debugging
+python gui/start_gui.py --debug
 
-# Verify LLM configuration in GUI
-python gui/start_gui.py
-# Navigate to System Administration → External LLMs → Test LLMs
-
-# Check rate limits and quotas
-python -c "from src.external_llm_manager import get_external_llm_manager; print(get_external_llm_manager().list_llms())"
+# Check port 8501 availability
+sudo lsof -i :8501
 ```
 
-**CIC dataset ingestion issues:**
+**CIC dataset issues:**
 ```bash
-# Check CIC files are present
-ls -la data_raw/*.pcap_ISCX.csv
+# Verify CIC files exist
+ls -la data_raw/*.csv
 
 # Test single file processing
-python src/process_cic_ids2017.py \
+python src/ingestion/cic_processor.py \
     --input data_raw/Monday-WorkingHours.pcap_ISCX.csv \
-    --output test_output.jsonl \
-    --sample 1000
+    --output test.jsonl --sample 100
 
-# Verify CIC index
-curl -u elastic:ChangeMe_123 "localhost:9200/logs_cic_ids2017/_count"
-```
-
-**Generation timeouts:**
-```bash
-# Increase timeout in generate_constrained.py
-# Default is 60 seconds, may need 120+ for complex queries
+# Use GUI for easier processing
+python gui/start_gui.py
+# Navigate to System Administration → Data Management
 ```
 
 **Permission errors:**
 ```bash
-# Ensure proper file permissions
-chmod +x *.sh
-chmod +x run_suite.sh
+# Fix script permissions
+chmod +x *.sh scripts/*.sh
 ```
 
-### Performance Tuning
+### **Performance Tuning**
 
 **For faster generation:**
-- **Local models**: Use smaller model (e.g., `llama3.2:3b` instead of `llama3.1:latest`)
-- **External LLMs**: Use faster models (e.g., `gpt-4o-mini` vs `gpt-4o`, `gemini-2.5-flash` vs `gemini-2.5-pro`)
-- Reduce few-shot examples in prompt templates
-- Increase timeout for complex scenarios
-- Use parallel evaluation for batch processing
+- Use GUI for interactive feedback and faster iteration
+- Smaller local models for development/testing
+- External LLMs for production (faster inference)
 
-**For better accuracy:**
-- **Local models**: Use larger model (`llama3.1:70b` if available, `deepseek-r1:14b` for reasoning)
-- **External LLMs**: Use advanced models (`gpt-4o`, `o1`, `gemini-2.5-pro`, `deepseek-reasoner`)
-- Add more few-shot examples in `tasks/fewshot.yaml`
-- Fine-tune validation rules for specific use cases
-- Combine multiple models with voting/ensemble approaches
+**For better accuracy:**  
+- Use enhanced constrained generator (primary method)
+- Add domain-specific validation rules
+- Test with CIC-IDS2017 real-world data
 
 **For cost optimization:**
-- Mix local and external models based on query complexity
-- Set appropriate token limits for external APIs
-- Use cheaper models for simple queries, premium models for complex ones
-- Enable caching for repeated query patterns
+- Primarily use local models (llama3.1:latest)
+- External LLMs for complex scenarios only
+- GUI provides usage monitoring and controls
 
-### Debugging
+### **Debugging & Monitoring**
 
-**Enable verbose logging:**
+**System debugging:**
 ```bash
+# Enable verbose logging
 export ES_NL2DSL_DEBUG=1
-python src/run_one.py --id scan-001 --gen
+
+# Check system health
+make status
+python src/smoke_es.py
+
+# Monitor through GUI
+python gui/start_gui.py
+# Navigate to System Administration → System Health
 ```
 
-**Check validation events:**
+**View logs and metrics:**
 ```bash
+# Validation events
 tail -f artifacts/results/validator_events.jsonl
-```
 
-**Monitor generation metrics:**
-```bash
-ls artifacts/generated/*.metrics.json
-cat artifacts/generated/scan-001.metrics.json
+# Generated queries and metrics  
+ls artifacts/generated/
+cat artifacts/results/*.json
 ```
 
 ## 🤝 Contributing
 
-### Development Setup
+### **Development Setup**
 
 ```bash
-# Install development dependencies
-pip install -r requirements-dev.txt
+# Install all dependencies
+pip install -r requirements.txt
+pip install -r gui/requirements-gui.txt
 
 # Run tests
-python -m pytest tests/
+python -m pytest tests/ --verbose
 
-# Code formatting
-black src/
-flake8 src/
+# Start development environment
+make setup                    # Initial setup
+python gui/start_gui.py      # GUI development
 ```
 
-### Adding New Scenarios
+### **Adding New Test Scenarios**
 
-1. Add scenario to `tasks/prompts.yaml`
-2. Generate ground truth: `python src/generate_ground_truth.py`
-3. Test scenario: `python src/run_one.py --id new-scenario --gen`
+1. Add to `tasks/prompts.yaml` with expert DSL query
+2. Generate ground truth: `python src/cli/generate_ground_truth.py`
+3. Test: `python src/cli/run_one.py --id new-scenario --gen`
+4. Validate with GUI evaluation dashboard
 
-### Adding New Baselines
+### **Adding New Generator Methods**
 
-1. Create `src/baseline_newmethod.py` following existing patterns
-2. Add to `src/run_experiment.py`
-3. Update documentation
+1. Create `src/generators/new_method.py` following existing patterns
+2. Add integration in `src/generators/enhanced_constrained.py`
+3. Test via CLI and GUI interfaces
+4. Update validation rules as needed
 
 ## 📜 License
 
@@ -866,19 +817,33 @@ If you use this system in your research, please cite:
 
 ```bibtex
 @software{es_nl2dsl,
-  title={ES-NL2DSL: Secure Natural Language to Elasticsearch DSL Translation},
-  author={Hamroz Gavharov},
+  title={ES-NL2DSL: Natural Language to Elasticsearch DSL Translation Framework},
+  author={Your Name},
   year={2025},
-  url={https://github.com/hamroz/es-nl2dsl}
+  url={https://github.com/your-username/es-nl2dsl},
+  note={Production-ready framework for cybersecurity log analysis with GUI interface}
 }
 ```
+
+## 🌟 **What Makes ES-NL2DSL Special**
+
+✅ **Production-Ready**: Complete system with GUI, not just a research prototype  
+✅ **Real Data**: Handles actual CIC-IDS2017 cybersecurity datasets (2.8M+ records)  
+✅ **Query Execution**: Not just generation - executes queries and shows actual results  
+✅ **Data Export**: One-click CSV/JSON export of query results  
+✅ **Multi-LLM**: Local models + 4 external providers with intelligent routing  
+✅ **Security-First**: Multi-layer validation with red team testing  
+✅ **Super Easy Setup**: One-command deployment with Docker profiles  
+✅ **Interactive GUI**: Full-featured web interface for all operations  
 
 ## 🙏 Acknowledgments
 
 - Elasticsearch team for the robust search platform
-- Ollama team for local LLM infrastructure
-- Contributors to the evaluation scenarios and test cases
+- Ollama team for local LLM infrastructure  
+- Streamlit team for the excellent web framework
+- CIC-IDS2017 dataset contributors for real-world cybersecurity data
 
 ---
 
-**For questions, issues, or contributions, please open an issue on GitHub or contact me.**
+🚀 **Ready to translate natural language to Elasticsearch queries?**  
+Start with: `make setup` then `python gui/start_gui.py`

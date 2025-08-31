@@ -67,7 +67,7 @@ experiment:
 # Advanced testing
 security:
 	@echo "Running red team security tests..."
-	python src/analysis/security.py
+	python src/redteam_runner.py
 
 privacy:
 	@echo "Running privacy-utility analysis..."
@@ -111,12 +111,12 @@ status:
 demo:
 	@echo "=== ES-NL2DSL Quick Demo ==="
 	@echo "1. Testing basic query generation..."
-	python src/run_one.py --id scan-001 --gen
+	python src/cli/run_one.py --id scan-001 --gen
 	@echo ""
-	@echo "2. Testing ambiguity detection..."
-	python src/generate_constrained.py --prompt "Find events from yesterday" --task-id demo-ambiguous
+	@echo "2. Testing enhanced constrained generation..."
+	python src/generators/enhanced_constrained.py --prompt "Find events from yesterday" --task-id demo-ambiguous --index logs_net
 	@echo ""
 	@echo "3. Testing validation..."
-	python src/validator.py --dsl artifacts/queries/good.json || true
+	python src/core/validator.py --dsl artifacts/queries/expert.json || true
 	@echo ""
 	@echo "Demo complete! Check artifacts/results/ for outputs."

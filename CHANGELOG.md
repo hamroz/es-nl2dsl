@@ -20,7 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - **Enhanced Query Generation Pipeline**: Production-ready enhanced_constrained.py with dynamic index profiling
 - **Query Processing Framework**: Centralized preprocessing and postprocessing pipeline with comprehensive audit trails
-- **Multi-LLM Support**: Integration with OpenAI, Anthropic, Google, Cohere, and local Ollama models
+- **Multi-LLM Support**: Integration with OpenAI, Anthropic, Google, and local Ollama models
 - **Advanced Security Framework**: Multi-layer security validation with formal verification and adversarial testing
 - **Dynamic Index Intelligence**: Real-time schema discovery with field relationship mapping and pattern recognition
 - **Advanced GUI Interface**: Interactive Streamlit interface with real-time query execution and data export

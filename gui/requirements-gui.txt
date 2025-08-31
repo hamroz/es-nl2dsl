@@ -1,12 +1,18 @@
 # Additional GUI dependencies for ES-NL2DSL
 # Add these to the main requirements.txt or install separately
 
+# Core Streamlit & UI
 streamlit==1.28.1
+streamlit-ace==0.1.1
+streamlit-option-menu==0.3.6
+
+# Data Visualization
 plotly==5.17.0
 altair==5.1.2
 matplotlib==3.8.2
 seaborn==0.13.0
-streamlit-ace==0.1.1
-streamlit-option-menu==0.3.6
 
-# Note: pandas is already included in main requirements.txt
+# Scientific Computing (for GUI analytics)
+scipy==1.11.4
+
+# Note: pandas, numpy are already included in main requirements.txt

@@ -57,7 +57,7 @@ def get_external_llm_models():
     
     Returns:
         List[str]: Names of enabled external LLM providers (OpenAI, Anthropic, 
-                  Google, Cohere, etc.), empty list if none configured or on error
+                  Google, etc.), empty list if none configured or on error
                   
     Used for populating the LLM selection dropdown in the advanced options
     section of the query generator interface.

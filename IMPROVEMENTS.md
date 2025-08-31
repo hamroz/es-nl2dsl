@@ -109,7 +109,7 @@ The ES-NL2DSL system is a mature, production-ready intelligent query generation 
 **Enhanced Query Generation Pipeline**
 - **Production-Ready Generation**: Advanced constrained generation with dynamic index profiling and multi-method support
 - **Query Processing Pipeline**: Centralized preprocessing and postprocessing with comprehensive audit trails and transformation logging
-- **Multi-Provider LLM Integration**: Seamless support for OpenAI, Anthropic, Google, Cohere, and local Ollama models
+- **Multi-Provider LLM Integration**: Seamless support for OpenAI, Anthropic, Google, and local Ollama models
 - **Security-Hardened Generation**: Advanced threat detection with adversarial prompt identification and evasion prevention
 - **Asynchronous Processing**: High-performance parallel query generation with intelligent request batching
 
@@ -137,7 +137,7 @@ The ES-NL2DSL system is a mature, production-ready intelligent query generation 
 - **Speed**: Sub-5 second generation with full validation pipeline and comprehensive preprocessing/postprocessing
 - **Accuracy**: >95% success rate for queries returning meaningful results with enhanced field mapping and type validation
 - **Reliability**: 100% field existence validation with dynamic schema discovery and .keyword field detection
-- **Multi-LLM Support**: Seamless integration with local (Ollama) and external LLMs (OpenAI, Anthropic, Google, Cohere)
+- **Multi-LLM Support**: Seamless integration with local (Ollama) and external LLMs (OpenAI, Anthropic, Google)
 - **Efficiency**: Advanced caching with intelligent profile management and async processing
 
 **Enterprise Security & Robustness**

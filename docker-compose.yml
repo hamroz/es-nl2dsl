@@ -1,17 +1,92 @@
-version: "3.8"
+# ES-NL2DSL Complete Docker Compose Configuration
+# Includes Elasticsearch, Ollama, and optional GUI services
+version: '3.8'
+
 services:
-  es:
+  # Elasticsearch service (required)
+  elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.11.3
-    container_name: es8113
+    container_name: es-nl2dsl-elasticsearch
     environment:
       - discovery.type=single-node
       - xpack.security.enabled=true
-      - xpack.security.http.ssl.enabled=false   # <- this line disables HTTPS on :9200
-      - ELASTIC_PASSWORD=ChangeMe_123           # <- bootstrap password for 'elastic'
+      - xpack.security.http.ssl.enabled=false
+      - xpack.security.transport.ssl.enabled=false
+      - ELASTIC_PASSWORD=ChangeMe_123
       - ES_JAVA_OPTS=-Xms2g -Xmx2g
-    ports: ["9200:9200","9300:9300"]
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
+    networks:
+      - es-nl2dsl
     ulimits:
       memlock: { soft: -1, hard: -1 }
+    healthcheck:
+      test: ["CMD-SHELL", "curl -u elastic:ChangeMe_123 -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Ollama service for LLM (optional - for local models)
+  ollama:
+    image: ollama/ollama:latest
+    container_name: es-nl2dsl-ollama
+    ports:
+      - "11434:11434"
     volumes:
-      - ./data_es:/usr/share/elasticsearch/data
+      - ollama_data:/root/.ollama
+    networks:
+      - es-nl2dsl
+    environment:
+      - OLLAMA_HOST=0.0.0.0:11434
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:11434/api/tags || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    profiles:
+      - full  # Only start with 'docker-compose --profile full up'
+
+  # ES-NL2DSL GUI Application (optional)
+  es-nl2dsl-gui:
+    build:
+      context: .
+      dockerfile: gui/Dockerfile
+    container_name: es-nl2dsl-gui
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./artifacts:/app/artifacts
+      - ./data_raw:/app/data_raw
+      - ./tasks:/app/tasks
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - es-nl2dsl
+    environment:
+      - ES_HOST=elasticsearch:9200
+      - OLLAMA_HOST=ollama:11434
+      - STREAMLIT_SERVER_HEADLESS=true
+      - STREAMLIT_SERVER_FILE_WATCHER_TYPE=none
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    profiles:
+      - gui  # Only start with 'docker-compose --profile gui up'
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8501/_stcore/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  es_data:
+    driver: local
+  ollama_data:
+    driver: local
+
+networks:
+  es-nl2dsl:
+    driver: bridge
 

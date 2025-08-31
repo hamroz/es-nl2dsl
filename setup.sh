@@ -43,7 +43,7 @@ echo "✅ Sample data ingested"
 # Generate ground truth
 echo
 echo "5. Generating ground truth for all scenarios..."
-python src/generate_ground_truth.py
+python src/cli/generate_ground_truth.py
 echo "✅ Ground truth generated"
 
 # Create schema drift index
@@ -84,12 +84,13 @@ echo
 echo "=== Setup Complete! ==="
 echo
 echo "Quick test commands:"
-echo "  python src/run_one.py --id scan-001 --gen"
+echo "  python src/cli/run_one.py --id scan-001 --gen"
 echo "  ./run_suite.sh"
 echo "  python src/redteam_runner.py"
+echo "  python gui/start_gui.py  # Start GUI"
 echo
 echo "View results:"
-echo "  python src/render_tables.py"
+echo "  python src/analysis/tables.py"
 echo "  cat artifacts/results/results_table_*.md"
 echo
 echo "System is ready for evaluation!"
