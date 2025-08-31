@@ -426,15 +426,32 @@ def load_fewshot_examples(index=None):
     if not examples:
         return []
     
-    # Get actual date range for the target index
+    # Get actual date range AND timestamp field for the target index
     target_date_range = None
+    target_timestamp_field = "@timestamp"  # default fallback
     if index:
         try:
-            from src.data_adaptation.mapping_storage import MappingStorage
-            ms = MappingStorage()
-            target_date_range = ms.get_dynamic_date_range(index)
+            from src.index_profiler import IndexProfiler
+            profiler = IndexProfiler()
+            profile = profiler.analyze_index(index)
+            
+            # Get actual timestamp field name
+            target_timestamp_field = profile.primary_timestamp_field or "@timestamp"
+            
+            # Get actual date range
+            target_date_range = {
+                "min_date": profile.date_range["min_date"],
+                "max_date": profile.date_range["max_date"]
+            }
         except Exception as e:
-            logger.debug(f"Could not get date range for {index}: {e}")
+            logger.debug(f"Could not get profile info for {index}: {e}")
+            # Fallback to MappingStorage
+            try:
+                from src.data_adaptation.mapping_storage import MappingStorage
+                ms = MappingStorage()
+                target_date_range = ms.get_dynamic_date_range(index)
+            except Exception as e2:
+                logger.debug(f"Could not get date range from MappingStorage for {index}: {e2}")
     
     # Fallback to current time if no date range available
     if not target_date_range or not target_date_range.get("min_date"):
@@ -446,32 +463,39 @@ def load_fewshot_examples(index=None):
             "max_date": end_date.strftime("%Y-%m-%dT%H:%M:%SZ")
         }
     
-    # Dynamically replace hardcoded dates in examples
-    def replace_dates_in_structure(obj):
-        """Recursively replace hardcoded dates with target dates"""
+    # Dynamically replace hardcoded dates and field names in examples
+    def replace_dates_and_fields_in_structure(obj):
+        """Recursively replace hardcoded dates and field names with target values"""
         if isinstance(obj, dict):
             new_obj = {}
             for key, value in obj.items():
+                # Replace hardcoded timestamp field names with the actual field name
+                if key == "@timestamp" and target_timestamp_field != "@timestamp":
+                    # Use the actual timestamp field name instead of @timestamp
+                    new_key = target_timestamp_field
+                else:
+                    new_key = key
+                
                 if key in ["gte", "lte"] and isinstance(value, str):
                     # Replace hardcoded dates
                     if "2017-01-01" in value or "2024-01-01" in value:
-                        new_obj[key] = target_date_range["min_date"]
+                        new_obj[new_key] = target_date_range["min_date"]
                     elif "2017-12-31" in value or "2024-12-30" in value:
-                        new_obj[key] = target_date_range["max_date"]  
+                        new_obj[new_key] = target_date_range["max_date"]  
                     else:
-                        new_obj[key] = value
+                        new_obj[new_key] = value
                 else:
-                    new_obj[key] = replace_dates_in_structure(value)
+                    new_obj[new_key] = replace_dates_and_fields_in_structure(value)
             return new_obj
         elif isinstance(obj, list):
-            return [replace_dates_in_structure(item) for item in obj]
+            return [replace_dates_and_fields_in_structure(item) for item in obj]
         else:
             return obj
     
-    # Apply date replacement to all examples
+    # Apply date and field replacement to all examples
     updated_examples = []
     for example in examples:
-        updated_example = replace_dates_in_structure(example)
+        updated_example = replace_dates_and_fields_in_structure(example)
         updated_examples.append(updated_example)
     
     return updated_examples
