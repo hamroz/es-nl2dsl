@@ -231,10 +231,13 @@ class MappingStorage:
         if mapping and mapping.get("date_range"):
             return mapping["date_range"]
         
-        # Ultimate fallback to 2017 dates for backward compatibility
+        # Dynamic fallback based on current time (no hardcoded dates!)
+        from datetime import datetime, timedelta
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=7)  # Last 7 days as reasonable default
         return {
-            "min_date": "2017-01-01T00:00:00Z",
-            "max_date": "2017-12-31T23:59:59Z"
+            "min_date": start_date.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "max_date": end_date.strftime("%Y-%m-%dT%H:%M:%SZ")
         }
     
     def has_index_profile(self, index_name: str) -> bool:

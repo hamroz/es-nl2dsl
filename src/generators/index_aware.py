@@ -220,8 +220,12 @@ class IndexAwareGenerator:
             sample_start = date_range["min_date"]
             sample_end = date_range["max_date"]
         else:
-            sample_start = "2024-01-01T00:00:00Z"
-            sample_end = "2024-01-01T23:59:59Z"
+            # Dynamic fallback - no hardcoded dates!
+            from datetime import datetime, timedelta
+            end_date = datetime.now()
+            start_date = end_date - timedelta(days=1)
+            sample_start = start_date.strftime("%Y-%m-%dT%H:%M:%SZ")
+            sample_end = end_date.strftime("%Y-%m-%dT%H:%M:%SZ")
         
         # Example 1: Basic time range query
         if timestamp_field in available_fields:

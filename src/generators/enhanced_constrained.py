@@ -35,11 +35,35 @@ def build_enhanced_prompt(task_prompt, index=None):
     """Build an enhanced prompt using dynamic index profiles"""
     prompt = "You are an Elasticsearch DSL query generator for cybersecurity log analysis.\n\n"
     
-    # Get dynamic index information
-    mapping_storage = MappingStorage()
-    field_mapping = mapping_storage.get_field_mapping_for_query_generation(index)
-    date_range = mapping_storage.get_dynamic_date_range(index)
-    field_catalog = mapping_storage.get_field_catalog_for_index(index)
+    # Get dynamic index information - use IndexProfiler directly for reliability
+    try:
+        from src.index_profiler import IndexProfiler
+        profiler = IndexProfiler()
+        index_profile = profiler.analyze_index(index)
+        
+        # Extract info from IndexProfiler 
+        date_range = {
+            "min_date": index_profile.date_range["min_date"],
+            "max_date": index_profile.date_range["max_date"]
+        }
+        timestamp_field = index_profile.primary_timestamp_field
+        field_catalog = profiler.get_field_catalog_for_index(index)
+        all_fields = list(index_profile.fields.keys())
+        
+        # Create field_mapping structure for compatibility
+        field_mapping = {
+            "primary_timestamp": timestamp_field,
+            "all_fields": all_fields,
+            "system_type": "Cybersecurity" if "cic" in index.lower() or "security" in index.lower() else "Network"
+        }
+        
+    except Exception as e:
+        # Fallback to MappingStorage
+        mapping_storage = MappingStorage()
+        field_mapping = mapping_storage.get_field_mapping_for_query_generation(index)
+        date_range = mapping_storage.get_dynamic_date_range(index)
+        field_catalog = mapping_storage.get_field_catalog_for_index(index)
+        timestamp_field = field_mapping.get("primary_timestamp", "@timestamp") if field_mapping else "@timestamp"
     
     # Add index-specific information
     if field_mapping and field_mapping.get("all_fields"):
@@ -130,8 +154,7 @@ def build_enhanced_prompt(task_prompt, index=None):
     prompt += "\nRules:\n"
     prompt += "- Always use bool.filter for combining conditions\n"
     
-    # Use dynamic timestamp field and date range
-    timestamp_field = field_mapping.get("primary_timestamp", "@timestamp") if field_mapping else "@timestamp"
+    # Use dynamic timestamp field and date range (timestamp_field is already set above)
     prompt += f"- Always include a time range filter using {timestamp_field}\n"
     
     # Use actual date range from index
@@ -140,7 +163,13 @@ def build_enhanced_prompt(task_prompt, index=None):
         max_date = date_range["max_date"][:10]
         prompt += f"- Use dates between {min_date} and {max_date} for time ranges\n"
     else:
-        prompt += "- For CIC data, use dates in 2017 (e.g., gte: '2017-01-01', lte: '2017-12-31')\n"
+        # Dynamic fallback - no hardcoded dates!
+        from datetime import datetime, timedelta
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=7)
+        min_date = start_date.strftime("%Y-%m-%d")
+        max_date = end_date.strftime("%Y-%m-%d")
+        prompt += f"- Use recent dates between {min_date} and {max_date} for time ranges\n"
     
     prompt += "- Use term for exact matches, terms for multiple values\n"
     prompt += "- Use range only for date and numeric fields\n"
@@ -167,8 +196,12 @@ def get_enhanced_examples(index, field_mapping, timestamp_field, date_range):
         sample_start = date_range["min_date"][:19] + "Z" if not date_range["min_date"].endswith("Z") else date_range["min_date"]
         sample_end = date_range["max_date"][:19] + "Z" if not date_range["max_date"].endswith("Z") else date_range["max_date"]
     else:
-        sample_start = "2017-07-04T00:00:00Z"
-        sample_end = "2017-07-04T23:59:59Z"
+        # Dynamic fallback - no hardcoded dates!
+        from datetime import datetime, timedelta
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=1)  # Single day for examples
+        sample_start = start_date.strftime("%Y-%m-%dT%H:%M:%SZ")
+        sample_end = end_date.strftime("%Y-%m-%dT%H:%M:%SZ")
     
     # Example 1: Basic time range
     examples.append({

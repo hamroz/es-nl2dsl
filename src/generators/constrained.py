@@ -406,21 +406,75 @@ CONVERTIBLE_TIME_TERMS = [
 SECURITY_PATTERNS = []
 
 def load_fewshot_examples(index=None):
-    """Load few-shot examples from file"""
+    """Load few-shot examples from file and dynamically adjust dates"""
+    examples = []
+    
     # Check for CIC-specific examples if CIC index is used
     if index and "cic" in index.lower():
-        cic_path = Path(__file__).parent.parent / "artifacts" / "few_shot_cic.yaml"
+        cic_path = Path(__file__).parent.parent.parent / "artifacts" / "few_shot_cic.yaml"
         if cic_path.exists():
             with open(cic_path) as f:
                 data = yaml.safe_load(f)
-                return data.get('examples', [])
+                examples = data.get('examples', [])
+    else:
+        # Default examples
+        fewshot_path = Path(__file__).parent.parent.parent / "tasks" / "fewshot.yaml"
+        if fewshot_path.exists():
+            with open(fewshot_path) as f:
+                examples = yaml.safe_load(f)
     
-    # Default examples
-    fewshot_path = Path(__file__).parent.parent / "tasks" / "fewshot.yaml"
-    if fewshot_path.exists():
-        with open(fewshot_path) as f:
-            return yaml.safe_load(f)
-    return []
+    if not examples:
+        return []
+    
+    # Get actual date range for the target index
+    target_date_range = None
+    if index:
+        try:
+            from src.data_adaptation.mapping_storage import MappingStorage
+            ms = MappingStorage()
+            target_date_range = ms.get_dynamic_date_range(index)
+        except Exception as e:
+            logger.debug(f"Could not get date range for {index}: {e}")
+    
+    # Fallback to current time if no date range available
+    if not target_date_range or not target_date_range.get("min_date"):
+        from datetime import datetime, timedelta
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=7)
+        target_date_range = {
+            "min_date": start_date.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "max_date": end_date.strftime("%Y-%m-%dT%H:%M:%SZ")
+        }
+    
+    # Dynamically replace hardcoded dates in examples
+    def replace_dates_in_structure(obj):
+        """Recursively replace hardcoded dates with target dates"""
+        if isinstance(obj, dict):
+            new_obj = {}
+            for key, value in obj.items():
+                if key in ["gte", "lte"] and isinstance(value, str):
+                    # Replace hardcoded dates
+                    if "2017-01-01" in value or "2024-01-01" in value:
+                        new_obj[key] = target_date_range["min_date"]
+                    elif "2017-12-31" in value or "2024-12-30" in value:
+                        new_obj[key] = target_date_range["max_date"]  
+                    else:
+                        new_obj[key] = value
+                else:
+                    new_obj[key] = replace_dates_in_structure(value)
+            return new_obj
+        elif isinstance(obj, list):
+            return [replace_dates_in_structure(item) for item in obj]
+        else:
+            return obj
+    
+    # Apply date replacement to all examples
+    updated_examples = []
+    for example in examples:
+        updated_example = replace_dates_in_structure(example)
+        updated_examples.append(updated_example)
+    
+    return updated_examples
 
 def get_dynamic_index_info(index):
     """Get dynamic information about an index with robust error handling"""
@@ -602,7 +656,13 @@ def build_prompt(task_prompt, index=None):
             prompt += "- Use appropriate dates based on the query context\n"
     else:
         prompt += "- Always include a time range filter using @timestamp\n"
-        prompt += "- For CIC data, use dates in 2017 (e.g., gte: '2017-01-01', lte: '2017-12-31')\n"
+        # Dynamic fallback - no hardcoded dates!
+        from datetime import datetime, timedelta
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=7)
+        min_date = start_date.strftime("%Y-%m-%d")
+        max_date = end_date.strftime("%Y-%m-%d")
+        prompt += f"- Use recent dates between {min_date} and {max_date} for time ranges\n"
     prompt += "- Use term for exact matches, terms for multiple values\n"
     prompt += "- Use range only for date and numeric fields\n"
     prompt += "- Output only valid JSON, no explanations\n\n"

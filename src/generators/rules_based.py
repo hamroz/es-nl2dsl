@@ -52,10 +52,13 @@ def extract_date_patterns(prompt):
         end = f"{year:04d}-{month:02d}-{end_day:02d}T23:59:59Z"
         return {"gte": start, "lte": end}
     
-    # Default to a recent window
+    # Default to a recent window - dynamic dates
+    from datetime import datetime, timedelta
+    end_date = datetime.now()
+    start_date = end_date - timedelta(days=1)
     return {
-        "gte": "2017-07-04T00:00:00Z",
-        "lte": "2017-07-04T23:59:59Z"
+        "gte": start_date.strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "lte": end_date.strftime("%Y-%m-%dT%H:%M:%SZ")
     }
 
 def extract_ip_patterns(prompt):
