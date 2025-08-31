@@ -183,10 +183,10 @@ def run_query_generation(prompt: str, method: str = "constrained",
     elif method == "constrained":
         logger.info(f"🔄 Using enhanced constrained generation method")
         
-        # Always use the enhanced constrained generator which includes dynamic index profiling
-        logger.info(f"🎯 Using enhanced constrained generation with automatic index profiling")
+        # Use the enhanced constrained generator with Phase 5 processing pipeline
+        logger.info(f"🎯 Using enhanced constrained generation with Phase 5 processing pipeline")
         cmd = [
-            sys.executable, "src/generators/constrained.py",
+            sys.executable, "src/generators/enhanced_constrained.py",
             "--prompt", prompt,
             "--task-id", task_id
         ]
