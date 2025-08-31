@@ -191,6 +191,8 @@ def build_enhanced_prompt(task_prompt, index=None):
     
     prompt += "- Use term for exact matches, terms for multiple values\n"
     prompt += "- Use range only for date and numeric fields\n"
+    prompt += "- IMPORTANT: Protocol values are uppercase (TCP, UDP, ICMP)\n"
+    prompt += "- IMPORTANT: Use exact case as stored in index\n"
     prompt += "- Output only valid JSON, no explanations\n\n"
     
     # Use simpler examples

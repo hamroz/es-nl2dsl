@@ -274,6 +274,13 @@ class QueryProcessor:
             
             if field_type_fixes:
                 changes.extend(field_type_fixes)
+            
+            # Fix case sensitivity issues for common field values
+            case_fixes = []
+            self._fix_case_sensitivity_recursive(processed_query, case_fixes)
+            
+            if case_fixes:
+                changes.extend(case_fixes)
                 
         except Exception as e:
             changes.append(f"Warning: Could not validate field types: {e}")
@@ -483,6 +490,27 @@ class QueryProcessor:
                 logger.debug(f"      - {change}")
         
         logger.info("="*50)
+    
+    def _fix_case_sensitivity_recursive(self, obj: Any, fixes: List[str]):
+        """Recursively fix case sensitivity issues in query structure"""
+        if isinstance(obj, dict):
+            for key, value in obj.items():
+                if key in ["term", "terms"]:
+                    # This is a query clause, fix case of field values
+                    if isinstance(value, dict):
+                        for field_name, field_value in value.items():
+                            if field_name == "protocol" and isinstance(field_value, str):
+                                # Protocol values should be uppercase
+                                correct_value = field_value.upper()
+                                if correct_value != field_value:
+                                    fixes.append(f"Fixed protocol case: '{field_value}' -> '{correct_value}'")
+                                    value[field_name] = correct_value
+                else:
+                    # Recurse into nested structures
+                    self._fix_case_sensitivity_recursive(value, fixes)
+        elif isinstance(obj, list):
+            for item in obj:
+                self._fix_case_sensitivity_recursive(item, fixes)
 
 # Convenience functions for external usage
 def preprocess_prompt(prompt: str, index: str) -> Tuple[str, List[str]]:
