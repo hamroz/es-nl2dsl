@@ -1,5 +1,27 @@
 #!/usr/bin/env python3
-"""Enhanced evaluation methodology for comprehensive query assessment"""
+"""
+Enhanced Evaluation Framework: Comprehensive query assessment and benchmarking system
+
+This module provides advanced evaluation capabilities for systematic assessment of query
+generation quality, semantic similarity, and performance metrics within the ES-NL2DSL
+system. It implements multiple evaluation methodologies including structural analysis,
+semantic similarity assessment, and execution-based metrics for comprehensive validation.
+
+Key capabilities:
+- Multi-dimensional query assessment with structural and semantic analysis
+- Advanced similarity metrics with optional transformer-based embeddings
+- Execution-based evaluation with performance and accuracy measurement
+- Statistical analysis with confidence intervals and significance testing
+- Comprehensive benchmarking with detailed reporting and visualization
+- Integration with research frameworks for publication-quality evaluation
+
+The framework serves as the foundation for systematic evaluation of query generation
+methods, enabling rigorous comparison and validation for research and production use.
+
+Author: Hamroz Gavharov
+Project: ES-NL2DSL - Natural Language to Elasticsearch DSL Framework
+License: MIT (see LICENSE file)
+"""
 import json
 import argparse
 import time

@@ -1,6 +1,27 @@
 #!/usr/bin/env python3
 """
-Query generation using external LLMs (OpenAI, Anthropic, etc.)
+External LLM Query Generator: Multi-provider AI model integration for DSL generation
+
+This module provides comprehensive query generation capabilities using external Large
+Language Model providers including OpenAI, Anthropic, Google, and others. It extends
+the core generation framework with enterprise-grade external AI integration, advanced
+prompt engineering, and provider-specific optimizations.
+
+Key capabilities:
+- Multi-provider LLM integration (OpenAI GPT-4, Anthropic Claude, Google Gemini)
+- Advanced prompt engineering with provider-specific optimization
+- Intelligent provider selection and fallback mechanisms
+- Cost optimization with token usage monitoring and budget controls
+- Rate limiting and request throttling for API compliance
+- Response validation and quality assessment
+- Integration with existing validation and security frameworks
+
+The generator provides access to state-of-the-art AI capabilities while maintaining
+consistency with the ES-NL2DSL framework's validation, security, and quality standards.
+
+Author: Hamroz Gavharov
+Project: ES-NL2DSL - Natural Language to Elasticsearch DSL Framework
+License: MIT (see LICENSE file)
 """
 
 import json

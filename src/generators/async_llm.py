@@ -1,7 +1,28 @@
 #!/usr/bin/env python3
 """
-Async LLM calling infrastructure for improved performance.
-Supports concurrent calls and integrated caching.
+Asynchronous LLM Interface: High-performance concurrent model calling infrastructure
+
+This module provides advanced asynchronous calling capabilities for Large Language Models,
+enabling high-throughput query generation with concurrent processing, intelligent batching,
+and performance optimization. It supports multiple LLM providers with unified async
+interfaces and comprehensive error handling for production workloads.
+
+Key capabilities:
+- Asynchronous LLM calling with concurrent request processing
+- Thread pool optimization for improved throughput and resource utilization
+- Intelligent batching and request queuing for optimal performance
+- Error handling and retry mechanisms with exponential backoff
+- Request timing and performance monitoring for optimization
+- Multi-provider support with unified async interfaces
+- Memory-efficient processing for large-scale generation tasks
+
+The infrastructure is designed for high-performance applications requiring concurrent
+LLM access, batch processing scenarios, and production systems with strict
+performance requirements.
+
+Author: Hamroz Gavharov
+Project: ES-NL2DSL - Natural Language to Elasticsearch DSL Framework
+License: MIT (see LICENSE file)
 """
 
 import asyncio

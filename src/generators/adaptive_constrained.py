@@ -1,5 +1,29 @@
 #!/usr/bin/env python3
-"""Adaptive constrained generator that understands field mappings from newly adapted data"""
+"""
+Adaptive Constrained Generator: Dynamic schema-aware query generation system
+
+This module provides advanced adaptive query generation capabilities that automatically
+adjust to new data schemas and field mappings discovered through the data adaptation
+pipeline. It extends the core constrained generation framework with dynamic field
+discovery, schema evolution support, and intelligent mapping utilization.
+
+Key capabilities:
+- Dynamic schema adaptation with automatic field mapping integration
+- Real-time field discovery and constraint adjustment
+- Multi-index support with schema-specific optimization
+- Intelligent field mapping utilization from adapted data sources
+- Backward compatibility with existing constrained generation methods
+- Enhanced error handling for schema evolution scenarios
+- Performance optimization for frequently adapted schemas
+
+The generator is designed for environments with evolving data sources and schemas,
+enabling seamless query generation across diverse and dynamically changing datasets
+without manual reconfiguration.
+
+Author: Hamroz Gavharov
+Project: ES-NL2DSL - Natural Language to Elasticsearch DSL Framework
+License: MIT (see LICENSE file)
+"""
 import json
 import argparse
 from typing import Dict, List, Any, Optional

@@ -1,5 +1,29 @@
 #!/usr/bin/env python3
-"""Master experiment runner for all baselines and ablations"""
+"""
+Experiment Runner: Comprehensive evaluation and ablation study framework
+
+This module provides a master experiment runner for conducting systematic evaluations
+and ablation studies across all query generation methods within the ES-NL2DSL system.
+It enables automated comparison of different approaches, statistical analysis, and
+comprehensive performance benchmarking for research and development purposes.
+
+Key capabilities:
+- Multi-method evaluation (constrained, rules-based, zero-shot) with automated execution
+- Scenario-based testing across comprehensive benchmark datasets
+- Ablation study support with systematic parameter variation
+- Statistical comparison with confidence intervals and significance testing
+- Automated result collection and aggregation for analysis
+- Reproducible experiment execution with configurable parameters
+- Integration with evaluation frameworks and reporting systems
+
+The framework is essential for research validation, method comparison, and system
+optimization, providing rigorous experimental methodology for academic and
+industrial research applications.
+
+Author: Hamroz Gavharov
+Project: ES-NL2DSL - Natural Language to Elasticsearch DSL Framework
+License: MIT (see LICENSE file)
+"""
 import json
 import subprocess
 import sys

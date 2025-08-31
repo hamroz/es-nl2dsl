@@ -1,4 +1,27 @@
 #!/usr/bin/env python3
+"""
+AST Normalizer: Query structure comparison and semantic similarity analysis
+
+This module provides advanced Abstract Syntax Tree (AST) normalization capabilities
+for comparing Elasticsearch DSL queries at a structural level. It enables semantic
+comparison of queries by normalizing their structure and extracting comparable
+features, supporting evaluation frameworks and query similarity analysis.
+
+Key capabilities:
+- Query structure normalization with clause-level decomposition
+- Semantic equivalence detection ignoring syntactic differences
+- Boolean query flattening with standardized clause ordering
+- Term and range query normalization with consistent representation
+- Structural comparison metrics for evaluation frameworks
+- Integration with evaluation pipelines for query similarity assessment
+
+The normalizer is essential for evaluation frameworks that need to compare
+queries based on their semantic meaning rather than exact syntactic structure.
+
+Author: Hamroz Gavharov
+Project: ES-NL2DSL - Natural Language to Elasticsearch DSL Framework
+License: MIT (see LICENSE file)
+"""
 import argparse, json
 
 def normalize_clause(c):

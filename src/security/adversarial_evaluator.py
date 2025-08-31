@@ -1,5 +1,29 @@
 #!/usr/bin/env python3
-"""Adversarial evaluation system for security testing"""
+"""
+Adversarial Evaluator: Advanced security testing and red team evaluation framework
+
+This module provides comprehensive adversarial evaluation capabilities for testing the
+security robustness of the ES-NL2DSL system against malicious inputs, prompt injection
+attacks, and security boundary testing. It implements automated red team testing
+methodologies with systematic attack pattern generation and defense assessment.
+
+Key capabilities:
+- Automated adversarial prompt generation with attack pattern libraries
+- Security boundary testing with systematic evasion attempt evaluation
+- Defense mechanism validation with comprehensive attack simulation
+- Statistical security analysis with attack success rate monitoring
+- Red team testing automation with reproducible evaluation protocols
+- Integration with security validation frameworks and reporting systems
+- Multi-dimensional attack assessment (injection, evasion, manipulation)
+
+The evaluator serves as a critical security validation tool for ensuring system
+robustness against adversarial inputs and maintaining security posture under
+attack conditions.
+
+Author: Hamroz Gavharov
+Project: ES-NL2DSL - Natural Language to Elasticsearch DSL Framework
+License: MIT (see LICENSE file)
+"""
 import json
 import subprocess
 import sys

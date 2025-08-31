@@ -1,4 +1,27 @@
 #!/usr/bin/env python3
+"""
+Base Ingestion System: Core data loading and processing framework
+
+This module provides the foundational data ingestion capabilities for the ES-NL2DSL system,
+offering standardized interfaces for loading various data formats into Elasticsearch.
+It serves as the base class and common functionality for specialized ingestion modules
+with support for CSV processing, data transformation, and index management.
+
+Key capabilities:
+- Standardized CSV data ingestion with pandas integration
+- Deterministic document ID generation for consistent indexing
+- Elasticsearch bulk loading with performance optimization
+- Data type inference and conversion with validation
+- Timestamp standardization and formatting
+- Integration with configuration management and credential handling
+
+The framework provides consistent data loading patterns across the ES-NL2DSL system
+and ensures reliable data ingestion for both development and production environments.
+
+Author: Hamroz Gavharov
+Project: ES-NL2DSL - Natural Language to Elasticsearch DSL Framework
+License: MIT (see LICENSE file)
+"""
 import argparse, pathlib, pandas as pd
 from elasticsearch import Elasticsearch, helpers
 from ..utils.config import get_es_client_config, ES_ADMIN_CREDS, ES_DEFAULT_INDEX

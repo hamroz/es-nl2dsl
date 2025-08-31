@@ -1,5 +1,28 @@
 #!/usr/bin/env python3
-"""Rule-based baseline query generator (no LLM)"""
+"""
+Rules-Based Query Generator: Deterministic DSL generation using pattern matching
+
+This module provides rule-based query generation capabilities that generate Elasticsearch
+DSL queries using predefined templates, pattern matching, and deterministic algorithms
+without relying on Large Language Models. It serves as a fast, reliable baseline for
+query generation and provides consistent results for testing and comparison purposes.
+
+Key capabilities:
+- Template-driven query construction with cybersecurity domain patterns
+- Deterministic pattern matching with consistent reproducible output
+- Fast execution suitable for real-time and batch processing scenarios
+- Integration with field validation and security frameworks
+- Baseline comparison capability for evaluation and benchmarking
+- No external dependencies or API calls required for generation
+
+The generator is designed for scenarios requiring predictable, fast query generation
+without the complexity or overhead of LLM-based approaches, making it ideal for
+production environments with strict performance and reliability requirements.
+
+Author: Hamroz Gavharov
+Project: ES-NL2DSL - Natural Language to Elasticsearch DSL Framework
+License: MIT (see LICENSE file)
+"""
 import json
 import re
 import argparse

@@ -1,7 +1,28 @@
 #!/usr/bin/env python3
 """
-Smart Field Matcher for Natural Language to Elasticsearch Fields
-Maps user terms like "log type" to actual field names like "log_type.keyword"
+Field Matcher: Intelligent natural language to Elasticsearch field mapping system
+
+This module provides sophisticated field matching capabilities for translating natural
+language terms into appropriate Elasticsearch field names. It uses advanced text
+similarity algorithms, semantic analysis, and domain knowledge to accurately map
+user expressions to structured field names within cybersecurity datasets.
+
+Key capabilities:
+- Intelligent field name mapping with fuzzy matching and similarity scoring
+- Semantic field analysis with context-aware disambiguation
+- Multi-term mapping support for complex field expressions
+- Field type awareness with automatic .keyword and .text handling
+- Custom field alias management with user-defined mappings
+- Performance optimization with caching and preprocessing
+- Integration with index profiling for dynamic field discovery
+
+The matcher bridges the gap between natural language expressions and technical
+field names, enabling intuitive query construction while maintaining precision
+and accuracy in field selection.
+
+Author: Hamroz Gavharov
+Project: ES-NL2DSL - Natural Language to Elasticsearch DSL Framework
+License: MIT (see LICENSE file)
 """
 
 import re

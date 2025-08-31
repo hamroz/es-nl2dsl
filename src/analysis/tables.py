@@ -1,4 +1,28 @@
 #!/usr/bin/env python3
+"""
+Results Table Generator: Evaluation data processing and tabulation system
+
+This module provides comprehensive table generation capabilities for processing and
+presenting evaluation results in structured formats suitable for analysis, reporting,
+and publication. It transforms raw evaluation data into organized tables with statistical
+summaries and formatting suitable for research and production reporting.
+
+Key capabilities:
+- Automated table generation from evaluation result files
+- Statistical summary computation with confidence intervals
+- Multi-format output support (CSV, JSON, LaTeX, HTML)
+- Comparative analysis with method performance comparison
+- Publication-ready formatting with professional styling
+- Integration with evaluation frameworks and reporting systems
+
+The generator enables systematic analysis of evaluation results and provides
+formatted output suitable for research papers, technical reports, and
+system documentation.
+
+Author: Hamroz Gavharov
+Project: ES-NL2DSL - Natural Language to Elasticsearch DSL Framework
+License: MIT (see LICENSE file)
+"""
 import json
 import pandas as pd
 from pathlib import Path

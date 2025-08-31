@@ -1,5 +1,28 @@
 #!/usr/bin/env python3
-"""Distributed query generation service with load balancing"""
+"""
+Distributed Query Service: Scalable load-balanced query generation infrastructure
+
+This module provides distributed query generation capabilities with load balancing,
+service orchestration, and high-availability features for production-scale deployments
+of the ES-NL2DSL system. It enables horizontal scaling and fault tolerance for
+enterprise environments requiring high throughput and reliability.
+
+Key capabilities:
+- Distributed query generation with automatic load balancing
+- Service health monitoring with automatic failover and recovery
+- Asynchronous processing with concurrent request handling
+- Horizontal scaling with dynamic service discovery and registration
+- Fault tolerance with graceful degradation and error recovery
+- Performance monitoring with metrics collection and alerting
+- Integration with containerized and cloud deployment environments
+
+The service is designed for production environments requiring high availability,
+scalability, and performance for query generation workloads.
+
+Author: Hamroz Gavharov
+Project: ES-NL2DSL - Natural Language to Elasticsearch DSL Framework
+License: MIT (see LICENSE file)
+"""
 import asyncio
 import aiohttp
 import time

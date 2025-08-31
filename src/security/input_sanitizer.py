@@ -1,6 +1,26 @@
 """
-Input sanitizer for comprehensive text normalization and cleaning.
-Handles character-based obfuscation, control sequences, and suspicious patterns.
+Input Sanitizer: Comprehensive text normalization and security filtering system
+
+This module provides advanced input sanitization capabilities for protecting the ES-NL2DSL
+system against malicious inputs, obfuscated attacks, and security threats through character-
+level analysis, pattern detection, and normalization. It serves as a critical security
+component in the input processing pipeline.
+
+Key capabilities:
+- Comprehensive character normalization with Unicode standardization
+- Obfuscation detection and normalization (leet speak, character substitution)
+- Control character filtering and removal
+- Suspicious pattern identification with threat intelligence
+- Multi-language support with international character handling
+- Integration with security frameworks and threat detection systems
+
+The sanitizer provides robust protection against sophisticated input-based attacks
+while maintaining usability for legitimate queries across different languages
+and character sets.
+
+Author: Hamroz Gavharov
+Project: ES-NL2DSL - Natural Language to Elasticsearch DSL Framework
+License: MIT (see LICENSE file)
 """
 
 import re

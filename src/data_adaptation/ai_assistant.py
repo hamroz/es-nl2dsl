@@ -1,5 +1,29 @@
 #!/usr/bin/env python3
-"""AI Assistant for helping with data adaptation and query generation"""
+"""
+AI Assistant: Intelligent data adaptation and query generation support system
+
+This module provides advanced AI-powered assistance for data adaptation, schema analysis,
+and query generation within the ES-NL2DSL system. It leverages domain knowledge and
+machine learning techniques to provide intelligent recommendations and automated assistance
+for integrating new data sources and optimizing query generation.
+
+Key capabilities:
+- Intelligent data adaptation with domain-specific knowledge integration
+- Automated schema analysis with cybersecurity pattern recognition
+- Query generation assistance with context-aware recommendations
+- Field mapping suggestions with semantic similarity analysis
+- Threat pattern recognition with cybersecurity domain expertise
+- Interactive assistance with natural language understanding
+- Learning and adaptation from user feedback and system usage patterns
+
+The assistant serves as an intelligent guide for users adapting new data sources,
+providing expert-level recommendations and automation to streamline the integration
+process and improve query generation quality.
+
+Author: Hamroz Gavharov
+Project: ES-NL2DSL - Natural Language to Elasticsearch DSL Framework
+License: MIT (see LICENSE file)
+"""
 import json
 from typing import Dict, List, Any, Optional
 import logging

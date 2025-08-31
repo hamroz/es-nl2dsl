@@ -1,5 +1,28 @@
 #!/usr/bin/env python3
-"""Formal verification system for security properties"""
+"""
+Formal Verification: Mathematical security property validation framework
+
+This module provides rigorous formal verification capabilities for validating security
+properties within the ES-NL2DSL system using mathematical proof techniques and automated
+verification methods. It ensures system compliance with defined security invariants
+and provides mathematical guarantees about system behavior under various conditions.
+
+Key capabilities:
+- Mathematical property verification with formal proof techniques
+- Security invariant validation with automated theorem proving
+- Compliance checking against defined security policies and constraints
+- Formal model generation for system behavior analysis
+- Property-based testing with automated counterexample generation
+- Integration with security frameworks for comprehensive validation
+- Verification report generation with mathematical proofs and evidence
+
+The framework provides mathematical assurance of security properties, complementing
+empirical testing with rigorous formal methods for critical security validation.
+
+Author: Hamroz Gavharov
+Project: ES-NL2DSL - Natural Language to Elasticsearch DSL Framework
+License: MIT (see LICENSE file)
+"""
 import json
 import re
 from typing import Dict, List, Any, Tuple, Optional, Set

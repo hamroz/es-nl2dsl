@@ -1,5 +1,28 @@
 #!/usr/bin/env python3
-"""Zero-shot baseline generator (no schema, no few-shot examples)"""
+"""
+Zero-Shot Query Generator: Pure LLM-based DSL generation without constraints
+
+This module provides zero-shot query generation capabilities using Large Language Models
+without domain-specific constraints, schema information, or few-shot examples. It serves
+as a baseline for comparison with constrained approaches and demonstrates the raw
+capabilities of modern LLMs for Elasticsearch DSL generation.
+
+Key capabilities:
+- Pure LLM-based generation without domain constraints or examples
+- Minimal preprocessing with maximum flexibility and creativity
+- Baseline comparison capability for evaluation frameworks
+- Integration with multiple LLM providers and models
+- Raw LLM performance assessment for research purposes
+- Simple prompt construction without complex engineering
+
+The generator is designed for research comparisons and baseline establishment,
+providing insight into the fundamental capabilities of LLMs for query generation
+without the enhancements provided by domain knowledge and constraints.
+
+Author: Hamroz Gavharov
+Project: ES-NL2DSL - Natural Language to Elasticsearch DSL Framework
+License: MIT (see LICENSE file)
+"""
 import json
 import sys
 import argparse

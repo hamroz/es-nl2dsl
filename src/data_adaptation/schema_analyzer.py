@@ -1,5 +1,29 @@
 #!/usr/bin/env python3
-"""Schema Analyzer for new log data"""
+"""
+Schema Analyzer: Automated log data structure analysis and field discovery system
+
+This module provides comprehensive schema analysis capabilities for automatically
+understanding the structure and characteristics of new log data sources. It performs
+intelligent field classification, type inference, and pattern recognition to enable
+seamless integration of diverse log formats into the ES-NL2DSL system.
+
+Key capabilities:
+- Automated field type inference with statistical analysis and pattern matching
+- Cybersecurity domain pattern recognition with threat-specific field identification
+- Field classification with semantic categorization (timestamp, IP, user, status)
+- Data quality assessment with completeness and consistency analysis
+- Field relationship discovery with correlation and dependency analysis
+- Elasticsearch mapping generation with optimized field configurations
+- Integration with data adaptation pipeline for automated processing
+
+The analyzer enables rapid onboarding of new data sources by automatically
+understanding their structure and generating appropriate configurations for
+optimal query generation and analysis.
+
+Author: Hamroz Gavharov
+Project: ES-NL2DSL - Natural Language to Elasticsearch DSL Framework
+License: MIT (see LICENSE file)
+"""
 import json
 import pandas as pd
 from typing import Dict, List, Any, Optional, Set

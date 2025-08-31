@@ -1,5 +1,26 @@
 """
-Field Validator - Pre-validates and suggests corrections for field names
+Field Validator: Intelligent field validation and correction system
+
+This module provides comprehensive field validation capabilities for verifying field
+names against known schemas and providing intelligent suggestions for corrections.
+It serves as a critical component in the query generation pipeline by ensuring field
+accuracy and preventing query failures due to invalid field references.
+
+Key capabilities:
+- Field name validation against multiple index schemas
+- Intelligent field name correction with similarity-based suggestions
+- Multi-index field mapping with context-aware validation
+- Field existence verification with real-time schema checking
+- Typo detection and correction with fuzzy matching algorithms
+- Integration with field management and query generation systems
+
+The validator ensures query reliability by catching field errors early in the
+generation process and providing helpful corrections to improve user experience
+and system robustness.
+
+Author: Hamroz Gavharov
+Project: ES-NL2DSL - Natural Language to Elasticsearch DSL Framework
+License: MIT (see LICENSE file)
 """
 
 import json
