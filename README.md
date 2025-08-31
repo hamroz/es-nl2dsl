@@ -66,7 +66,7 @@ python src/cli/run_one.py --id scan-001 --gen
 
 ES-NL2DSL now includes a comprehensive **Streamlit-based web interface** that provides an intuitive way to interact with all system capabilities through your browser.
 
-### **GUI Features (Fully Implemented)**
+### **GUI Features**
 - **🤖 Query Generator** - Interactive NL-to-DSL conversion with **query execution** and **data export**
   - Dynamic index selection from all available Elasticsearch indices
   - Real-time query execution with 10-10,000 result limits
@@ -182,17 +182,17 @@ The system supports multiple external LLM providers for enhanced accuracy and pe
 
 ### **Supported Providers**
 
-#### 🔥 OpenAI
+#### OpenAI
 - **Models**: GPT-4o, GPT-4o-mini, GPT-4-Turbo, o1, o1-mini
 - **Best for**: High-quality reasoning, complex query generation
 - **Setup**: Requires `OPENAI_API_KEY` environment variable
 
-#### 🤖 Anthropic
+#### Anthropic
 - **Models**: Claude-3.5-Sonnet, Claude-3-Haiku, Claude-3-Opus
 - **Best for**: Safety, reasoning, code analysis
 - **Setup**: Requires `ANTHROPIC_API_KEY` environment variable
 
-#### ✨ Google Gemini
+#### Google Gemini
 - **Models**: Gemini-1.5-Pro, Gemini-1.5-Flash
 - **Best for**: Multi-modal analysis, cost-efficiency
 - **Setup**: Requires `GOOGLE_API_KEY` environment variable
