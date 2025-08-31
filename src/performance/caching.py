@@ -3,13 +3,18 @@
 import time
 import json
 import hashlib
-import pickle
+import base64
 import threading
+import logging
 from typing import Dict, Any, Optional, List, Tuple, Union
 from dataclasses import dataclass, asdict
 from pathlib import Path
 import sqlite3
 from enum import Enum
+
+# Configure logging for cache operations
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 class CacheLevel(Enum):
     """Cache levels with different TTL and policies"""
@@ -90,6 +95,8 @@ class MemoryCache:
         self.access_order: List[str] = []  # LRU tracking
         self.lock = threading.RLock()
         self.stats = CacheStats()
+        
+        logger.info(f"Initialized memory cache: {max_size_mb}MB max, {default_ttl}s TTL")
     
     def _generate_key(self, prompt: str, model: str, method: str, **kwargs) -> str:
         """Generate cache key from parameters"""
@@ -138,8 +145,12 @@ class MemoryCache:
         key = self._generate_key(prompt, model, method, **kwargs)
         ttl = ttl or self.default_ttl
         
-        # Calculate size
-        value_bytes = len(json.dumps(value).encode())
+        # Calculate size and validate JSON serialization
+        try:
+            value_bytes = len(json.dumps(value).encode())
+        except (TypeError, ValueError) as e:
+            logger.error(f"Memory cache serialization error: {e}")
+            return False
         
         with self.lock:
             # Check if we need to evict entries
@@ -241,6 +252,8 @@ class DiskCache:
         
         self._init_database()
         self._load_stats()
+        
+        logger.info(f"Initialized disk cache: {max_size_mb}MB max, {default_ttl}s TTL, path: {self.db_path}")
     
     def _init_database(self):
         """Initialize SQLite database"""
@@ -324,13 +337,20 @@ class DiskCache:
                         WHERE key = ?
                     """, (time.time(), key))
                     
-                    # Deserialize value
-                    value = pickle.loads(value_blob)
-                    self.stats.hits += 1
-                    return value
+                    # Deserialize value from JSON
+                    try:
+                        value = json.loads(value_blob.decode('utf-8'))
+                        self.stats.hits += 1
+                        return value
+                    except (json.JSONDecodeError, UnicodeDecodeError) as e:
+                        logger.error(f"Disk cache deserialization error for key {key[:8]}...: {e}")
+                        # Remove corrupted entry
+                        self._remove_entry(key)
+                        self.stats.misses += 1
+                        return None
                     
             except Exception as e:
-                print(f"Disk cache get error: {e}")
+                logger.error(f"Disk cache get error: {e}")
                 self.stats.misses += 1
                 return None
     
@@ -341,9 +361,14 @@ class DiskCache:
         ttl = ttl or self.default_ttl
         
         try:
-            # Serialize value
-            value_blob = pickle.dumps(value)
-            value_size = len(value_blob)
+            # Serialize value to JSON
+            try:
+                value_json = json.dumps(value, ensure_ascii=False, separators=(',', ':'))
+                value_blob = value_json.encode('utf-8')
+                value_size = len(value_blob)
+            except (TypeError, ValueError) as e:
+                logger.error(f"Disk cache serialization error: {e}")
+                return False
             
             with self.lock:
                 # Check if we need to evict entries
@@ -377,19 +402,37 @@ class DiskCache:
                 return True
                 
         except Exception as e:
-            print(f"Disk cache put error: {e}")
+            logger.error(f"Disk cache put error: {e}")
             return False
     
     def _ensure_space(self, required_bytes: int):
         """Ensure enough space by evicting old entries"""
         while self.stats.size_bytes + required_bytes > self.max_size_bytes:
-            if not self._evict_oldest():
+            if not self._evict_lru():
                 break  # No more entries to evict
     
-    def _evict_oldest(self) -> bool:
-        """Evict oldest entry"""
+    def _evict_lru(self) -> bool:
+        """Evict least recently used entry (proper LRU)"""
         try:
             with sqlite3.connect(self.db_path) as conn:
+                # First try to evict expired entries
+                cursor = conn.execute("""
+                    SELECT key, size_bytes FROM cache_entries 
+                    WHERE created_at + ttl_seconds <= ?
+                    ORDER BY created_at ASC 
+                    LIMIT 1
+                """, (time.time(),))
+                
+                row = cursor.fetchone()
+                if row:
+                    key, size_bytes = row
+                    conn.execute("DELETE FROM cache_entries WHERE key = ?", (key,))
+                    self.stats.size_bytes -= size_bytes
+                    self.stats.entry_count -= 1
+                    self.stats.evictions += 1
+                    return True
+                
+                # If no expired entries, evict LRU (least recently accessed)
                 cursor = conn.execute("""
                     SELECT key, size_bytes FROM cache_entries 
                     ORDER BY last_accessed ASC 
@@ -410,7 +453,7 @@ class DiskCache:
                 return True
                 
         except Exception as e:
-            print(f"Disk cache eviction error: {e}")
+            logger.error(f"Disk cache LRU eviction error: {e}")
             return False
     
     def _remove_entry(self, key: str):
@@ -425,7 +468,7 @@ class DiskCache:
                     self.stats.size_bytes -= size_bytes
                     self.stats.entry_count -= 1
         except Exception as e:
-            print(f"Disk cache remove error: {e}")
+            logger.error(f"Disk cache remove error: {e}")
     
     def cleanup_expired(self) -> int:
         """Remove expired entries"""
@@ -453,7 +496,7 @@ class DiskCache:
                     return removed_count
                     
         except Exception as e:
-            print(f"Disk cache cleanup error: {e}")
+            logger.error(f"Disk cache cleanup error: {e}")
             return 0
     
     def get_stats(self) -> Dict[str, Any]:
@@ -518,10 +561,10 @@ class MultiLevelCache:
                 disk_cleaned = self.disk_cache.cleanup_expired()
                 
                 if memory_cleaned > 0 or disk_cleaned > 0:
-                    print(f"Cache cleanup: {memory_cleaned} memory + {disk_cleaned} disk entries removed")
+                    logger.info(f"Cache cleanup: {memory_cleaned} memory + {disk_cleaned} disk entries removed")
                     
             except Exception as e:
-                print(f"Cache cleanup error: {e}")
+                logger.error(f"Cache cleanup error: {e}")
     
     def get_stats(self) -> Dict[str, Any]:
         """Get comprehensive cache statistics"""
@@ -543,6 +586,57 @@ class MultiLevelCache:
         """Clear all cache levels"""
         self.memory_cache.clear()
         # Note: Disk cache clearing would require more careful implementation
+    
+    def warm_cache(self, warm_entries: List[Dict[str, Any]], max_warm_entries: int = 100) -> int:
+        """Warm cache with frequently used queries"""
+        warmed_count = 0
+        
+        logger.info(f"Starting cache warming with {len(warm_entries)} potential entries")
+        
+        for entry in warm_entries[:max_warm_entries]:
+            try:
+                prompt = entry.get('prompt', '')
+                model = entry.get('model', '')
+                method = entry.get('method', 'constrained')
+                result = entry.get('result', {})
+                
+                if prompt and model and result:
+                    self.put(prompt, model, method, result)
+                    warmed_count += 1
+                    
+            except Exception as e:
+                logger.warning(f"Failed to warm cache entry: {e}")
+                continue
+        
+        logger.info(f"Cache warming completed: {warmed_count} entries loaded")
+        return warmed_count
+    
+    def warm_from_history(self, history_file: str = "artifacts/cache/query_history.json", 
+                         max_entries: int = 50) -> int:
+        """Warm cache from historical queries"""
+        try:
+            history_path = Path(history_file)
+            if not history_path.exists():
+                logger.info(f"No history file found at {history_path}")
+                return 0
+            
+            with open(history_path) as f:
+                history = json.load(f)
+            
+            # Sort by frequency/recency and warm most common queries
+            if isinstance(history, list):
+                warm_entries = history
+            elif isinstance(history, dict) and 'queries' in history:
+                warm_entries = history['queries']
+            else:
+                logger.warning("Invalid history file format")
+                return 0
+            
+            return self.warm_cache(warm_entries, max_entries)
+            
+        except Exception as e:
+            logger.error(f"Failed to warm cache from history: {e}")
+            return 0
 
 # Global cache instance
 _global_cache: Optional[MultiLevelCache] = None
@@ -568,6 +662,19 @@ def get_cache_stats() -> Dict[str, Any]:
     """Get global cache statistics"""
     cache = get_global_cache()
     return cache.get_stats()
+
+def warm_global_cache(warm_entries: List[Dict[str, Any]] = None, from_history: bool = True) -> int:
+    """Warm the global cache"""
+    cache = get_global_cache()
+    
+    total_warmed = 0
+    if from_history:
+        total_warmed += cache.warm_from_history()
+    
+    if warm_entries:
+        total_warmed += cache.warm_cache(warm_entries)
+    
+    return total_warmed
 
 if __name__ == "__main__":
     import argparse
