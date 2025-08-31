@@ -12,7 +12,7 @@ ES-NL2DSL enables secure translation of human-readable queries into Elasticsearc
 
 - **Multi-LLM Support**: Local models (Ollama) + External APIs (OpenAI, Google Gemini, DeepSeek, Qwen)
 - **Enhanced Accuracy**: Improved validation, sophisticated security filtering, and prompt enhancement
-- **CIC-IDS2017 Integration**: Real-world cybersecurity dataset with 2.8M+ network flow records
+- **CIC-IDS2017 Integration**: Real-world cybersecurity dataset with extensive network flow records
 - **Advanced Security**: Context-aware filtering, pattern-based threat detection, bypass attempt blocking
 - **Constrained Generation**: LLM-based translation with schema and security validation
 - **Privacy Preservation**: Differential privacy with configurable ε parameters
@@ -67,22 +67,15 @@ python src/cli/run_one.py --id scan-001 --gen
 ES-NL2DSL now includes a comprehensive **Streamlit-based web interface** that provides an intuitive way to interact with all system capabilities through your browser.
 
 ### **GUI Features**
-- **🤖 Query Generator** - Interactive NL-to-DSL conversion with **query execution** and **data export**
-  - Dynamic index selection from all available Elasticsearch indices
-  - Real-time query execution with 10-10,000 result limits
-  - Multiple display formats (Table, JSON, Raw Data) with syntax highlighting
-  - One-click CSV/JSON export of results
-  - Performance metrics and validation feedback
-- **📊 Evaluation Dashboard** - Scenario comparison and performance analysis
+- **🤖 Query Generator** - Interactive NL-to-DSL conversion with query execution and data export
+- **🔍 Data Explorer** - Interactive data browsing and analysis across all indices
+- **📊 Evaluation Dashboard** - Comprehensive scenario evaluation and performance analysis
 - **🛡️ Security Testing** - Red team testing with adversarial prompt evaluation
 - **🔒 Privacy Analysis** - Differential privacy tools and visualization
-- **⚙️ System Administration** - Complete system management with 6 specialized tabs:
-  - System health monitoring and diagnostics
-  - Data management (CSV upload, CIC dataset processing)
-  - Index management (creation, deletion, metadata)
-  - External LLM configuration and testing
-  - Maintenance tools and cleanup
-  - Live log monitoring
+- **🎭 Multi-Modal Data Adaptation** - AI-powered data integration for new sources
+- **⚙️ System Administration** - Complete system management with specialized tabs
+
+**For comprehensive GUI documentation and usage workflows, see [gui/README.md](gui/README.md)**
 
 ### **Start GUI**
 
@@ -99,7 +92,7 @@ docker-compose --profile gui up -d
 
 **Access**: http://localhost:8501
 
-📖 **For detailed GUI documentation, see [gui/README.md](gui/README.md)**
+📖 **Complete GUI Documentation**: [gui/README.md](gui/README.md)
 
 ## 💻 System Requirements
 
@@ -235,6 +228,8 @@ python gui/start_gui.py
 # Navigate to Query Generator → Select external model from dropdown
 ```
 
+**For detailed external LLM setup and configuration, see [gui/README.md](gui/README.md)**
+
 ### Benefits of External LLMs
 
 - **🎯 Higher Accuracy**: Cloud models often outperform local models on complex queries
@@ -245,7 +240,7 @@ python gui/start_gui.py
 
 ## 🛡️ CIC-IDS2017 Dataset
 
-The system includes comprehensive support for the CIC-IDS2017 cybersecurity dataset, containing 2.8M+ network flow records with labeled attack patterns.
+The system includes comprehensive support for the CIC-IDS2017 cybersecurity dataset, containing extensive network flow records with labeled attack patterns.
 
 ### Dataset Features
 
@@ -310,14 +305,17 @@ The system includes specialized scenarios for CIC-IDS2017:
 # Start interactive web interface (recommended)
 python gui/start_gui.py
 # Access: http://localhost:8501
-
-# Features:
-# - Natural language query input
-# - Real-time DSL generation
-# - Query execution with result visualization
-# - Data export (CSV/JSON)
-# - System administration
 ```
+
+**Key GUI Capabilities:**
+- Natural language query input with intelligent examples
+- Real-time DSL generation with multiple methods
+- Query execution with result visualization and export
+- Comprehensive data exploration and analysis
+- System administration and monitoring
+- Security testing and privacy analysis
+
+**For complete GUI documentation and workflows, see [gui/README.md](gui/README.md)**
 
 ### **Command Line Interface**
 ```bash
@@ -353,12 +351,13 @@ python src/core/eval_exec.py --expert artifacts/queries/expert.json --candidate 
 # Create DP-perturbed datasets
 python src/create_dp_grid.py
 
-# Run queries on DP data (ε = 0.5, 1.0, 2.0)
+# Run queries on DP data (multiple epsilon values)
 python src/cli/run_one.py --id scan-001 --index logs_net_dp_eps05
 python src/cli/run_one.py --id scan-001 --index logs_net_dp_eps10
 python src/cli/run_one.py --id scan-001 --index logs_net_dp_eps20
 
 # Via GUI: Privacy Analysis tab provides DP visualization
+# For complete privacy analysis features, see gui/README.md
 ```
 
 ### **Schema Drift Testing**
@@ -378,6 +377,7 @@ python src/cli/run_one.py --id scan-001 --index logs_net_drift
 python src/redteam_runner.py
 
 # Via GUI: Security Panel provides interactive adversarial testing
+# For comprehensive security testing, see gui/README.md
 ```
 
 ### **System Testing & Monitoring**
@@ -431,6 +431,8 @@ python src/cli/run_one.py --id scan-007 --gen --method rules_based
 # Interactive evaluation via GUI
 python gui/start_gui.py
 # Navigate to Evaluation Dashboard for comprehensive analysis
+
+# For detailed evaluation workflows, see gui/README.md
 ```
 
 ### **Testing & Monitoring**
@@ -482,7 +484,7 @@ The evaluation framework tracks multiple performance dimensions:
 - **Threat Detection**: Pattern-based attack identification
 
 #### **Performance Metrics**
-- **Generation Latency**: Local (2-5s), External LLMs (1-3s)
+- **Generation Speed**: Optimized performance across model types
 - **Success Rate**: Valid query generation percentage
 - **System Uptime**: Service availability monitoring
 
@@ -503,7 +505,7 @@ The evaluation framework tracks multiple performance dimensions:
     ┌─────────────┐ ┌──────────┐ ┌──────────┐    ┌─────────────────┐
     │Local Models │ │ OpenAI   │ │ Google   │    │   Schema &      │
     │ (Ollama)    │ │ GPT-4o   │ │ Gemini   │───▶│   Rule          │
-    │ Llama3.1    │ │ o1, o3   │ │ 2.5-Pro  │    │   Validation    │
+    │ Llama3.1    │ │ o1, o3   │ │ Gemini   │    │   Validation    │
     │ DeepSeek-R1 │ └──────────┘ └──────────┘    └─────────────────┘
     └─────────────┘                                       │
               │     ┌──────────┐ ┌──────────┐             │
@@ -535,7 +537,7 @@ The evaluation framework tracks multiple performance dimensions:
 
 #### 📊 Multi-Dataset Support
 - **Standard Evaluation**: 12 cybersecurity scenarios with expert ground truth
-- **CIC-IDS2017 Integration**: Real-world attack patterns with 2.8M+ records
+- **CIC-IDS2017 Integration**: Real-world attack patterns with extensive records
 - **Privacy-Enhanced Indices**: Differential privacy with configurable ε values
 - **Schema Adaptation**: Dynamic field mapping across different data sources
 
@@ -634,42 +636,33 @@ ES_READER_PASSWORD=ReaderPwd_123
 3. **Incident Response**: Rapid query generation during security incidents
 4. **Training & Education**: Teach Elasticsearch query syntax through examples
 
-## 📊 Enhanced Metrics and Evaluation
+## 📊 Evaluation Framework
 
-### Accuracy Metrics (Enhanced Performance)
-- **Structural F1 Score**: AST-based semantic similarity (**≥0.85** achieved vs previous 0.75)
-- **Execution F1 Score**: Result set overlap accuracy (**≥0.80** achieved vs previous 0.68)
-- **Jaccard Similarity**: Document overlap coefficient with CIC dataset validation
+### Evaluation Capabilities
+- **Structural Analysis**: AST-based semantic query similarity
+- **Execution Analysis**: Result set overlap and accuracy assessment
+- **Jaccard Similarity**: Document overlap coefficient with comprehensive validation
 - **Precision/Recall**: Fine-grained retrieval metrics across multiple datasets
-- **Multi-Model Comparison**: Performance across local vs external LLMs
+- **Multi-Model Comparison**: Performance analysis across local and external LLMs
 
-### Security Metrics (Advanced Protection)
-- **Adversarial Block Rate**: **95%+** of malicious prompts rejected (improved from 85%)
-- **False Positive Rate**: **<3%** legitimate queries blocked (improved from 8%)
-- **Context-Aware Filtering**: Sophisticated pattern detection with severity classification
-- **Threat Categorization**: SQL injection, command injection, bypass attempts, sensitive data
-- **Ambiguity Detection**: Automatic abstention on unclear/impossible prompts
+### Security Assessment
+- **Adversarial Testing**: Automated testing against malicious prompt injection
+- **Input Validation**: Multi-layer security filtering and validation
+- **Context-Aware Analysis**: Sophisticated pattern detection with threat classification
+- **Security Controls**: Protection against SQL injection, command injection, and bypass attempts
+- **Abstention Logic**: Intelligent handling of ambiguous or malicious inputs
 
-### Performance Metrics (Multi-LLM Optimization)
-- **Local Model Latency**: 2-5 seconds (Ollama Llama3.1, DeepSeek-R1)
-- **External LLM Latency**: 1-3 seconds (GPT-4o, Gemini-2.5-Pro, DeepSeek-Reasoner)
-- **Success Rate**: **92%+** valid query generation (improved from 78%)
-- **Retry Efficiency**: Average 1.2 attempts before success (improved from 2.1)
-- **Cost Optimization**: Token limits and intelligent model routing
+### Performance Analysis
+- **Generation Speed**: Optimized performance across local and cloud models
+- **Success Rate**: High-quality query generation with validation
+- **Retry Logic**: Intelligent error handling and recovery mechanisms
+- **Cost Management**: Token optimization and intelligent model routing
 
-### Dataset Coverage (Expanded Scope)
-- **Standard Scenarios**: 12 comprehensive cybersecurity test cases
-- **CIC-IDS2017 Integration**: 2.8M+ real-world network flow records
-- **Attack Type Coverage**: DDoS, Brute Force, Web Attacks, Infiltration, Port Scanning, Botnet
-- **Privacy Preservation**: Differential privacy across multiple ε values (0.5, 1.0, 2.0)
-
-### Model Performance Comparison
-| Model Type | Structural F1 | Execution F1 | Latency | Cost |
-|------------|---------------|--------------|---------|------|
-| Llama3.1 (Local) | 0.83 | 0.78 | 3.2s | Free |
-| GPT-4o | 0.89 | 0.85 | 1.8s | $$ |
-| Gemini-2.5-Pro | 0.87 | 0.83 | 2.1s | $ |
-| DeepSeek-Reasoner | 0.85 | 0.81 | 2.4s | $ |
+### Dataset Coverage
+- **Standard Scenarios**: Comprehensive cybersecurity test cases
+- **Real-World Data**: CIC-IDS2017 integration with extensive network flow records
+- **Attack Coverage**: DDoS, Brute Force, Web Attacks, Infiltration, Port Scanning, Botnet
+- **Privacy Support**: Differential privacy with configurable parameters
 
 ## 🛠️ Troubleshooting
 
@@ -708,9 +701,11 @@ pip install -r gui/requirements-gui.txt
 # Start with debugging
 python gui/start_gui.py --debug
 
-# Check port 8501 availability
+# Check port availability
 sudo lsof -i :8501
 ```
+
+**For detailed GUI troubleshooting, see [gui/README.md](gui/README.md)**
 
 **CIC dataset issues:**
 ```bash
@@ -735,10 +730,10 @@ chmod +x *.sh scripts/*.sh
 
 ### **Performance Tuning**
 
-**For faster generation:**
-- Use GUI for interactive feedback and faster iteration
-- Smaller local models for development/testing
-- External LLMs for production (faster inference)
+**For optimal generation:**
+- Use GUI for interactive feedback and iteration
+- Local models for privacy-sensitive scenarios
+- External LLMs for complex query requirements
 
 **For better accuracy:**  
 - Use enhanced constrained generator (primary method)
@@ -746,9 +741,9 @@ chmod +x *.sh scripts/*.sh
 - Test with CIC-IDS2017 real-world data
 
 **For cost optimization:**
-- Primarily use local models (llama3.1:latest)
-- External LLMs for complex scenarios only
-- GUI provides usage monitoring and controls
+- Local models for standard use cases
+- External LLMs for enhanced accuracy when needed
+- GUI provides usage monitoring and cost controls
 
 ### **Debugging & Monitoring**
 
@@ -764,6 +759,8 @@ python src/smoke_es.py
 # Monitor through GUI
 python gui/start_gui.py
 # Navigate to System Administration → System Health
+
+# For complete system monitoring features, see gui/README.md
 ```
 
 **View logs and metrics:**
@@ -828,7 +825,7 @@ If you use this system in your research, please cite:
 ## 🌟 **What Makes ES-NL2DSL Special**
 
 ✅ **Production-Ready**: Complete system with GUI, not just a research prototype  
-✅ **Real Data**: Handles actual CIC-IDS2017 cybersecurity datasets (2.8M+ records)  
+✅ **Real Data**: Handles actual CIC-IDS2017 cybersecurity datasets with comprehensive coverage  
 ✅ **Query Execution**: Not just generation - executes queries and shows actual results  
 ✅ **Data Export**: One-click CSV/JSON export of query results  
 ✅ **Multi-LLM**: Local models + 4 external providers with intelligent routing  
