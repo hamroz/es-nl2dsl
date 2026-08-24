@@ -815,9 +815,9 @@ If you use this system in your research, please cite:
 ```bibtex
 @software{es_nl2dsl,
   title={ES-NL2DSL: Natural Language to Elasticsearch DSL Translation Framework},
-  author={Your Name},
+  author={Hamroz Gavharov},
   year={2025},
-  url={https://github.com/your-username/es-nl2dsl},
+  url={https://github.com/hamroz/es-nl2dsl},
   note={Production-ready framework for cybersecurity log analysis with GUI interface}
 }
 ```
